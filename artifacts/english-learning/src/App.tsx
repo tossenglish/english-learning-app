@@ -37,6 +37,8 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice from '@/components/passage-practice';
+import AdminUpload from '@/components/admin-upload';
+import { useAdminAccess } from '@/hooks/use-admin-access';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -242,10 +244,20 @@ function SignUpPage() {
 function AccountControl() {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { isAdmin } = useAdminAccess();
   const name = user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0] || '학습자';
 
   return (
     <div className="flex items-center gap-2">
+      {isAdmin && (
+        <Link
+          href="/admin"
+          data-testid="link-admin-upload"
+          className="rounded-lg px-2.5 py-2 text-xs font-bold text-[hsl(var(--accent))] transition-colors hover:bg-[hsl(var(--muted))]"
+        >
+          관리자
+        </Link>
+      )}
       <span className="hidden text-xs font-semibold text-[hsl(var(--muted-foreground))] sm:inline" data-testid="text-account-name">
         {name}
       </span>
@@ -286,7 +298,7 @@ function Sidebar({ location }: { location: string }) {
       <div className="mt-14">
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
-          <NavItem href="/" label="오늘의 연습" icon={HomeIcon} active={location === '/'} />
+          <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
           <NavItem href="/learn" label="배우기" icon={BookOpen} active={location === '/learn'} />
           <NavItem href="/passage" label="지문 연습" icon={MessageCircle} active={location === '/passage'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
@@ -312,7 +324,7 @@ function MobileNav({ location }: { location: string }) {
   return (
     <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.94)] px-2 py-2 shadow-[0_12px_32px_rgba(49,42,29,.15)] backdrop-blur-md md:hidden">
       {[
-        { href: '/', label: '오늘', icon: HomeIcon },
+        { href: '/dashboard', label: '오늘', icon: HomeIcon },
         { href: '/learn', label: '배우기', icon: BookOpen },
           { href: '/passage', label: '지문', icon: MessageCircle },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
@@ -628,11 +640,12 @@ function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, se
   level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: () => void; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void;
 }) {
   return <Switch>
-    <Route path="/"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
+    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} /></Route>
     <Route path="/passage"><PassagePractice /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
+    <Route path="/admin"><AdminUpload /></Route>
     <Route component={NotFound} />
   </Switch>;
 }
@@ -641,7 +654,7 @@ function HomeRedirect() {
   return (
     <>
       <Show when="signed-in">
-        <Redirect to="/learn" />
+        <Redirect to="/dashboard" />
       </Show>
       <Show when="signed-out">
         <PublicLanding />
