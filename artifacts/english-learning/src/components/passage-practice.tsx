@@ -261,28 +261,29 @@ export default function PassagePractice({
   const activeMaterial = useMemo(() => readActivePracticeMaterial(), []);
   const hasSavedCustomPassage = normalizePassage(initialState.passageText) !== normalizePassage(DEFAULT_PASSAGE_TEXT);
   const [usingActiveMaterial, setUsingActiveMaterial] = useState(
-    () => Boolean(activeMaterial && !hasSavedCustomPassage),
+    () => Boolean(activeMaterial),
   );
   const [draftText, setDraftText] = useState(
-    () => hasSavedCustomPassage
-      ? initialState.draftText
-      : activeMaterial?.sentences.map((sentence) => sentence.english).join(' ') ?? DEFAULT_PASSAGE_TEXT,
+    () => activeMaterial?.sentences.map((sentence) => sentence.english).join(' ')
+      ?? (hasSavedCustomPassage ? initialState.draftText : DEFAULT_PASSAGE_TEXT),
   );
   const [passageText, setPassageText] = useState(
-    () => hasSavedCustomPassage ? initialState.passageText : DEFAULT_PASSAGE_TEXT,
+    () => activeMaterial
+      ? activeMaterial.sentences.map((sentence) => sentence.english).join(' ')
+      : (hasSavedCustomPassage ? initialState.passageText : DEFAULT_PASSAGE_TEXT),
   );
   const [currentIndex, setCurrentIndex] = useState(
-    () => hasSavedCustomPassage ? initialState.currentIndex : 0,
+    () => activeMaterial ? 0 : (hasSavedCustomPassage ? initialState.currentIndex : 0),
   );
   const [mode, setMode] = useState<ExerciseMode>('dictation');
   const [answers, setAnswers] = useState<Record<number, Record<ExerciseMode, string>>>(
-    () => hasSavedCustomPassage ? initialState.answers : {},
+    () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.answers : {}),
   );
   const [completed, setCompleted] = useState<Record<number, Completion>>(
-    () => hasSavedCustomPassage ? initialState.completed : {},
+    () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.completed : {}),
   );
   const [attempts, setAttempts] = useState<Record<number, AttemptCounts>>(
-    () => hasSavedCustomPassage ? initialState.attempts : {},
+    () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.attempts : {}),
   );
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'hint' | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -672,9 +673,12 @@ export default function PassagePractice({
                 <h2 className="mt-4 max-w-2xl text-2xl font-bold leading-tight tracking-[-.04em] sm:text-3xl" data-testid="text-current-passage-sentence">
                   {mode === 'dictation' && !showAnswer ? '소리를 듣고 문장을 완성해보세요.' : current.english}
                 </h2>
-                <p className="mt-3 text-sm text-[hsl(var(--sidebar-foreground)/.58)]" data-testid="text-current-passage-meaning">
-                  {current.korean}
-                </p>
+                <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
+                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">한글 해석</p>
+                  <p className="mt-1.5 text-base font-semibold leading-relaxed text-[hsl(var(--sidebar-foreground)/.9)]">
+                    {current.korean}
+                  </p>
+                </div>
               </div>
               <span className="rounded-full border border-[hsl(var(--sidebar-foreground)/.15)] px-3 py-1.5 font-mono text-[10px] text-[hsl(var(--sidebar-foreground)/.6)]">
                 {currentMode.label}
