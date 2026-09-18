@@ -18,6 +18,24 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary 영어 연습 문장을 자연스러운 한국어로 번역
+ */
+export const translatePracticeSentencesBodySentencesItemMax = 1000;
+
+export const translatePracticeSentencesBodySentencesMax = 20;
+
+
+
+export const TranslatePracticeSentencesBody = zod.object({
+  "sentences": zod.array(zod.string().min(1).max(translatePracticeSentencesBodySentencesItemMax)).min(1).max(translatePracticeSentencesBodySentencesMax)
+})
+
+export const TranslatePracticeSentencesResponse = zod.object({
+  "translations": zod.array(zod.string())
+})
+
+
+/**
  * @summary 관리자용 파일 업로드 주소 발급
  */
 

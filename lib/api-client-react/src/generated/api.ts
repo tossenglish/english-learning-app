@@ -26,7 +26,9 @@ import type {
   CreateAssignmentRequest,
   ErrorEnvelope,
   HealthStatus,
+  KoreanTranslationsEnvelope,
   ListAssignmentsParams,
+  TranslatePracticeSentencesRequest,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -135,6 +137,94 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getTranslatePracticeSentencesUrl = () => {
+
+
+
+
+  return `/api/openai/translations`
+}
+
+/**
+ * @summary 영어 연습 문장을 자연스러운 한국어로 번역
+ */
+export const translatePracticeSentences = async (translatePracticeSentencesRequest: TranslatePracticeSentencesRequest, options?: Parameters<typeof customFetch>[1]): Promise<KoreanTranslationsEnvelope> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<KoreanTranslationsEnvelope>(getTranslatePracticeSentencesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(translatePracticeSentencesRequest)
+  }
+);}
+
+
+
+
+
+export const getTranslatePracticeSentencesMutationKey = () => ['translatePracticeSentences'] as const;
+
+export const getTranslatePracticeSentencesMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof translatePracticeSentences>>, TError,TranslatePracticeSentencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof translatePracticeSentences>>, TError,TranslatePracticeSentencesMutationVariables, TContext> => {
+
+const mutationKey = getTranslatePracticeSentencesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof translatePracticeSentences>>, TranslatePracticeSentencesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  translatePracticeSentences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TranslatePracticeSentencesMutationResult = NonNullable<Awaited<ReturnType<typeof translatePracticeSentences>>>
+    export type TranslatePracticeSentencesMutationBody = BodyType<TranslatePracticeSentencesRequest>
+    export type TranslatePracticeSentencesMutationError = ErrorType<ErrorEnvelope>
+    export type TranslatePracticeSentencesMutationVariables = {data: BodyType<TranslatePracticeSentencesRequest>}
+
+    /**
+ * @summary 영어 연습 문장을 자연스러운 한국어로 번역
+ */
+export const useTranslatePracticeSentences = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof translatePracticeSentences>>, TError,TranslatePracticeSentencesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof translatePracticeSentences>>,
+        TError,
+        TranslatePracticeSentencesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTranslatePracticeSentencesMutationOptions(options));
+    }
 
 export const getRequestUploadUrlUrl = () => {
 

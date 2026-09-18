@@ -9,6 +9,20 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface TranslatePracticeSentencesRequest {
+  /**
+     * @minItems 1
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 1000
+     */
+  sentences: string[];
+}
+
+export interface KoreanTranslationsEnvelope {
+  translations: string[];
+}
+
 export interface UploadUrlRequest {
   /** @minLength 1 */
   name: string;

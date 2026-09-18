@@ -14,6 +14,8 @@ tags:
     description: 관리자 파일 업로드와 저장 파일 제공
   - name: Assignments
     description: 레벨별 학습 과제 등록과 조회
+  - name: OpenAI
+    description: AI 기반 학습 지원
 paths:
   /healthz:
     get:
@@ -28,6 +30,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /openai/translations:
+    post:
+      operationId: translatePracticeSentences
+      tags: [OpenAI]
+      summary: 영어 연습 문장을 자연스러운 한국어로 번역
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslatePracticeSentencesRequest"
+      responses:
+        "200":
+          description: 입력 순서와 같은 한국어 번역 목록
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KoreanTranslationsEnvelope"
+        "400":
+          description: 잘못된 문장 목록
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -273,6 +305,26 @@ components:
           type: string
       required:
         - status
+    TranslatePracticeSentencesRequest:
+      type: object
+      required: [sentences]
+      properties:
+        sentences:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 1000
+    KoreanTranslationsEnvelope:
+      type: object
+      required: [translations]
+      properties:
+        translations:
+          type: array
+          items:
+            type: string
     UploadUrlRequest:
       type: object
       required: [name, size, contentType]
