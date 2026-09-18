@@ -3,6 +3,16 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
+  ClerkProvider,
+  Show,
+  SignIn,
+  SignUp,
+  useClerk,
+  useUser,
+} from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
+import {
   ArrowRight,
   BarChart3,
   BookOpen,
@@ -25,7 +35,7 @@ import {
   X,
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice from '@/components/passage-practice';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
@@ -61,6 +71,70 @@ const weekData = [
 const quizOptions = ['계획된 만남', '뜻밖의 행운', '오래된 기억', '작은 실수'];
 
 const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || '/'
+    : path;
+}
+
+if (!clerkPubKey) {
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#e88942',
+    colorForeground: '#252d40',
+    colorMutedForeground: '#6f756f',
+    colorDanger: '#b9534e',
+    colorBackground: '#fffaf2',
+    colorInput: '#fffdf8',
+    colorInputForeground: '#252d40',
+    colorNeutral: '#ded8cc',
+    fontFamily: 'DM Sans, Noto Sans KR, sans-serif',
+    borderRadius: '0.75rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#fffaf2] rounded-[24px] w-[440px] max-w-full overflow-hidden shadow-xl',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#252d40] font-bold',
+    headerSubtitle: 'text-[#6f756f]',
+    socialButtonsBlockButtonText: 'text-[#252d40] font-semibold',
+    formFieldLabel: 'text-[#252d40] font-semibold',
+    footerActionLink: 'text-[#d36e32] font-semibold',
+    footerActionText: 'text-[#6f756f]',
+    dividerText: 'text-[#6f756f]',
+    formFieldSuccessText: 'text-[#497b6b]',
+    alertText: 'text-[#b9534e]',
+    logoBox: 'rounded-xl overflow-hidden',
+    logoImage: 'object-contain',
+    socialButtonsBlockButton: 'border-[#ded8cc] bg-[#fffdf8] hover:bg-[#f6efe3]',
+    formButtonPrimary: 'bg-[#252d40] hover:bg-[#313b52] text-white',
+    formFieldInput: 'border-[#ded8cc] bg-[#fffdf8] text-[#252d40]',
+    footerAction: 'border-t border-[#ded8cc]',
+    dividerLine: 'bg-[#ded8cc]',
+    alert: 'bg-[#fff0ec] border-[#f2c8bd]',
+    otpCodeFieldInput: 'border-[#ded8cc] bg-[#fffdf8] text-[#252d40]',
+    formFieldRow: 'gap-1',
+    main: 'bg-transparent',
+  },
+};
 
 function Logo() {
   return (
@@ -73,6 +147,117 @@ function Logo() {
         lingoloop<span className="text-[hsl(var(--sidebar-primary))]">.</span>
       </span>
     </Link>
+  );
+}
+
+function PublicLanding() {
+  return (
+    <main className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-5 py-12">
+      <div className="w-full max-w-[1060px]">
+        <div className="flex items-center justify-between">
+          <Logo />
+          <Link
+            href="/sign-in"
+            data-testid="link-landing-sign-in-top"
+            className="text-sm font-bold text-[hsl(var(--foreground))] transition-colors hover:text-[hsl(var(--accent))]"
+          >
+            로그인
+          </Link>
+        </div>
+        <section className="mt-20 grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr]">
+          <div className="rise-in">
+            <p className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.17em] text-[hsl(var(--accent))]">
+              <Sparkles size={14} /> LingoLoop
+            </p>
+            <h1 className="max-w-2xl text-5xl font-bold leading-[1.08] tracking-[-.06em] text-[hsl(var(--foreground))] sm:text-6xl">
+              매일 10분,<br />
+              <span className="text-[hsl(var(--accent))]">영어가 내 것이 되는</span> 시간.
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-[hsl(var(--muted-foreground))]">
+              단어를 보고 끝내지 않아요. 지문의 모든 문장을 듣고, 적고, 직접 말하면서 진짜로 꺼내 쓸 수 있는 영어를 연습해요.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/sign-up"
+                data-testid="link-landing-sign-up"
+                className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--primary-foreground))]"
+              >
+                무료로 시작하기 <ArrowRight size={17} />
+              </Link>
+              <Link
+                href="/sign-in"
+                data-testid="link-landing-sign-in"
+                className="inline-flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.5)]"
+              >
+                로그인
+              </Link>
+            </div>
+          </div>
+          <div className="rise-in stagger-1 relative overflow-hidden rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
+            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full border-[30px] border-[hsl(var(--sidebar-primary)/.15)]" />
+            <div className="relative">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">A small daily loop</span>
+                <CheckCircle2 size={19} className="text-[hsl(var(--sidebar-primary))]" />
+              </div>
+              <p className="mt-16 text-4xl font-bold tracking-[-.06em]">serendipity</p>
+              <p className="mt-2 font-semibold text-[hsl(var(--sidebar-primary))]">뜻밖의 행운</p>
+              <p className="mt-8 border-l-2 border-[hsl(var(--accent))] pl-4 text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.7)]">
+                “I stumbled upon a little café.”
+              </p>
+              <div className="mt-10 flex items-center justify-between border-t border-[hsl(var(--sidebar-foreground)/.14)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]">
+                <span className="flex items-center gap-2"><Headphones size={15} /> 듣고 따라 말하기</span>
+                <ArrowRight size={15} />
+              </div>
+            </div>
+          </div>
+        </section>
+        <div className="mt-16 flex flex-wrap gap-x-8 gap-y-3 border-t border-[hsl(var(--border))] pt-5 text-xs text-[hsl(var(--muted-foreground))]">
+          <span>받아쓰기</span>
+          <span>영작</span>
+          <span>따라 말하기</span>
+          <span>나만의 단어장</span>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function SignInPage() {
+  return (
+    <div className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4 py-10">
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    </div>
+  );
+}
+
+function SignUpPage() {
+  return (
+    <div className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4 py-10">
+      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+    </div>
+  );
+}
+
+function AccountControl() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const name = user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0] || '학습자';
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden text-xs font-semibold text-[hsl(var(--muted-foreground))] sm:inline" data-testid="text-account-name">
+        {name}
+      </span>
+      <button
+        type="button"
+        onClick={() => signOut({ redirectUrl: basePath || '/' })}
+        data-testid="button-sign-out"
+        className="rounded-lg px-2.5 py-2 text-xs font-bold text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+      >
+        로그아웃
+      </button>
+    </div>
   );
 }
 
@@ -162,35 +347,38 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
             <span className="h-2 w-2 rounded-full bg-[hsl(var(--accent))]" />
             매일 10분, 나를 위한 영어
           </div>
-          <div className="relative ml-auto">
-            <button
-              type="button"
-              onClick={() => setLevelOpen((open) => !open)}
-              data-testid="button-level-menu"
-              className="button-pop flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold text-[hsl(var(--foreground))]"
-              aria-expanded={levelOpen}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-[10px] text-[hsl(var(--secondary-foreground))]">민</span>
-              <span className="hidden sm:inline">{level}</span>
-              <ChevronRight size={14} className={`transition-transform ${levelOpen ? 'rotate-90' : ''}`} />
-            </button>
-            {levelOpen && (
-              <div className="soft-pop absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 shadow-[var(--shadow-md)]">
-                <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[.15em] text-[hsl(var(--muted-foreground))]">학습 레벨</p>
-                {(['Beginner', 'Intermediate', 'Advanced'] as Level[]).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    data-testid={`button-level-${item.toLowerCase()}`}
-                    onClick={() => { onLevelChange(item); setLevelOpen(false); }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${level === item ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'hover:bg-[hsl(var(--muted))]'}`}
-                  >
-                    {item}
-                    {level === item && <Check size={14} />}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setLevelOpen((open) => !open)}
+                data-testid="button-level-menu"
+                className="button-pop flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold text-[hsl(var(--foreground))]"
+                aria-expanded={levelOpen}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-[10px] text-[hsl(var(--secondary-foreground))]">민</span>
+                <span className="hidden sm:inline">{level}</span>
+                <ChevronRight size={14} className={`transition-transform ${levelOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {levelOpen && (
+                <div className="soft-pop absolute right-0 top-12 z-50 w-48 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-2 shadow-[var(--shadow-md)]">
+                  <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[.15em] text-[hsl(var(--muted-foreground))]">학습 레벨</p>
+                  {(['Beginner', 'Intermediate', 'Advanced'] as Level[]).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      data-testid={`button-level-${item.toLowerCase()}`}
+                      onClick={() => { onLevelChange(item); setLevelOpen(false); }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-colors ${level === item ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'hover:bg-[hsl(var(--muted))]'}`}
+                    >
+                      {item}
+                      {level === item && <Check size={14} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <AccountControl />
           </div>
         </header>
         <main className="mx-auto max-w-[1320px] px-5 pb-28 pt-8 sm:px-8 lg:px-12 lg:pb-12">{children}</main>
@@ -449,7 +637,20 @@ function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, se
   </Switch>;
 }
 
-function App() {
+function HomeRedirect() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/learn" />
+      </Show>
+      <Show when="signed-out">
+        <PublicLanding />
+      </Show>
+    </>
+  );
+}
+
+function LearningPortal() {
   const [level, setLevel] = useState<Level>('Intermediate');
   const [learned, setLearned] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -470,18 +671,68 @@ function App() {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <ErrorBoundary>
-            <Shell level={level} onLevelChange={setLevel}>
-              <RouterContent level={level} onLevelChange={setLevel} learned={learned} onStart={startSession} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} onMarkLearned={() => { setLearned(true); setCardFlipped(true); }} listening={listening} onListen={() => setListening(true)} onRemove={() => setLearned(false)} />
-            </Shell>
-          </ErrorBoundary>
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <>
+      <Show when="signed-in">
+        <ErrorBoundary>
+          <Shell level={level} onLevelChange={setLevel}>
+            <RouterContent level={level} onLevelChange={setLevel} learned={learned} onStart={startSession} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} onMarkLearned={() => { setLearned(true); setCardFlipped(true); }} listening={listening} onListen={() => setListening(true)} onRemove={() => setLearned(false)} />
+          </Shell>
+        </ErrorBoundary>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/" />
+      </Show>
+    </>
+  );
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      appearance={clerkAppearance}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      localization={{
+        signIn: {
+          start: {
+            title: '다시 만나서 반가워요',
+            subtitle: '계정에 로그인하고 오늘의 학습을 이어가세요',
+          },
+        },
+        signUp: {
+          start: {
+            title: 'LingoLoop 시작하기',
+            subtitle: '매일 10분의 영어 루프를 만들어보세요',
+          },
+        },
+      }}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Switch>
+            <Route path="/" component={HomeRedirect} />
+            <Route path="/sign-in/*?" component={SignInPage} />
+            <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route component={LearningPortal} />
+          </Switch>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
+  );
+}
+
+function App() {
+  return (
+    <WouterRouter base={basePath}>
+      <ClerkProviderWithRoutes />
+    </WouterRouter>
   );
 }
 
