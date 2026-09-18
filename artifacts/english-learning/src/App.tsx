@@ -16,6 +16,7 @@ import {
   Home as HomeIcon,
   Layers3,
   Lightbulb,
+  MessageCircle,
   RotateCcw,
   Sparkles,
   Target,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import PassagePractice from '@/components/passage-practice';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -101,6 +103,7 @@ function Sidebar({ location }: { location: string }) {
         <nav className="space-y-1.5">
           <NavItem href="/" label="오늘의 연습" icon={HomeIcon} active={location === '/'} />
           <NavItem href="/learn" label="배우기" icon={BookOpen} active={location === '/learn'} />
+          <NavItem href="/passage" label="지문 연습" icon={MessageCircle} active={location === '/passage'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
         </nav>
@@ -126,6 +129,7 @@ function MobileNav({ location }: { location: string }) {
       {[
         { href: '/', label: '오늘', icon: HomeIcon },
         { href: '/learn', label: '배우기', icon: BookOpen },
+          { href: '/passage', label: '지문', icon: MessageCircle },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
       ].map(({ href, label, icon: Icon }) => (
@@ -386,7 +390,10 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
           </button>
         </div>
       </section>
-      <div className="rise-in stagger-2 flex items-center gap-3 rounded-2xl bg-[hsl(var(--secondary)/.5)] px-5 py-4 text-xs text-[hsl(var(--secondary-foreground))]"><Lightbulb size={17} /><span><strong>팁:</strong> 카페에서 우연히 좋은 장소를 발견했을 때, “I stumbled upon...”으로 문장을 시작해보세요.</span></div>
+      <div className="rise-in stagger-2 flex flex-col items-start justify-between gap-4 rounded-2xl bg-[hsl(var(--secondary)/.5)] px-5 py-4 text-xs text-[hsl(var(--secondary-foreground))] sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3"><Lightbulb size={17} /><span><strong>팁:</strong> 카페에서 우연히 좋은 장소를 발견했을 때, “I stumbled upon...”으로 문장을 시작해보세요.</span></div>
+        <Link href="/passage" data-testid="link-passage-practice" className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[hsl(var(--card)/.55)] px-3 py-2 font-bold text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--card))]">지문 전체 연습 <ArrowRight size={14} /></Link>
+      </div>
     </div>
   );
 }
@@ -435,6 +442,7 @@ function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, se
   return <Switch>
     <Route path="/"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} /></Route>
+    <Route path="/passage"><PassagePractice /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
     <Route component={NotFound} />
