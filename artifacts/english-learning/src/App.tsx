@@ -40,6 +40,7 @@ import PassagePractice, { type PassageEvaluation } from '@/components/passage-pr
 import AdminUpload from '@/components/admin-upload';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { useAdminAccess } from '@/hooks/use-admin-access';
+import LevelAssignments from '@/components/level-assignments';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -507,6 +508,8 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
           </Link>
         </div>
       </section>
+
+      <LevelAssignments level={level} />
 
       <section className="rise-in stagger-2 grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
         <div className="rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-6">

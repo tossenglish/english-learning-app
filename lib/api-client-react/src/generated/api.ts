@@ -21,8 +21,12 @@ import type {
 
 import type {
   AdminStatus,
+  Assignment,
+  AssignmentMember,
+  CreateAssignmentRequest,
   ErrorEnvelope,
   HealthStatus,
+  ListAssignmentsParams,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -296,6 +300,406 @@ export function useGetAdminStatus<TData = Awaited<ReturnType<typeof getAdminStat
 
 
 
+
+export const getListAssignmentsUrl = (params: ListAssignmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/assignments?${stringifiedParams}` : `/api/assignments`
+}
+
+/**
+ * @summary 현재 레벨에 배정된 공개 과제 조회
+ */
+export const listAssignments = async (params: ListAssignmentsParams, options?: Parameters<typeof customFetch>[1]): Promise<Assignment[]> => {
+
+  return customFetch<Assignment[]>(getListAssignmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssignmentsQueryKey = (params?: ListAssignmentsParams,) => {
+    return [
+    `/api/assignments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listAssignments>>, TError = ErrorType<ErrorEnvelope>>(params: ListAssignmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssignmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssignments>>> = ({ signal }) => listAssignments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAssignments>>>
+export type ListAssignmentsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 현재 레벨에 배정된 공개 과제 조회
+ */
+
+export function useListAssignments<TData = Awaited<ReturnType<typeof listAssignments>>, TError = ErrorType<ErrorEnvelope>>(
+ params: ListAssignmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssignmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminAssignmentsUrl = () => {
+
+
+
+
+  return `/api/admin/assignments`
+}
+
+/**
+ * @summary 관리자가 전체 과제 조회
+ */
+export const listAdminAssignments = async ( options?: Parameters<typeof customFetch>[1]): Promise<Assignment[]> => {
+
+  return customFetch<Assignment[]>(getListAdminAssignmentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAssignmentsQueryKey = () => {
+    return [
+    `/api/admin/assignments`
+    ] as const;
+    }
+
+
+export const getListAdminAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAssignments>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAssignmentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAssignments>>> = ({ signal }) => listAdminAssignments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAssignments>>>
+export type ListAdminAssignmentsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 관리자가 전체 과제 조회
+ */
+
+export function useListAdminAssignments<TData = Awaited<ReturnType<typeof listAdminAssignments>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAssignmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminMembersUrl = () => {
+
+
+
+
+  return `/api/admin/members`
+}
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+export const listAdminMembers = async ( options?: Parameters<typeof customFetch>[1]): Promise<AssignmentMember[]> => {
+
+  return customFetch<AssignmentMember[]>(getListAdminMembersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminMembersQueryKey = () => {
+    return [
+    `/api/admin/members`
+    ] as const;
+    }
+
+
+export const getListAdminMembersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminMembers>>> = ({ signal }) => listAdminMembers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminMembers>>>
+export type ListAdminMembersQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+
+export function useListAdminMembers<TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAssignmentUrl = () => {
+
+
+
+
+  return `/api/admin/members`
+}
+
+/**
+ * @summary 레벨별 과제 등록
+ */
+export const createAssignment = async (createAssignmentRequest: CreateAssignmentRequest, options?: Parameters<typeof customFetch>[1]): Promise<Assignment> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Assignment>(getCreateAssignmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createAssignmentRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateAssignmentMutationKey = () => ['createAssignment'] as const;
+
+export const getCreateAssignmentMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssignment>>, TError,CreateAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAssignment>>, TError,CreateAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getCreateAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAssignment>>, CreateAssignmentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAssignment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof createAssignment>>>
+    export type CreateAssignmentMutationBody = BodyType<CreateAssignmentRequest>
+    export type CreateAssignmentMutationError = ErrorType<ErrorEnvelope>
+    export type CreateAssignmentMutationVariables = {data: BodyType<CreateAssignmentRequest>}
+
+    /**
+ * @summary 레벨별 과제 등록
+ */
+export const useCreateAssignment = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssignment>>, TError,CreateAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAssignment>>,
+        TError,
+        CreateAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAssignmentMutationOptions(options));
+    }
+
+export const getDeleteAssignmentUrl = (assignmentId: number,) => {
+
+
+
+
+  return `/api/admin/assignments/${assignmentId}`
+}
+
+/**
+ * @summary 등록한 과제 삭제
+ */
+export const deleteAssignment = async (assignmentId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAssignmentUrl(assignmentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAssignmentMutationKey = () => ['deleteAssignment'] as const;
+
+export const getDeleteAssignmentMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssignment>>, TError,DeleteAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAssignment>>, TError,DeleteAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAssignment>>, DeleteAssignmentMutationVariables> = (props) => {
+          const {assignmentId} = props ?? {};
+
+          return  deleteAssignment(assignmentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAssignment>>>
+
+    export type DeleteAssignmentMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteAssignmentMutationVariables = {assignmentId: number}
+
+    /**
+ * @summary 등록한 과제 삭제
+ */
+export const useDeleteAssignment = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssignment>>, TError,DeleteAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAssignment>>,
+        TError,
+        DeleteAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAssignmentMutationOptions(options));
+    }
 
 export const getGetStorageObjectUrl = (objectPath: string,) => {
 

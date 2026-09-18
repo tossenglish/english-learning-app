@@ -7,7 +7,12 @@
  */
 
 export * from './adminStatus';
+export * from './assignment';
+export * from './assignmentMember';
+export * from './createAssignmentRequest';
 export * from './errorEnvelope';
 export * from './healthStatus';
+export * from './learningLevel';
+export * from './listAssignmentsParams';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

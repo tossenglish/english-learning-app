@@ -35,3 +35,65 @@ export interface AdminStatus {
   isAdmin: boolean;
 }
 
+export type LearningLevel = typeof LearningLevel[keyof typeof LearningLevel];
+
+
+export const LearningLevel = {
+  Beginner: 'Beginner',
+  Intermediate: 'Intermediate',
+  Advanced: 'Advanced',
+  All: 'All',
+} as const;
+
+export interface Assignment {
+  id: number;
+  title: string;
+  description: string;
+  level: LearningLevel;
+  /** @nullable */
+  assigneeUserId?: string | null;
+  /** @nullable */
+  assigneeName?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  resourcePath?: string | null;
+  /** @nullable */
+  resourceName?: string | null;
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface CreateAssignmentRequest {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /** @maxLength 4000 */
+  description: string;
+  level: LearningLevel;
+  /** @nullable */
+  assigneeUserId?: string | null;
+  /** @nullable */
+  assigneeName?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  /** @nullable */
+  resourcePath?: string | null;
+  /** @nullable */
+  resourceName?: string | null;
+  isPublished: boolean;
+}
+
+export interface AssignmentMember {
+  id: string;
+  displayName: string;
+  /** @nullable */
+  email?: string | null;
+}
+
+export type ListAssignmentsParams = {
+level: LearningLevel;
+};
+

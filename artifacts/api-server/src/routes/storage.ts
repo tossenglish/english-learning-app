@@ -1,5 +1,4 @@
 import { Readable } from 'stream';
-import { clerkClient, getAuth } from '@clerk/express';
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
@@ -10,27 +9,10 @@ import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+import { getUserId, isAdmin } from '../lib/auth';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
-
-function getUserId(req: Request): string | null {
-  const auth = getAuth(req);
-  const claimUserId = auth?.sessionClaims?.userId;
-  if (typeof claimUserId === 'string') return claimUserId;
-  return auth?.userId || null;
-}
-
-async function isAdmin(req: Request): Promise<boolean> {
-  const userId = getUserId(req);
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!userId || !adminEmail) return false;
-
-  const user = await clerkClient.users.getUser(userId);
-  return user.emailAddresses.some(
-    ({ emailAddress }) => emailAddress.toLowerCase() === adminEmail,
-  );
-}
 
 router.get('/admin/status', async (req: Request, res: Response) => {
   if (!getUserId(req)) {

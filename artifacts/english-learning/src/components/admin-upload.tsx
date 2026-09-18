@@ -7,13 +7,9 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { useAdminAccess } from '@/hooks/use-admin-access';
+import AdminAssignments, { type AssignmentResource } from '@/components/admin-assignments';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
-type UploadedFile = {
-  name: string;
-  objectPath: string;
-};
 
 export default function AdminUpload() {
   const { isAdmin, isChecking } = useAdminAccess();
@@ -21,7 +17,7 @@ export default function AdminUpload() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
-  const [uploaded, setUploaded] = useState<UploadedFile | null>(null);
+  const [uploaded, setUploaded] = useState<AssignmentResource | null>(null);
 
   const upload = async () => {
     if (!file || status === 'uploading') return;
@@ -192,6 +188,7 @@ export default function AdminUpload() {
           </button>
         </div>
       </section>
+      <AdminAssignments latestUpload={uploaded} />
     </div>
   );
 }

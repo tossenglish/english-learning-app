@@ -58,6 +58,105 @@ export const GetAdminStatusResponse = zod.object({
 
 
 /**
+ * @summary 현재 레벨에 배정된 공개 과제 조회
+ */
+export const ListAssignmentsQueryParams = zod.object({
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All'])
+})
+
+export const ListAssignmentsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "assigneeUserId": zod.string().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "resourcePath": zod.string().nullish(),
+  "resourceName": zod.string().nullish(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem)
+
+
+/**
+ * @summary 관리자가 전체 과제 조회
+ */
+export const ListAdminAssignmentsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "assigneeUserId": zod.string().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "resourcePath": zod.string().nullish(),
+  "resourceName": zod.string().nullish(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminAssignmentsResponse = zod.array(ListAdminAssignmentsResponseItem)
+
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+export const ListAdminMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "displayName": zod.string(),
+  "email": zod.string().nullish()
+})
+export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
+
+
+/**
+ * @summary 레벨별 과제 등록
+ */
+export const createAssignmentBodyTitleMax = 160;
+
+export const createAssignmentBodyDescriptionMax = 4000;
+
+
+
+export const CreateAssignmentBody = zod.object({
+  "title": zod.string().min(1).max(createAssignmentBodyTitleMax),
+  "description": zod.string().max(createAssignmentBodyDescriptionMax),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "assigneeUserId": zod.string().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "resourcePath": zod.string().nullish(),
+  "resourceName": zod.string().nullish(),
+  "isPublished": zod.boolean()
+})
+
+export const CreateAssignmentResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "assigneeUserId": zod.string().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "resourcePath": zod.string().nullish(),
+  "resourceName": zod.string().nullish(),
+  "isPublished": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary 등록한 과제 삭제
+ */
+export const DeleteAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.number().int()
+})
+
+export const DeleteAssignmentResponse = zod.void()
+
+
+/**
  * @summary 업로드된 파일 제공
  */
 export const GetStorageObjectParams = zod.object({
