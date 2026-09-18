@@ -453,7 +453,7 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[hsl(var(--accent))]" data-testid="text-greeting-label">
             <Sparkles size={14} /> Friday, May 24
           </p>
-          <h1 className="font-sans text-3xl font-bold tracking-[-.04em] text-[hsl(var(--foreground))] sm:text-4xl" data-testid="text-welcome">좋은 아침이에요, 민지님<span className="text-[hsl(var(--accent))]">.</span></h1>
+          <h1 className="font-sans text-3xl font-bold tracking-[-.04em] text-[hsl(var(--foreground))] sm:text-4xl" data-testid="text-welcome">다시 만나서 반가워요, 민지님<span className="text-[hsl(var(--accent))]">.</span></h1>
           <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]" data-testid="text-level-message">{levelCopy[level].korean}</p>
         </div>
         <div className="flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card)/.55)] p-1.5 pl-3.5">
