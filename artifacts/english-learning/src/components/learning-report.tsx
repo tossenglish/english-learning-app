@@ -148,7 +148,7 @@ export default function LearningReport({
         pdf.addImage(image, 'JPEG', 0, y, pageWidth, imageHeight);
         remaining -= pageHeight;
       }
-      pdf.save(`lingoloop-learning-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(`영어의신-학습리포트-${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       setExporting(false);
     }
@@ -179,7 +179,7 @@ export default function LearningReport({
           <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
             <div>
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">
-                LingoLoop · {reportDate}
+                영어의신 · {reportDate}
               </p>
               <h2 className="mt-4 text-3xl font-bold tracking-[-.05em]">나의 영어 학습 기록</h2>
               <p className="mt-2 text-sm text-[hsl(var(--sidebar-foreground)/.6)]">
