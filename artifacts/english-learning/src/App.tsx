@@ -105,7 +105,7 @@ const clerkAppearance = {
   options: {
     logoPlacement: 'inside' as const,
     logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/logo-cat.png`,
   },
   variables: {
     colorPrimary: '#e88942',
@@ -147,14 +147,19 @@ const clerkAppearance = {
   },
 };
 
-function Logo() {
+function Logo({ inverse = false }: { inverse?: boolean }) {
   return (
     <Link href="/" className="group flex items-center gap-3" data-testid="link-logo">
-      <span className="relative flex h-10 w-10 items-center justify-center rounded-[14px] bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar)]">
-        <span className="absolute h-5 w-5 rounded-full border-[3px] border-[hsl(var(--sidebar))] border-r-transparent transition-transform duration-500 group-hover:rotate-180" />
-        <span className="absolute h-2 w-2 translate-x-1 rounded-full bg-[hsl(var(--accent))]" />
-      </span>
-      <span className="font-mono text-[15px] font-bold tracking-[-0.04em] text-[hsl(var(--sidebar-foreground))]">
+      <img
+        src={`${basePath}/logo-cat.png`}
+        alt="영어의신 페르시안 고양이 로고"
+        className="h-11 w-11 object-contain transition-transform duration-300 group-hover:scale-105"
+      />
+      <span className={`font-mono text-[15px] font-bold tracking-[-0.04em] ${
+        inverse
+          ? 'text-[hsl(var(--sidebar-foreground))]'
+          : 'text-[hsl(var(--foreground))]'
+      }`}>
         영어의신<span className="text-[hsl(var(--sidebar-primary))]">.</span>
       </span>
     </Link>
@@ -303,7 +308,7 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 function Sidebar({ location }: { location: string }) {
   return (
     <aside className="hidden min-h-[100dvh] w-[248px] shrink-0 flex-col bg-[hsl(var(--sidebar))] px-5 py-7 md:flex">
-      <Logo />
+      <Logo inverse />
       <div className="mt-14">
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
