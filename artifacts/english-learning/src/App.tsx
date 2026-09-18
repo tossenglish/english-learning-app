@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -36,8 +36,9 @@ import {
 } from 'lucide-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
-import PassagePractice from '@/components/passage-practice';
+import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
 import AdminUpload from '@/components/admin-upload';
+import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
@@ -71,6 +72,14 @@ const weekData = [
 ];
 
 const quizOptions = ['계획된 만남', '뜻밖의 행운', '오래된 기억', '작은 실수'];
+const emptyPassageEvaluation: PassageEvaluation = {
+  completedSteps: 0,
+  totalSteps: 12,
+  dictationCompleted: 0,
+  writingCompleted: 0,
+  shadowingCompleted: 0,
+  wrongAttempts: 0,
+};
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -303,6 +312,7 @@ function Sidebar({ location }: { location: string }) {
           <NavItem href="/passage" label="지문 연습" icon={MessageCircle} active={location === '/passage'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
+          <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
         </nav>
       </div>
       <div className="mt-auto rounded-2xl border border-[hsl(var(--sidebar-foreground)/.12)] bg-[hsl(var(--sidebar-accent)/.55)] p-4">
@@ -627,7 +637,7 @@ function Progress({ learned }: { learned: boolean }) {
         <div className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8"><div className="flex items-end justify-between"><div><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Weekly rhythm</p><h2 className="mt-2 text-lg font-bold">이번 주 학습 리듬</h2></div><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">May 20 — 26</span></div><div className="mt-10 flex h-44 items-end justify-between gap-2 sm:gap-4">{weekData.map((day, index) => { const current = index === 4 && learned; const height = current ? 65 : day.minutes ? Math.max(35, day.minutes * 7) : 9; return <div key={day.day} className="flex h-full flex-1 flex-col items-center justify-end gap-3"><div className="relative flex h-full w-full items-end justify-center"><div className={`progress-grow w-full max-w-[40px] rounded-t-lg ${current ? 'bg-[hsl(var(--accent))]' : day.done ? 'bg-[hsl(var(--secondary-foreground)/.72)]' : 'bg-[hsl(var(--muted))]'}`} style={{ height: `${height}%` }} data-testid={`bar-progress-${day.day}`} />{current && <span className="absolute -top-6 font-mono text-[9px] font-bold text-[hsl(var(--accent))]">10m</span>}</div><span className={`text-xs font-bold ${current ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>{day.day}</span></div>; })}</div></div>
         <div className="rounded-[26px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))]"><div className="flex items-center justify-between"><span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.5)]">Next milestone</span><Trophy size={18} className="text-[hsl(var(--sidebar-primary))]" /></div><div className="mt-10"><p className="text-4xl font-bold tracking-[-.07em]">10일</p><p className="mt-2 text-sm text-[hsl(var(--sidebar-foreground)/.6)]">연속 학습까지 3일 남았어요.</p></div><div className="mt-8 h-2 overflow-hidden rounded-full bg-[hsl(var(--sidebar-accent))]"><div className="progress-grow h-full w-[70%] rounded-full bg-[hsl(var(--sidebar-primary))]" /></div><p className="mt-3 text-right font-mono text-[10px] text-[hsl(var(--sidebar-foreground)/.45)]">7 / 10 DAYS</p></div>
       </section>
-      <section className="rise-in stagger-3 flex flex-col items-start justify-between gap-4 rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)] p-6 sm:flex-row sm:items-center"><div className="flex items-start gap-3"><Sparkles size={20} className="mt-0.5 text-[hsl(var(--accent))]" /><div><p className="text-sm font-bold">민지님의 루프는 잘 돌아가고 있어요.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">오늘 10분을 채우면 이번 주 목표의 57%를 달성해요.</p></div></div><Link href="/learn" data-testid="link-progress-practice" className="flex shrink-0 items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">오늘 연습하기 <ArrowRight size={14} /></Link></section>
+      <section className="rise-in stagger-3 flex flex-col items-start justify-between gap-4 rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)] p-6 sm:flex-row sm:items-center"><div className="flex items-start gap-3"><Sparkles size={20} className="mt-0.5 text-[hsl(var(--accent))]" /><div><p className="text-sm font-bold">민지님의 루프는 잘 돌아가고 있어요.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">오늘 10분을 채우면 이번 주 목표의 57%를 달성해요.</p></div></div><div className="flex flex-wrap items-center gap-4"><Link href="/report" data-testid="link-progress-report" className="flex shrink-0 items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">평가 리포트 <BarChart3 size={14} /></Link><Link href="/learn" data-testid="link-progress-practice" className="flex shrink-0 items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">오늘 연습하기 <ArrowRight size={14} /></Link></div></section>
     </div>
   );
 }
@@ -636,15 +646,16 @@ function NotFound() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] p-6 text-center"><div><p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-[hsl(var(--accent))]">404 / loop lost</p><h1 className="mt-4 text-4xl font-bold">이 페이지는 아직 없어요.</h1><Link href="/" data-testid="link-not-found-home" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[hsl(var(--accent))]">오늘로 돌아가기 <ArrowRight size={16} /></Link></div></div>;
 }
 
-function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove }: {
-  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: () => void; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void;
+function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress }: {
+  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: () => void; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void;
 }) {
   return <Switch>
     <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} /></Route>
-    <Route path="/passage"><PassagePractice /></Route>
+    <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
+    <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>
     <Route path="/admin"><AdminUpload /></Route>
     <Route component={NotFound} />
   </Switch>;
@@ -668,8 +679,14 @@ function LearningPortal() {
   const [learned, setLearned] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
+  const [quizAttempts, setQuizAttempts] = useState(0);
   const [listening, setListening] = useState(false);
+  const [hasListened, setHasListened] = useState(false);
+  const [passageEvaluation, setPassageEvaluation] = useState<PassageEvaluation>(emptyPassageEvaluation);
   const [, setLocation] = useLocation();
+  const handlePassageProgress = useCallback((evaluation: PassageEvaluation) => {
+    setPassageEvaluation(evaluation);
+  }, []);
 
   useEffect(() => {
     if (!listening) return;
@@ -681,6 +698,16 @@ function LearningPortal() {
     setLocation('/learn');
     setCardFlipped(false);
     setQuizAnswer(null);
+    setQuizAttempts(0);
+  };
+
+  const metrics: LearningMetrics = {
+    cardFlipped,
+    hasListened,
+    learned,
+    quizAnswer,
+    quizAttempts,
+    passage: passageEvaluation,
   };
 
   return (
@@ -688,7 +715,28 @@ function LearningPortal() {
       <Show when="signed-in">
         <ErrorBoundary>
           <Shell level={level} onLevelChange={setLevel}>
-            <RouterContent level={level} onLevelChange={setLevel} learned={learned} onStart={startSession} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} onMarkLearned={() => { setLearned(true); setCardFlipped(true); }} listening={listening} onListen={() => setListening(true)} onRemove={() => setLearned(false)} />
+            <RouterContent
+              level={level}
+              onLevelChange={setLevel}
+              learned={learned}
+              onStart={startSession}
+              cardFlipped={cardFlipped}
+              setCardFlipped={setCardFlipped}
+              quizAnswer={quizAnswer}
+              setQuizAnswer={(answer) => {
+                setQuizAnswer(answer);
+                setQuizAttempts((attempts) => attempts + 1);
+              }}
+              onMarkLearned={() => { setLearned(true); setCardFlipped(true); }}
+              listening={listening}
+              onListen={() => {
+                setListening(true);
+                setHasListened(true);
+              }}
+              onRemove={() => setLearned(false)}
+              metrics={metrics}
+              onPassageProgress={handlePassageProgress}
+            />
           </Shell>
         </ErrorBoundary>
       </Show>

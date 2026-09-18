@@ -24,6 +24,16 @@ type PassageSentence = {
 };
 
 type Completion = Record<ExerciseMode, boolean>;
+type AttemptCounts = Record<ExerciseMode, number>;
+
+export type PassageEvaluation = {
+  completedSteps: number;
+  totalSteps: number;
+  dictationCompleted: number;
+  writingCompleted: number;
+  shadowingCompleted: number;
+  wrongAttempts: number;
+};
 
 const passageSentences: PassageSentence[] = [
   {
@@ -90,6 +100,12 @@ const blankAnswers = (): Record<ExerciseMode, string> => ({
   shadowing: '',
 });
 
+const blankAttempts = (): AttemptCounts => ({
+  dictation: 0,
+  writing: 0,
+  shadowing: 0,
+});
+
 function normalizeAnswer(value: string) {
   return value
     .toLowerCase()
@@ -115,11 +131,16 @@ function speakSentence(sentence: string, onStart: () => void, onEnd: () => void)
   return true;
 }
 
-export default function PassagePractice() {
+export default function PassagePractice({
+  onProgressChange,
+}: {
+  onProgressChange?: (evaluation: PassageEvaluation) => void;
+}) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mode, setMode] = useState<ExerciseMode>('dictation');
   const [answers, setAnswers] = useState<Record<number, Record<ExerciseMode, string>>>({});
   const [completed, setCompleted] = useState<Record<number, Completion>>({});
+  const [attempts, setAttempts] = useState<Record<number, AttemptCounts>>({});
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'hint' | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -140,6 +161,36 @@ export default function PassagePractice() {
   );
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
+  useEffect(() => {
+    const byMode = {
+      dictation: 0,
+      writing: 0,
+      shadowing: 0,
+    };
+    let totalAnswerAttempts = 0;
+
+    for (const sentence of passageSentences) {
+      const progress = completed[sentence.id] ?? blankCompletion();
+      const sentenceAttempts = attempts[sentence.id] ?? blankAttempts();
+      for (const exerciseMode of modes) {
+        if (progress[exerciseMode.id]) byMode[exerciseMode.id] += 1;
+      }
+      totalAnswerAttempts += sentenceAttempts.dictation + sentenceAttempts.writing;
+    }
+
+    onProgressChange?.({
+      completedSteps,
+      totalSteps: passageSentences.length * modes.length,
+      dictationCompleted: byMode.dictation,
+      writingCompleted: byMode.writing,
+      shadowingCompleted: byMode.shadowing,
+      wrongAttempts: Math.max(
+        0,
+        totalAnswerAttempts - byMode.dictation - byMode.writing,
+      ),
+    });
+  }, [attempts, completed, completedSteps, onProgressChange]);
 
   const updateAnswer = (value: string) => {
     setAnswers((previous) => ({
@@ -165,6 +216,14 @@ export default function PassagePractice() {
   };
 
   const checkAnswer = () => {
+    setAttempts((previous) => ({
+      ...previous,
+      [current.id]: {
+        ...(previous[current.id] ?? blankAttempts()),
+        [mode]: (previous[current.id]?.[mode] ?? 0) + 1,
+      },
+    }));
+
     if (mode === 'shadowing') {
       markComplete();
       return;
