@@ -13,15 +13,9 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
 
 type ExerciseMode = 'dictation' | 'writing' | 'shadowing';
-
-type PassageSentence = {
-  id: number;
-  english: string;
-  korean: string;
-  hint: string;
-};
 
 type Completion = Record<ExerciseMode, boolean>;
 type AttemptCounts = Record<ExerciseMode, number>;
@@ -35,7 +29,7 @@ export type PassageEvaluation = {
   wrongAttempts: number;
 };
 
-const passageSentences: PassageSentence[] = [
+const defaultPassageSentences: PracticeSentence[] = [
   {
     id: 1,
     english: 'I stumbled upon a little café.',
@@ -144,6 +138,8 @@ export default function PassagePractice({
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'hint' | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const activeMaterial = useMemo(() => readActivePracticeMaterial(), []);
+  const passageSentences = activeMaterial?.sentences ?? defaultPassageSentences;
 
   const current = passageSentences[currentIndex];
   const currentAnswers = answers[current.id] ?? blankAnswers();
@@ -285,7 +281,7 @@ export default function PassagePractice({
             Sentence studio
           </p>
           <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl" data-testid="text-passage-title">
-            지문의 모든 문장을<br className="sm:hidden" /> 내 것으로 만들어요.
+            {activeMaterial ? activeMaterial.title : '지문의 모든 문장을'}<br className="sm:hidden" /> 내 것으로 만들어요.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
             한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.
@@ -315,12 +311,14 @@ export default function PassagePractice({
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">
                 Today's passage
               </p>
-              <h2 className="mt-2 text-lg font-bold">작은 발견</h2>
+              <h2 className="mt-2 text-lg font-bold">{activeMaterial?.title || '작은 발견'}</h2>
             </div>
             <MessageCircle size={19} className="text-[hsl(var(--accent))]" />
           </div>
           <p className="mt-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-            작은 카페를 발견한 오후의 이야기예요.
+            {activeMaterial
+              ? `업로드한 자료에서 ${passageSentences.length}개의 연습 문장을 불러왔어요.`
+              : '작은 카페를 발견한 오후의 이야기예요.'}
           </p>
 
           <div className="mt-7 space-y-2">

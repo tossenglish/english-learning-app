@@ -17,8 +17,12 @@ const levelLabels: Record<LearningLevel, string> = {
 
 export default function LevelAssignments({
   level,
+  onAssignmentsChange,
+  onStartPractice,
 }: {
   level: Exclude<LearningLevel, 'All'>;
+  onAssignmentsChange?: (assignments: Assignment[]) => void;
+  onStartPractice?: (assignment: Assignment) => void;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +38,10 @@ export default function LevelAssignments({
         if (!response.ok) return [];
         return response.json() as Promise<Assignment[]>;
       })
-      .then(setAssignments)
+      .then((loaded) => {
+        setAssignments(loaded);
+        onAssignmentsChange?.(loaded);
+      })
       .catch((error) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setAssignments([]);
@@ -44,7 +51,7 @@ export default function LevelAssignments({
       });
 
     return () => controller.abort();
-  }, [level]);
+  }, [level, onAssignmentsChange]);
 
   return (
     <section className="rise-in stagger-2 rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-6">
@@ -96,6 +103,13 @@ export default function LevelAssignments({
                   <ArrowRight size={14} />
                 </a>
               )}
+              <button
+                type="button"
+                onClick={() => onStartPractice?.(assignment)}
+                className="button-pop mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--primary-foreground))]"
+              >
+                이 자료로 연습 시작 <ArrowRight size={14} />
+              </button>
             </article>
           ))}
         </div>

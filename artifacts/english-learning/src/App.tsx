@@ -41,6 +41,8 @@ import AdminUpload from '@/components/admin-upload';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
+import type { Assignment } from '@workspace/api-client-react';
+import { prepareAssignmentPractice } from '@/lib/practice-material';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -445,8 +447,19 @@ function ProgressRing({ percent }: { percent: number }) {
   );
 }
 
-function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: () => void }) {
+function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void> }) {
   const completed = learned ? 4 : 3;
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [startError, setStartError] = useState('');
+
+  const startPractice = async (assignment?: Assignment) => {
+    setStartError('');
+    try {
+      await onStart(assignment);
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : '자료를 연습으로 불러오지 못했습니다.');
+    }
+  };
   return (
     <div className="space-y-8">
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -474,9 +487,10 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
               </div>
               <h2 className="max-w-md text-3xl font-bold leading-[1.12] tracking-[-.04em] text-[hsl(var(--sidebar-primary))] sm:text-[40px]">{levelCopy[level].next}.</h2>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.6)]">{levelCopy[level].detail} 오늘은 하나의 단어와 문장을 내 것으로 만들어요.</p>
-              <button type="button" onClick={onStart} data-testid="button-start-session" className="button-pop mt-7 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--sidebar))]">
+              <button type="button" onClick={() => void startPractice(assignments[0])} data-testid="button-start-session" className="button-pop mt-7 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--sidebar))]">
                 {learned ? '한 번 더 연습하기' : '오늘의 연습 시작'} <ArrowRight size={17} />
               </button>
+              {startError && <p className="mt-3 max-w-sm text-xs font-semibold text-[hsl(var(--sidebar-primary))]">{startError}</p>}
             </div>
             <div className="flex shrink-0 justify-center sm:pr-5">
               <ProgressRing percent={learned ? 80 : 60} />
@@ -509,7 +523,11 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
         </div>
       </section>
 
-      <LevelAssignments level={level} />
+      <LevelAssignments
+        level={level}
+        onAssignmentsChange={setAssignments}
+        onStartPractice={(assignment) => void startPractice(assignment)}
+      />
 
       <section className="rise-in stagger-2 grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
         <div className="rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-6">
@@ -655,7 +673,7 @@ function NotFound() {
 }
 
 function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress }: {
-  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: () => void; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void;
+  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void;
 }) {
   return <Switch>
     <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
@@ -702,7 +720,13 @@ function LearningPortal() {
     return () => window.clearTimeout(timer);
   }, [listening]);
 
-  const startSession = () => {
+  const startSession = async (assignment?: Assignment) => {
+    if (assignment) {
+      await prepareAssignmentPractice(assignment);
+      setLocation('/passage');
+      return;
+    }
+
     setLocation('/learn');
     setCardFlipped(false);
     setQuizAnswer(null);
