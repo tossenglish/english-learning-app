@@ -1,6 +1,6 @@
-# [Project name]
+# LingoLoop
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+한국어 사용자가 매일 10분 동안 영어 단어와 실생활 문장을 익히고 짧은 퀴즈로 복습하는 학습 웹앱입니다.
 
 ## Run & Operate
 
@@ -22,15 +22,22 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/english-learning/src/App.tsx` — 라우팅, 학습 상태, 주요 화면과 인터랙션
+- `artifacts/english-learning/src/index.css` — 앱 전체 색상 토큰과 모션 스타일
+- `artifacts/english-learning/package.json` — 프론트엔드 실행 및 빌드 설정
+- `artifacts/api-server` — 공유 API 서버 스캐폴드 (현재 LingoLoop는 로컬 상태 기반으로 동작)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- 첫 버전은 별도 계정이나 서버 저장 없이 로컬 React 상태로 핵심 학습 흐름을 빠르게 체험할 수 있도록 구성했습니다.
+- Wouter의 평면 라우팅으로 오늘의 연습, 배우기, 단어장, 나의 기록 화면을 분리했습니다.
+- 학습 상태는 단어 카드 뒤집기, 퀴즈 선택, 단어장 저장, 레벨 선택이 화면 간 이어지도록 상위 App 상태에서 관리합니다.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- 사용자는 Beginner, Intermediate, Advanced 레벨을 선택할 수 있습니다.
+- 오늘의 단어 `serendipity`와 실생활 문장을 보고, 카드를 뒤집고, 발음을 듣고, 4지선다 퀴즈를 풀 수 있습니다.
+- 학습한 단어를 단어장에 저장하고 삭제할 수 있으며, 스트릭·주간 학습 시간·완료 레슨을 확인할 수 있습니다.
 
 ## User preferences
 

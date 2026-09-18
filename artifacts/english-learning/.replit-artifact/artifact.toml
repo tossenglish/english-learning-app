@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "영어 학습 웹앱"
+description = "초급 학습자가 매일 단어와 실생활 문장을 익히고 짧은 퀴즈로 복습할 수 있는 영어 학습 웹앱입니다. 레벨별 학습, 오늘의 진행률, 발음 연습 흐름을 제공합니다."
+version = "1.0.0"
+id = "artifacts/english-learning"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22575
+
+[services.development]
+run = "pnpm --filter @workspace/english-learning run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/english-learning", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/english-learning/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22575"
+BASE_PATH = "/"
