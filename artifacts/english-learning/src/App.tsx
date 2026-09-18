@@ -50,7 +50,7 @@ const levelCopy: Record<Level, { korean: string; detail: string; next: string }>
     next: '오늘은 생활 속 단어부터',
   },
   Intermediate: {
-    korean: '대화 속에서 자연스럽게 쓰이는 표현을 익혀요.',
+    korean: 'Practice Makes Perfect!',
     detail: '알고 있는 단어를 내 문장으로 바꿔보는 단계예요.',
     next: '오늘은 발견의 순간을 말해봐요',
   },
@@ -471,7 +471,7 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
               <div className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
                 <Clock3 size={15} /> Today's focus
               </div>
-              <h2 className="max-w-md text-3xl font-bold leading-[1.12] tracking-[-.04em] sm:text-[40px]">10분이면 충분해요.<br /><span className="text-[hsl(var(--sidebar-primary))]">{levelCopy[level].next}.</span></h2>
+              <h2 className="max-w-md text-3xl font-bold leading-[1.12] tracking-[-.04em] text-[hsl(var(--sidebar-primary))] sm:text-[40px]">{levelCopy[level].next}.</h2>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.6)]">{levelCopy[level].detail} 오늘은 하나의 단어와 문장을 내 것으로 만들어요.</p>
               <button type="button" onClick={onStart} data-testid="button-start-session" className="button-pop mt-7 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--sidebar))]">
                 {learned ? '한 번 더 연습하기' : '오늘의 연습 시작'} <ArrowRight size={17} />
