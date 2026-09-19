@@ -367,13 +367,17 @@ components:
       enum: [Beginner, Intermediate, Advanced, All]
     Assignment:
       type: object
-      required: [id, title, description, level, isPublished, createdAt]
+      required: [id, title, description, materialType, materialContent, level, isPublished, createdAt]
       properties:
         id:
           type: integer
         title:
           type: string
         description:
+          type: string
+        materialType:
+          $ref: "#/components/schemas/MaterialType"
+        materialContent:
           type: string
         level:
           $ref: "#/components/schemas/LearningLevel"
@@ -394,7 +398,7 @@ components:
           format: date-time
     CreateAssignmentRequest:
       type: object
-      required: [title, description, level, isPublished]
+      required: [title, description, materialType, materialContent, level, isPublished]
       properties:
         title:
           type: string
@@ -403,6 +407,11 @@ components:
         description:
           type: string
           maxLength: 4000
+        materialType:
+          $ref: "#/components/schemas/MaterialType"
+        materialContent:
+          type: string
+          maxLength: 20000
         level:
           $ref: "#/components/schemas/LearningLevel"
         assigneeUserId:
@@ -417,6 +426,9 @@ components:
           type: [string, "null"]
         isPublished:
           type: boolean
+    MaterialType:
+      type: string
+      enum: [sentence, word]
     AssignmentMember:
       type: object
       required: [id, displayName]

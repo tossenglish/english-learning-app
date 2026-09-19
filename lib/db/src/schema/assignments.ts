@@ -13,6 +13,8 @@ export const assignmentsTable = pgTable("assignments", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
+  materialType: text("material_type").notNull().default("sentence"),
+  materialContent: text("material_content").notNull().default(""),
   level: text("level").notNull(),
   assigneeUserId: text("assignee_user_id"),
   assigneeName: text("assignee_name"),
