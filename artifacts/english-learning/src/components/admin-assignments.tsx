@@ -26,6 +26,13 @@ const levelLabels: Record<LearningLevel, string> = {
   All: '전체 레벨',
 };
 
+const courseOptions: Array<{ value: LearningLevel; label: string }> = [
+  { value: 'Beginner', label: '초급 과정' },
+  { value: 'Intermediate', label: '중급 과정' },
+  { value: 'Advanced', label: '고급 과정' },
+  { value: 'All', label: '공통 과정' },
+];
+
 export default function AdminAssignments({
   latestUpload,
 }: {
@@ -46,6 +53,11 @@ export default function AdminAssignments({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
+
+  const visibleAssignments = assignments.filter((assignment) =>
+    listLevel === 'All' ? assignment.level === 'All' : assignment.level === listLevel,
+  );
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -110,6 +122,7 @@ export default function AdminAssignments({
 
       const created = await response.json() as Assignment;
       setAssignments((current) => [created, ...current]);
+      setListLevel(level);
       setTitle('');
       setDescription('');
       setMaterialContent('');
@@ -142,14 +155,14 @@ export default function AdminAssignments({
 
   return (
     <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-9">
-      <div className="flex items-start gap-3">
+       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
           <ClipboardList size={20} />
         </span>
         <div>
-          <h2 className="text-xl font-bold">레벨별 과제 등록</h2>
+           <h2 className="text-xl font-bold">과정별 과제 등록</h2>
           <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-            대상 레벨을 선택하면 해당 레벨 회원에게 자동으로 배정돼요.
+             과정을 선택해 저장하면 해당 과정 회원에게만 과제가 보여요.
           </p>
         </div>
       </div>
@@ -227,7 +240,7 @@ export default function AdminAssignments({
             className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-3">
+         <div className="grid gap-4 sm:grid-cols-3">
           <label className="grid gap-2">
             <span className="text-xs font-bold">배정 대상</span>
             <select
@@ -244,15 +257,15 @@ export default function AdminAssignments({
             </select>
           </label>
           <label className="grid gap-2">
-            <span className="text-xs font-bold">배정 레벨</span>
+             <span className="text-xs font-bold">배정 과정</span>
             <select
               value={level}
               onChange={(event) => setLevel(event.target.value as LearningLevel)}
               disabled={Boolean(assigneeUserId)}
               className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {Object.entries(levelLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+               {courseOptions.map(({ value, label }) => (
+                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
           </label>
@@ -313,20 +326,44 @@ export default function AdminAssignments({
         </p>
       )}
 
-      <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
+       <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold">등록된 과제</h3>
-          <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{assignments.length}개</span>
+           <div>
+             <h3 className="font-bold">과정별 등록 과제</h3>
+             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+               {courseOptions.find((course) => course.value === listLevel)?.label}에 저장된 과제
+             </p>
+           </div>
+           <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{visibleAssignments.length}개</span>
         </div>
+         <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="과제 과정 선택">
+           {courseOptions.map(({ value, label }) => (
+             <button
+               key={value}
+               type="button"
+               role="tab"
+               aria-selected={listLevel === value}
+               data-testid={`button-assignment-course-${value.toLowerCase()}`}
+               onClick={() => setListLevel(value)}
+               className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
+                 listLevel === value
+                   ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                   : 'border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--accent)/.6)] hover:text-[hsl(var(--foreground))]'
+               }`}
+             >
+               {label}
+             </button>
+           ))}
+         </div>
         {loading ? (
           <LoaderCircle className="mx-auto mt-8 animate-spin text-[hsl(var(--accent))]" size={24} />
-        ) : assignments.length === 0 ? (
+         ) : visibleAssignments.length === 0 ? (
           <p className="mt-6 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
-            아직 등록된 과제가 없어요.
+             이 과정에 등록된 과제가 없어요.
           </p>
         ) : (
           <div className="mt-4 grid gap-3">
-            {assignments.map((assignment) => (
+             {visibleAssignments.map((assignment) => (
               <article key={assignment.id} className="rounded-2xl border border-[hsl(var(--border))] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
