@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { LearningLevel } from './learningLevel';
+import type { MaterialType } from './materialType';
 
 export interface CreateAssignmentRequest {
   /**
@@ -15,6 +16,9 @@ export interface CreateAssignmentRequest {
   title: string;
   /** @maxLength 4000 */
   description: string;
+  materialType: MaterialType;
+  /** @maxLength 20000 */
+  materialContent: string;
   level: LearningLevel;
   /** @nullable */
   assigneeUserId?: string | null;

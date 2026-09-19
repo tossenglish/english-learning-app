@@ -3,6 +3,7 @@ import type {
   Assignment,
   AssignmentMember,
   LearningLevel,
+  MaterialType,
 } from '@workspace/api-client-react';
 import {
   CalendarDays,
@@ -34,6 +35,8 @@ export default function AdminAssignments({
   const [members, setMembers] = useState<AssignmentMember[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [materialType, setMaterialType] = useState<MaterialType>('sentence');
+  const [materialContent, setMaterialContent] = useState('');
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -90,6 +93,8 @@ export default function AdminAssignments({
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
+          materialType,
+          materialContent: materialContent.trim(),
           level,
           assigneeUserId: assigneeUserId || null,
           dueDate: dueDate || null,
@@ -107,6 +112,8 @@ export default function AdminAssignments({
       setAssignments((current) => [created, ...current]);
       setTitle('');
       setDescription('');
+      setMaterialContent('');
+      setMaterialType('sentence');
       setDueDate('');
       setAssigneeUserId('');
       setResourcePath('');
@@ -159,6 +166,56 @@ export default function AdminAssignments({
             className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
           />
         </label>
+        <div className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
+          <div>
+            <span className="text-xs font-bold">학습자료 유형</span>
+            <p className="mt-1 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">
+              파일을 첨부하지 않아도 직접 입력한 내용을 회원에게 바로 연습 자료로 제공할 수 있어요.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={`cursor-pointer rounded-xl border p-3 transition-colors ${materialType === 'sentence' ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]' : 'border-[hsl(var(--border))]'}`}>
+              <input
+                type="radio"
+                name="material-type"
+                value="sentence"
+                checked={materialType === 'sentence'}
+                onChange={() => setMaterialType('sentence')}
+                className="sr-only"
+              />
+              <span className="block text-sm font-bold">문장</span>
+              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">한 줄에 영어 문장 하나</span>
+            </label>
+            <label className={`cursor-pointer rounded-xl border p-3 transition-colors ${materialType === 'word' ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]' : 'border-[hsl(var(--border))]'}`}>
+              <input
+                type="radio"
+                name="material-type"
+                value="word"
+                checked={materialType === 'word'}
+                onChange={() => setMaterialType('word')}
+                className="sr-only"
+              />
+              <span className="block text-sm font-bold">단어</span>
+              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">한 줄에 단어 하나</span>
+            </label>
+          </div>
+          <label className="grid gap-2">
+            <span className="text-xs font-bold">직접 입력 자료</span>
+            <textarea
+              value={materialContent}
+              onChange={(event) => setMaterialContent(event.target.value)}
+              maxLength={20000}
+              rows={6}
+              placeholder={materialType === 'sentence'
+                ? 'I take a short walk every morning.\nSmall habits make a big difference.||작은 습관이 큰 차이를 만들어요.'
+                : 'apple||사과\ncurious||호기심 많은'}
+              className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
+            />
+            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
+              줄바꿈으로 항목을 나눠요. 영어 뒤에 <strong>||</strong>를 쓰면 한글 뜻도 직접 입력할 수 있어요.
+            </span>
+          </label>
+        </div>
         <label className="grid gap-2">
           <span className="text-xs font-bold">학습 안내</span>
           <textarea

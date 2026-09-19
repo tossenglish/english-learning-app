@@ -59,10 +59,20 @@ export const LearningLevel = {
   All: 'All',
 } as const;
 
+export type MaterialType = typeof MaterialType[keyof typeof MaterialType];
+
+
+export const MaterialType = {
+  sentence: 'sentence',
+  word: 'word',
+} as const;
+
 export interface Assignment {
   id: number;
   title: string;
   description: string;
+  materialType: MaterialType;
+  materialContent: string;
   level: LearningLevel;
   /** @nullable */
   assigneeUserId?: string | null;
@@ -86,6 +96,9 @@ export interface CreateAssignmentRequest {
   title: string;
   /** @maxLength 4000 */
   description: string;
+  materialType: MaterialType;
+  /** @maxLength 20000 */
+  materialContent: string;
   level: LearningLevel;
   /** @nullable */
   assigneeUserId?: string | null;

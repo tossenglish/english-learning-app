@@ -86,6 +86,8 @@ export const ListAssignmentsResponseItem = zod.object({
   "id": zod.number().int(),
   "title": zod.string(),
   "description": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
   "assigneeName": zod.string().nullish(),
@@ -105,6 +107,8 @@ export const ListAdminAssignmentsResponseItem = zod.object({
   "id": zod.number().int(),
   "title": zod.string(),
   "description": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
   "assigneeName": zod.string().nullish(),
@@ -135,11 +139,15 @@ export const createAssignmentBodyTitleMax = 160;
 
 export const createAssignmentBodyDescriptionMax = 4000;
 
+export const createAssignmentBodyMaterialContentMax = 20000;
+
 
 
 export const CreateAssignmentBody = zod.object({
   "title": zod.string().min(1).max(createAssignmentBodyTitleMax),
   "description": zod.string().max(createAssignmentBodyDescriptionMax),
+  "materialType": zod.enum(['sentence', 'word']),
+  "materialContent": zod.string().max(createAssignmentBodyMaterialContentMax),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
   "assigneeName": zod.string().nullish(),
@@ -153,6 +161,8 @@ export const CreateAssignmentResponse = zod.object({
   "id": zod.number().int(),
   "title": zod.string(),
   "description": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
   "assigneeName": zod.string().nullish(),

@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { LearningLevel } from './learningLevel';
+import type { MaterialType } from './materialType';
 
 export interface Assignment {
   id: number;
   title: string;
   description: string;
+  materialType: MaterialType;
+  materialContent: string;
   level: LearningLevel;
   /** @nullable */
   assigneeUserId?: string | null;

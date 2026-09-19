@@ -1,0 +1,1 @@
+- [Direct learning materials](direct-materials.md) — user-entered sentence and word content must be deterministic and avoid AI calls.

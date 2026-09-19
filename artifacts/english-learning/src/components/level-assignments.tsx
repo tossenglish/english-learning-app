@@ -86,6 +86,9 @@ export default function LevelAssignments({
                 )}
               </div>
               <h4 className="mt-3 font-bold">{assignment.title}</h4>
+              <span className="mt-1 inline-flex rounded-full bg-[hsl(var(--secondary))] px-2 py-1 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]">
+                {assignment.materialType === 'word' ? '단어 자료' : '문장 자료'}
+              </span>
               {assignment.description && (
                 <p className="mt-1.5 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">{assignment.description}</p>
               )}

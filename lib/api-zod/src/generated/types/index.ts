@@ -15,6 +15,7 @@ export * from './healthStatus';
 export * from './koreanTranslationsEnvelope';
 export * from './learningLevel';
 export * from './listAssignmentsParams';
+export * from './materialType';
 export * from './translatePracticeSentencesRequest';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';

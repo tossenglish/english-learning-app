@@ -16,6 +16,7 @@ export type PracticeMaterial = {
 const STORAGE_KEY = 'english-learning:active-practice-material';
 const TRANSLATION_CACHE_PREFIX = 'english-learning:translations:';
 const TEXT_EXTENSIONS = ['.txt', '.md', '.csv'];
+const DIRECT_MEANING_PLACEHOLDER = '한글 뜻을 직접 입력해 주세요.';
 
 function splitIntoSentences(text: string): string[] {
   return text
@@ -24,6 +25,33 @@ function splitIntoSentences(text: string): string[] {
     .map((sentence) => sentence.replace(/^[-*•\d.)\s]+/, '').trim())
     .filter((sentence) => /[a-zA-Z]/.test(sentence) && sentence.length >= 3)
     .slice(0, 20);
+}
+
+function parseDirectMaterial(
+  content: string,
+  materialType: Assignment['materialType'],
+): PracticeSentence[] {
+  const entries = content
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*•\d.)\s]+/, '').trim())
+    .filter(Boolean)
+    .slice(0, 50);
+
+  return entries
+    .map((entry, index) => {
+      const [englishPart, koreanPart] = entry.split(/\s*\|\|\s*/, 2);
+      const english = englishPart.trim();
+      const korean = koreanPart?.trim() || DIRECT_MEANING_PLACEHOLDER;
+      return {
+        id: index + 1,
+        english,
+        korean,
+        hint: materialType === 'word'
+          ? `${english}의 뜻을 떠올려보세요.`
+          : `${english.split(/\s+/).slice(0, 3).join(' ')}…`,
+      };
+    })
+    .filter((sentence) => /[a-zA-Z]/.test(sentence.english) && sentence.english.length >= 1);
 }
 
 function translationCacheKey(sentences: string[]) {
@@ -90,6 +118,23 @@ export async function prepareAssignmentPractice(
 ): Promise<PracticeMaterial> {
   const resourceName = assignment.resourceName?.toLowerCase() ?? '';
   let sourceText = '';
+
+  if (assignment.materialContent?.trim()) {
+    const directSentences = parseDirectMaterial(
+      assignment.materialContent,
+      assignment.materialType,
+    );
+    if (directSentences.length === 0) {
+      throw new Error('직접 입력한 학습자료에서 영어 항목을 찾지 못했습니다.');
+    }
+    const material = {
+      assignmentId: assignment.id,
+      title: assignment.title,
+      sentences: directSentences,
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(material));
+    return material;
+  }
 
   if (
     assignment.resourcePath &&
