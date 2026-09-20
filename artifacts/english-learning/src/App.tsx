@@ -155,7 +155,7 @@ function Logo({ inverse = false }: { inverse?: boolean }) {
     <Link href="/" className="group flex items-center gap-3" data-testid="link-logo">
       <img
         src={`${basePath}/logo-cat.png`}
-        alt="영어의신 페르시안 고양이 로고"
+        alt="토스일곡아이들 페르시안 고양이 로고"
         className="h-11 w-11 object-contain transition-transform duration-300 group-hover:scale-105"
       />
       <span className={`font-mono text-[15px] font-bold tracking-[-0.04em] ${
@@ -163,7 +163,7 @@ function Logo({ inverse = false }: { inverse?: boolean }) {
           ? 'text-[hsl(var(--sidebar-foreground))]'
           : 'text-[hsl(var(--foreground))]'
       }`}>
-        영어의신<span className="text-[hsl(var(--sidebar-primary))]">.</span>
+        토스일곡아이들<span className="text-[hsl(var(--sidebar-primary))]">.</span>
       </span>
     </Link>
   );
@@ -186,7 +186,7 @@ function PublicLanding() {
         <section className="mt-20 grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr]">
           <div className="rise-in">
             <p className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.17em] text-[hsl(var(--accent))]">
-              <Sparkles size={14} /> 영어의신
+              <Sparkles size={14} /> 토스일곡아이들
             </p>
             <h1 className="max-w-2xl text-5xl font-bold leading-[1.08] tracking-[-.06em] text-[hsl(var(--foreground))] sm:text-6xl">
               매일 10분,<br />
@@ -798,7 +798,7 @@ function ClerkProviderWithRoutes() {
         },
         signUp: {
           start: {
-            title: '영어의신 시작하기',
+            title: '토스일곡아이들 시작하기',
             subtitle: '매일 10분의 영어 루프를 만들어보세요',
           },
         },
