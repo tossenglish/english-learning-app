@@ -9,6 +9,8 @@ import {
   CalendarDays,
   ClipboardList,
   FileText,
+  FolderOpen,
+  Layers3,
   LoaderCircle,
   Plus,
   Trash2,
@@ -33,6 +35,26 @@ const courseOptions: Array<{ value: LearningLevel; label: string }> = [
   { value: 'All', label: '공통 과정' },
 ];
 
+const materialFolders: Array<{
+  value: MaterialType;
+  label: string;
+  description: string;
+  icon: typeof FileText;
+}> = [
+  {
+    value: 'sentence',
+    label: '문장 폴더',
+    description: '입력한 문장 자료',
+    icon: FileText,
+  },
+  {
+    value: 'word',
+    label: '단어 폴더',
+    description: '입력한 단어 자료',
+    icon: Layers3,
+  },
+];
+
 export default function AdminAssignments({
   latestUpload,
 }: {
@@ -54,10 +76,14 @@ export default function AdminAssignments({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
+  const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
 
-  const visibleAssignments = assignments.filter((assignment) =>
-    listLevel === 'All' ? assignment.level === 'All' : assignment.level === listLevel,
-  );
+  const visibleAssignments = assignments.filter((assignment) => {
+    const matchesCourse = listLevel === 'All'
+      ? assignment.level === 'All'
+      : assignment.level === listLevel;
+    return matchesCourse && assignment.materialType === materialFolder;
+  });
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -123,6 +149,7 @@ export default function AdminAssignments({
       const created = await response.json() as Assignment;
       setAssignments((current) => [created, ...current]);
       setListLevel(level);
+      setMaterialFolder(materialType);
       setTitle('');
       setDescription('');
       setMaterialContent('');
@@ -329,13 +356,53 @@ export default function AdminAssignments({
        <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
         <div className="flex items-center justify-between">
            <div>
-             <h3 className="font-bold">과정별 등록 과제</h3>
+             <h3 className="font-bold">자료 폴더</h3>
              <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-               {courseOptions.find((course) => course.value === listLevel)?.label}에 저장된 과제
+               입력한 단어와 문장을 서로 다른 폴더에서 다시 이용할 수 있어요.
              </p>
            </div>
            <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{visibleAssignments.length}개</span>
         </div>
+         <div className="mt-5 grid gap-3 sm:grid-cols-2" role="tablist" aria-label="학습자료 폴더 선택">
+           {materialFolders.map(({ value, label, description, icon: Icon }) => (
+             <button
+               key={value}
+               type="button"
+               role="tab"
+               aria-selected={materialFolder === value}
+               data-testid={`button-material-folder-${value}`}
+               onClick={() => setMaterialFolder(value)}
+               className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                 materialFolder === value
+                   ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]'
+                   : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] hover:border-[hsl(var(--accent)/.55)]'
+               }`}
+             >
+               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                 materialFolder === value
+                   ? 'bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]'
+                   : 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]'
+               }`}>
+                 <Icon size={18} />
+               </span>
+               <span>
+                 <span className="block text-sm font-bold">{label}</span>
+                 <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">{description}</span>
+               </span>
+               <FolderOpen className="ml-auto text-[hsl(var(--muted-foreground))]" size={17} />
+             </button>
+           ))}
+         </div>
+         <div className="mt-7 flex items-center justify-between gap-4">
+           <div>
+             <h3 className="font-bold">
+               {materialFolders.find((folder) => folder.value === materialFolder)?.label} · 과정별 목록
+             </h3>
+             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+               {courseOptions.find((course) => course.value === listLevel)?.label}에 저장된 자료
+             </p>
+           </div>
+         </div>
          <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="과제 과정 선택">
            {courseOptions.map(({ value, label }) => (
              <button
