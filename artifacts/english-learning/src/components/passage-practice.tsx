@@ -472,7 +472,7 @@ export default function PassagePractice({
   };
 
   return (
-    <div className="mx-auto max-w-[1120px] space-y-8">
+    <div className="mx-auto max-w-[1240px] space-y-8">
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <Link
@@ -576,8 +576,8 @@ export default function PassagePractice({
         )}
       </section>
 
-      <section className="rise-in stagger-1 grid gap-6 lg:grid-cols-[.72fr_1.28fr]">
-        <aside className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-5">
+      <section className="rise-in stagger-1 grid gap-6 lg:grid-cols-[minmax(210px,.58fr)_minmax(0,1.42fr)]">
+        <aside className="min-w-0 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">
@@ -641,7 +641,7 @@ export default function PassagePractice({
           </div>
         </aside>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap gap-2 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-2">
             {modes.map(({ id, label, description, icon: Icon }) => {
               const done = currentCompletion[id];
@@ -651,7 +651,7 @@ export default function PassagePractice({
                   type="button"
                   onClick={() => selectMode(id)}
                   data-testid={`button-passage-mode-${id}`}
-                  className={`flex min-w-[145px] flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-all ${
+                  className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-all ${
                     mode === id
                       ? 'bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))] shadow-sm'
                       : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/.7)]'
@@ -670,13 +670,13 @@ export default function PassagePractice({
             })}
           </div>
 
-          <article className="rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
+          <article className="min-w-0 rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">
                   Sentence {current.id} / {passageSentences.length}
                 </p>
-                <h2 className="mt-4 max-w-2xl text-2xl font-bold leading-tight tracking-[-.04em] sm:text-3xl" data-testid="text-current-passage-sentence">
+                <h2 className="mt-4 max-w-none break-words text-2xl font-bold leading-tight tracking-[-.04em] sm:text-3xl" data-testid="text-current-passage-sentence">
                   {current.english}
                 </h2>
                 <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
@@ -734,13 +734,19 @@ export default function PassagePractice({
             {mode !== 'shadowing' && (
               <div className="mt-5">
                 <label htmlFor={`passage-answer-${current.id}`} className="sr-only">{currentMode.label} 답안</label>
-                <input
+                <textarea
                   id={`passage-answer-${current.id}`}
                   value={currentAnswers[mode]}
                   onChange={(event) => updateAnswer(event.target.value)}
-                  onKeyDown={(event) => { if (event.key === 'Enter') checkAnswer(); }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      checkAnswer();
+                    }
+                  }}
                   data-testid={`input-passage-${mode}`}
-                  className="w-full rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-sm text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))]"
+                  rows={3}
+                  className="min-h-[112px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-sm leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[132px] sm:text-base"
                   placeholder={mode === 'dictation' ? '들은 문장을 영어로 적어보세요' : '영어 문장을 입력해보세요'}
                   autoComplete="off"
                 />
