@@ -666,7 +666,7 @@ export default function PassagePractice({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-xs font-semibold ${active ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]'}`}>
-                        {sentence.english}
+                        {hidePassageText ? `문장 ${index + 1} · 원문 숨김` : sentence.english}
                       </span>
                       <span className="mt-1.5 block line-clamp-2 text-[11px] leading-relaxed text-[hsl(var(--foreground)/.72)]">
                         {sentence.korean}
@@ -719,7 +719,12 @@ export default function PassagePractice({
                   Sentence {current.id} / {passageSentences.length}
                 </p>
                 <h2 className="mt-4 max-w-none break-words text-2xl font-bold leading-tight tracking-[-.04em] sm:text-3xl" data-testid="text-current-passage-sentence">
-                  {current.english}
+                  {hidePassageText ? (
+                    <span className="flex items-center gap-3 text-[hsl(var(--sidebar-foreground)/.72)]">
+                      <EyeOff className="shrink-0 text-[hsl(var(--sidebar-primary))]" size={24} />
+                      <span>{mode === 'dictation' ? '소리를 듣고 문장을 적어보세요.' : '한글 뜻만 보고 영어로 써보세요.'}</span>
+                    </span>
+                  ) : current.english}
                 </h2>
                 <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
                   <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">한글 해석</p>
