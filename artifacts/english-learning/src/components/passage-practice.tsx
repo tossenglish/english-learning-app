@@ -5,6 +5,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardPaste,
+  EyeOff,
   Headphones,
   Lightbulb,
   MessageCircle,
@@ -288,6 +289,7 @@ export default function PassagePractice({
   const [attempts, setAttempts] = useState<Record<number, AttemptCounts>>(
     () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.attempts : {}),
   );
+  const [showPassageEditor, setShowPassageEditor] = useState(false);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'hint' | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -308,6 +310,8 @@ export default function PassagePractice({
   const allCompleted = passageSentences.length > 0 && completedSteps === passageSentences.length * modes.length;
   const sentenceCompleted = modes.every((item) => currentCompletion[item.id]);
   const isDefaultPassage = !usingActiveMaterial && normalizePassage(passageText) === normalizePassage(DEFAULT_PASSAGE_TEXT);
+  const isAnswerMode = mode === 'dictation' || mode === 'writing';
+  const hidePassageText = isAnswerMode && !showPassageEditor;
 
   const currentMode = useMemo(
     () => modes.find((item) => item.id === mode) ?? modes[0],
@@ -393,6 +397,7 @@ export default function PassagePractice({
     setEditorError(null);
     setFeedback(null);
     setShowAnswer(false);
+    setShowPassageEditor(false);
     setMode('dictation');
 
     if (passageChanged) {
@@ -448,6 +453,7 @@ export default function PassagePractice({
 
   const selectMode = (nextMode: ExerciseMode) => {
     setMode(nextMode);
+    if (nextMode !== 'shadowing') setShowPassageEditor(false);
     setFeedback(null);
     setShowAnswer(false);
   };
@@ -529,46 +535,82 @@ export default function PassagePractice({
         </div>
 
         <label htmlFor="passage-text-input" className="sr-only">영어 지문</label>
-        <textarea
-          id="passage-text-input"
-          value={draftText}
-          onChange={(event) => {
-            setDraftText(event.target.value);
-            setEditorError(null);
-          }}
-          data-testid="textarea-passage-input"
-          className="mt-5 min-h-[150px] w-full resize-y rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.65)] px-4 py-3.5 text-sm leading-relaxed text-[hsl(var(--foreground))] outline-none transition-colors placeholder:text-[hsl(var(--muted-foreground)/.7)] focus:border-[hsl(var(--accent))] focus:ring-2 focus:ring-[hsl(var(--accent)/.15)]"
-          placeholder="예: I started my day with a quiet walk. The fresh air helped me think."
-          spellCheck="true"
-        />
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-            <Sparkles size={13} className="text-[hsl(var(--accent))]" />
-            마침표, 물음표, 느낌표를 기준으로 문장을 나눠요.
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span className="mr-1 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{draftText.length.toLocaleString()}자</span>
+        {hidePassageText ? (
+          <div className="mt-5 flex min-h-[150px] flex-col justify-between gap-4 rounded-2xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted)/.35)] p-5 sm:flex-row sm:items-center">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
+                <EyeOff size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-bold">연습 중에는 지문을 숨겨두었어요.</p>
+                <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                  소리를 듣거나 한글 뜻만 보고 답을 떠올려보세요.
+                </p>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setDraftText(DEFAULT_PASSAGE_TEXT);
+              onClick={() => setShowPassageEditor(true)}
+              data-testid="button-show-passage-editor"
+              className="shrink-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
+            >
+              지문 보기·편집
+            </button>
+          </div>
+        ) : (
+          <>
+            <textarea
+              id="passage-text-input"
+              value={draftText}
+              onChange={(event) => {
+                setDraftText(event.target.value);
                 setEditorError(null);
               }}
-              data-testid="button-load-example-passage"
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
-            >
-              예시 지문
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPassage(draftText)}
-              data-testid="button-apply-passage"
-              className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-xs font-bold text-[hsl(var(--primary-foreground))]"
-            >
-              이 지문으로 연습하기 <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
+              data-testid="textarea-passage-input"
+              className="mt-5 min-h-[150px] w-full resize-y rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.65)] px-4 py-3.5 text-sm leading-relaxed text-[hsl(var(--foreground))] outline-none transition-colors placeholder:text-[hsl(var(--muted-foreground)/.7)] focus:border-[hsl(var(--accent))] focus:ring-2 focus:ring-[hsl(var(--accent)/.15)]"
+              placeholder="예: I started my day with a quiet walk. The fresh air helped me think."
+              spellCheck="true"
+            />
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                <Sparkles size={13} className="text-[hsl(var(--accent))]" />
+                마침표, 물음표, 느낌표를 기준으로 문장을 나눠요.
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <span className="mr-1 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{draftText.length.toLocaleString()}자</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftText(DEFAULT_PASSAGE_TEXT);
+                    setEditorError(null);
+                  }}
+                  data-testid="button-load-example-passage"
+                  className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
+                >
+                  예시 지문
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPassage(draftText)}
+                  data-testid="button-apply-passage"
+                  className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-xs font-bold text-[hsl(var(--primary-foreground))]"
+                >
+                  이 지문으로 연습하기 <ArrowRight size={14} />
+                </button>
+                {isAnswerMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPassageEditor(false)}
+                    data-testid="button-hide-passage-editor"
+                    className="rounded-xl border border-[hsl(var(--border))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)] hover:text-[hsl(var(--foreground))]"
+                  >
+                    지문 숨기기
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
         {editorError && (
           <p className="mt-3 rounded-xl bg-[hsl(var(--destructive)/.1)] px-3.5 py-3 text-xs font-semibold text-[hsl(var(--destructive))]" data-testid="status-passage-input-error">
             {editorError}
