@@ -486,7 +486,7 @@ function Home({ level, onLevelChange, learned, onStart, content }: { level: Leve
                 <Clock3 size={15} /> Today's focus
               </div>
               <h2 className="max-w-md text-3xl font-bold leading-[1.12] tracking-[-.04em] text-[hsl(var(--sidebar-primary))] sm:text-[40px]">{levelCopy[level].next}.</h2>
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.6)]">{levelCopy[level].detail} 오늘은 하나의 단어와 문장을 내 것으로 만들어요.</p>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.6)]">{levelCopy[level].detail} Let&apos;s do it.</p>
               <button type="button" onClick={() => void startPractice(assignments[0])} data-testid="button-start-session" className="button-pop mt-7 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--sidebar))]">
                 {learned ? '한 번 더 연습하기' : '오늘의 연습 시작'} <ArrowRight size={17} />
               </button>

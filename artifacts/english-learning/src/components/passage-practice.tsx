@@ -483,7 +483,7 @@ export default function PassagePractice({
             Sentence studio
           </p>
           <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl" data-testid="text-passage-title">
-            {usingActiveMaterial && activeMaterial ? activeMaterial.title : '지문의 모든 문장을'}<br className="sm:hidden" /> 내 것으로 만들어요.
+            {usingActiveMaterial && activeMaterial ? activeMaterial.title : '지문의 모든 문장을'}<br className="sm:hidden" /> Let&apos;s do it.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
             한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.
