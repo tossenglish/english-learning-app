@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,7 +13,9 @@ import {
   PenLine,
   Play,
   RotateCcw,
+  Repeat2,
   Sparkles,
+  Square,
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
@@ -293,7 +295,11 @@ export default function PassagePractice({
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'hint' | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [dictationRepeating, setDictationRepeating] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const speechLoopRef = useRef(false);
+  const speechGenerationRef = useRef(0);
+  const speechTimerRef = useRef<number | null>(null);
   const parsedPassageSentences = useMemo(() => buildPassageSentences(passageText), [passageText]);
   const passageSentences = usingActiveMaterial && activeMaterial
     ? activeMaterial.sentences
@@ -318,7 +324,49 @@ export default function PassagePractice({
     [mode],
   );
 
-  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+  const stopSpeech = () => {
+    speechLoopRef.current = false;
+    speechGenerationRef.current += 1;
+    if (speechTimerRef.current !== null) {
+      window.clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+    setDictationRepeating(false);
+  };
+
+  const startDictationRepeat = (sentence: string) => {
+    speechLoopRef.current = true;
+    const generation = speechGenerationRef.current + 1;
+    speechGenerationRef.current = generation;
+    setDictationRepeating(true);
+
+    const playNext = () => {
+      if (!speechLoopRef.current || speechGenerationRef.current !== generation) return;
+
+      speakSentence(
+        sentence,
+        () => setSpeaking(true),
+        () => {
+          setSpeaking(false);
+          if (!speechLoopRef.current || speechGenerationRef.current !== generation) return;
+          speechTimerRef.current = window.setTimeout(() => {
+            speechTimerRef.current = null;
+            playNext();
+          }, 350);
+        },
+      );
+    };
+
+    playNext();
+  };
+
+  useEffect(() => () => {
+    speechLoopRef.current = false;
+    if (speechTimerRef.current !== null) window.clearTimeout(speechTimerRef.current);
+    window.speechSynthesis?.cancel();
+  }, []);
 
   useEffect(() => {
     const byMode = {
@@ -391,6 +439,7 @@ export default function PassagePractice({
 
     const passageChanged = normalizePassage(nextText) !== normalizePassage(passageText)
       || usingActiveMaterial;
+    stopSpeech();
     setUsingActiveMaterial(false);
     setDraftText(nextText);
     setPassageText(nextText);
@@ -411,6 +460,7 @@ export default function PassagePractice({
   };
 
   const markComplete = () => {
+    stopSpeech();
     setCompleted((previous) => ({
       ...previous,
       [current.id]: {
@@ -448,10 +498,20 @@ export default function PassagePractice({
       setFeedback('hint');
       return;
     }
+    if (mode === 'dictation') {
+      if (dictationRepeating) {
+        stopSpeech();
+      } else {
+        startDictationRepeat(current.english);
+      }
+      return;
+    }
+    stopSpeech();
     speakSentence(current.english, () => setSpeaking(true), () => setSpeaking(false));
   };
 
   const selectMode = (nextMode: ExerciseMode) => {
+    stopSpeech();
     setMode(nextMode);
     if (nextMode !== 'shadowing') setShowPassageEditor(false);
     setFeedback(null);
@@ -459,12 +519,14 @@ export default function PassagePractice({
   };
 
   const selectSentence = (index: number) => {
+    stopSpeech();
     setCurrentIndex(index);
     setFeedback(null);
     setShowAnswer(false);
   };
 
   const nextSentence = () => {
+    stopSpeech();
     if (!sentenceCompleted) {
       setFeedback('hint');
       return;
@@ -741,15 +803,24 @@ export default function PassagePractice({
             <div className="mt-8 rounded-2xl border border-[hsl(var(--sidebar-foreground)/.12)] bg-[hsl(var(--sidebar-accent)/.5)] p-4">
               {mode === 'dictation' && (
                 <div>
-                  <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">먼저 소리를 여러 번 들어보세요.</p>
+                  <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
+                    문장을 완성할 때까지 자동으로 반복해서 들어보세요.
+                  </p>
                   <button
                     type="button"
                     onClick={listen}
                     data-testid="button-passage-listen-dictation"
                     className="button-pop mt-3 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-4 py-2.5 text-xs font-bold text-[hsl(var(--sidebar))]"
                   >
-                    <Play size={14} fill="currentColor" /> {speaking ? '재생 중...' : '문장 듣기'}
+                    {dictationRepeating
+                      ? <><Square size={13} fill="currentColor" /> 반복 듣기 중지</>
+                      : <><Repeat2 size={15} /> 반복 듣기 시작</>}
                   </button>
+                  {dictationRepeating && (
+                    <span className="ml-3 text-[11px] text-[hsl(var(--sidebar-foreground)/.5)]">
+                      {speaking ? '재생 중...' : '다음 재생 준비 중...'}
+                    </span>
+                  )}
                 </div>
               )}
               {mode === 'writing' && (
