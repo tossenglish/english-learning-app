@@ -271,6 +271,110 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /learning-content:
+    get:
+      operationId: getLearningContent
+      tags: [LearningContent]
+      summary: 현재 과정의 배우기 콘텐츠 조회
+      parameters:
+        - name: level
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/LearningContentLevel"
+      responses:
+        "200":
+          description: 배우기 콘텐츠
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningContent"
+        "400":
+          description: 잘못된 과정
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: 해당 과정의 콘텐츠가 아직 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/learning-content:
+    get:
+      operationId: listAdminLearningContent
+      tags: [LearningContent]
+      summary: 관리자가 과정별 배우기 콘텐츠 조회
+      responses:
+        "200":
+          description: 과정별 배우기 콘텐츠 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LearningContent"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/learning-content/{level}:
+    put:
+      operationId: upsertLearningContent
+      tags: [LearningContent]
+      summary: 과정별 배우기 콘텐츠 저장
+      parameters:
+        - name: level
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/LearningContentLevel"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LearningContentInput"
+      responses:
+        "200":
+          description: 배우기 콘텐츠가 저장됨
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningContent"
+        "400":
+          description: 잘못된 콘텐츠
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /storage/objects/{objectPath}:
     get:
       operationId: getStorageObject
@@ -365,6 +469,96 @@ components:
     LearningLevel:
       type: string
       enum: [Beginner, Intermediate, Advanced, All]
+    LearningContentLevel:
+      type: string
+      enum: [Beginner, Intermediate, Advanced]
+    LearningContent:
+      type: object
+      required:
+        [id, level, word, pronunciation, partOfSpeech, shortMeaning, meaningDetail, englishDefinition, exampleSentence, exampleKorean, quizOptions, correctMeaning, tip, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        level:
+          $ref: "#/components/schemas/LearningContentLevel"
+        word:
+          type: string
+        pronunciation:
+          type: string
+        partOfSpeech:
+          type: string
+        shortMeaning:
+          type: string
+        meaningDetail:
+          type: string
+        englishDefinition:
+          type: string
+        exampleSentence:
+          type: string
+        exampleKorean:
+          type: string
+        quizOptions:
+          type: array
+          minItems: 2
+          maxItems: 4
+          items:
+            type: string
+        correctMeaning:
+          type: string
+        tip:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    LearningContentInput:
+      type: object
+      required:
+        [word, pronunciation, partOfSpeech, shortMeaning, meaningDetail, englishDefinition, exampleSentence, exampleKorean, quizOptions, correctMeaning, tip]
+      properties:
+        word:
+          type: string
+          minLength: 1
+          maxLength: 120
+        pronunciation:
+          type: string
+          maxLength: 120
+        partOfSpeech:
+          type: string
+          maxLength: 40
+        shortMeaning:
+          type: string
+          minLength: 1
+          maxLength: 200
+        meaningDetail:
+          type: string
+          maxLength: 1000
+        englishDefinition:
+          type: string
+          maxLength: 1000
+        exampleSentence:
+          type: string
+          maxLength: 1000
+        exampleKorean:
+          type: string
+          maxLength: 1000
+        quizOptions:
+          type: array
+          minItems: 2
+          maxItems: 4
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+        correctMeaning:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tip:
+          type: string
+          maxLength: 1000
     Assignment:
       type: object
       required: [id, title, description, materialType, materialContent, level, isPublished, createdAt]

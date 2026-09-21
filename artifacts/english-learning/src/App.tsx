@@ -43,6 +43,7 @@ import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
 import type { Assignment } from '@workspace/api-client-react';
 import { prepareAssignmentPractice } from '@/lib/practice-material';
+import { getDefaultLearningContent, type LearnContent } from '@/lib/learning-content';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -74,7 +75,6 @@ const weekData = [
   { day: '일', minutes: 0, done: false },
 ];
 
-const quizOptions = ['계획된 만남', '뜻밖의 행운', '오래된 기억', '작은 실수'];
 const emptyPassageEvaluation: PassageEvaluation = {
   completedSteps: 0,
   totalSteps: 12,
@@ -447,7 +447,7 @@ function ProgressRing({ percent }: { percent: number }) {
   );
 }
 
-function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void> }) {
+function Home({ level, onLevelChange, learned, onStart, content }: { level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; content: LearnContent }) {
   const completed = learned ? 4 : 3;
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [startError, setStartError] = useState('');
@@ -507,14 +507,14 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
           <div className="flex items-start justify-between">
             <div>
               <span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Word of the day</span>
-              <h2 className="mt-5 font-sans text-3xl font-bold tracking-[-.05em]" data-testid="text-word-serendipity">serendipity</h2>
-              <p className="mt-1 text-base font-semibold text-[hsl(var(--accent))]" data-testid="text-meaning-serendipity">뜻밖의 행운</p>
+               <h2 className="mt-5 font-sans text-3xl font-bold tracking-[-.05em]" data-testid="text-word-serendipity">{content.word}</h2>
+               <p className="mt-1 text-base font-semibold text-[hsl(var(--accent))]" data-testid="text-meaning-serendipity">{content.shortMeaning}</p>
             </div>
             <div className="float-soft flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"><Lightbulb size={20} /></div>
           </div>
           <div className="mt-8 border-l-2 border-[hsl(var(--accent)/.55)] pl-4">
-            <p className="text-sm font-medium leading-relaxed text-[hsl(var(--foreground)/.8)]" data-testid="text-phrase-cafe">“I stumbled upon a little café.”</p>
-            <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">작은 카페를 우연히 발견했어.</p>
+             <p className="text-sm font-medium leading-relaxed text-[hsl(var(--foreground)/.8)]" data-testid="text-phrase-cafe">“{content.exampleSentence}”</p>
+             <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">{content.exampleKorean}</p>
           </div>
           <Link href="/learn" data-testid="link-word-practice" className="mt-7 flex items-center justify-between border-t border-[hsl(var(--border))] pt-5 text-xs font-bold text-[hsl(var(--foreground))] hover:text-[hsl(var(--accent))]">
             <span className="flex items-center gap-2"><Volume2 size={15} /> 발음 듣고 연습하기</span>
@@ -562,7 +562,7 @@ function Home({ level, onLevelChange, learned, onStart }: { level: Level; onLeve
   );
 }
 
-function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, learned, onMarkLearned, listening, onListen }: {
+function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, learned, onMarkLearned, listening, onListen, content }: {
   level: Level;
   onLevelChange: (level: Level) => void;
   cardFlipped: boolean;
@@ -573,8 +573,9 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
   onMarkLearned: () => void;
   listening: boolean;
   onListen: () => void;
+  content: LearnContent;
 }) {
-  const correct = quizAnswer === '뜻밖의 행운';
+  const correct = quizAnswer === content.correctMeaning;
   return (
     <div className="mx-auto max-w-[1000px] space-y-8">
       <section className="rise-in flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -588,14 +589,14 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
           <button type="button" onClick={() => setCardFlipped(!cardFlipped)} data-testid="button-flip-word-card" className="group relative h-[360px] w-full [perspective:1200px] sm:h-[410px]">
             <div className={`relative h-full w-full duration-500 [transform-style:preserve-3d] ${cardFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
               <div className="absolute inset-0 flex [backface-visibility:hidden] flex-col justify-between overflow-hidden rounded-[30px] bg-[hsl(var(--sidebar))] p-8 text-left text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-10">
-                <div className="flex items-center justify-between"><span className="rounded-full border border-[hsl(var(--sidebar-foreground)/.2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.16em] text-[hsl(var(--sidebar-foreground)/.6)]">noun</span><span className="text-xs text-[hsl(var(--sidebar-foreground)/.5)]">카드를 눌러 뒤집기</span></div>
-                <div><p className="font-sans text-5xl font-bold tracking-[-.07em] sm:text-7xl" data-testid="text-learning-word">serendipity</p><p className="mt-3 text-sm text-[hsl(var(--sidebar-primary))]">/ˌserənˈdipitē/</p></div>
-                <div className="flex items-center justify-between border-t border-[hsl(var(--sidebar-foreground)/.14)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]"><span>우연히 좋은 것을 발견하는 일</span><RotateCcw size={17} /></div>
+                <div className="flex items-center justify-between"><span className="rounded-full border border-[hsl(var(--sidebar-foreground)/.2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.16em] text-[hsl(var(--sidebar-foreground)/.6)]">{content.partOfSpeech}</span><span className="text-xs text-[hsl(var(--sidebar-foreground)/.5)]">카드를 눌러 뒤집기</span></div>
+                <div><p className="font-sans text-5xl font-bold tracking-[-.07em] sm:text-7xl" data-testid="text-learning-word">{content.word}</p><p className="mt-3 text-sm text-[hsl(var(--sidebar-primary))]">{content.pronunciation}</p></div>
+                <div className="flex items-center justify-between border-t border-[hsl(var(--sidebar-foreground)/.14)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]"><span>{content.meaningDetail}</span><RotateCcw size={17} /></div>
               </div>
               <div className="absolute inset-0 flex [backface-visibility:hidden] [transform:rotateY(180deg)] flex-col justify-between rounded-[30px] bg-[hsl(var(--accent))] p-8 text-[hsl(var(--accent-foreground))] shadow-[var(--shadow-md)] sm:p-10">
                 <div className="flex items-center justify-between"><span className="rounded-full border border-[hsl(var(--accent-foreground)/.3)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.16em]">meaning</span><CheckCircle2 size={20} /></div>
-                <div><p className="text-4xl font-bold tracking-[-.06em]" data-testid="text-flipped-meaning">뜻밖의 행운</p><p className="mt-4 max-w-sm text-base leading-relaxed text-[hsl(var(--accent-foreground)/.75)]">준비하지 않았지만 우연히 좋은 것을 만나는 순간이에요.</p></div>
-                <p className="border-t border-[hsl(var(--accent-foreground)/.25)] pt-5 text-xs text-[hsl(var(--accent-foreground)/.75)]">serendipity = a happy discovery by chance</p>
+                <div><p className="text-4xl font-bold tracking-[-.06em]" data-testid="text-flipped-meaning">{content.shortMeaning}</p><p className="mt-4 max-w-sm text-base leading-relaxed text-[hsl(var(--accent-foreground)/.75)]">{content.meaningDetail}</p></div>
+                <p className="border-t border-[hsl(var(--accent-foreground)/.25)] pt-5 text-xs text-[hsl(var(--accent-foreground)/.75)]">{content.word} = {content.englishDefinition}</p>
               </div>
             </div>
           </button>
@@ -609,32 +610,32 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
 
         <div className="flex flex-col rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-7 sm:p-8">
           <div className="flex items-center justify-between"><span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Quick check</span><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-xs font-bold">01</span></div>
-          <h2 className="mt-8 text-xl font-bold leading-snug tracking-[-.03em]" data-testid="text-quiz-question">“serendipity”는 어떤 뜻일까요?</h2>
+          <h2 className="mt-8 text-xl font-bold leading-snug tracking-[-.03em]" data-testid="text-quiz-question">“{content.word}”는 어떤 뜻일까요?</h2>
           <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">가장 가까운 의미를 골라보세요.</p>
           <div className="mt-7 space-y-2.5">
-            {quizOptions.map((option, index) => {
+            {content.quizOptions.map((option, index) => {
               const selected = quizAnswer === option;
-              const isCorrect = option === '뜻밖의 행운';
+              const isCorrect = option === content.correctMeaning;
               return <button key={option} type="button" onClick={() => setQuizAnswer(option)} data-testid={`button-quiz-option-${index + 1}`} className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left text-sm transition-all ${selected ? (isCorrect ? 'border-[hsl(var(--secondary-foreground)/.45)] bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'border-[hsl(var(--destructive)/.45)] bg-[hsl(var(--destructive)/.08)]') : 'border-[hsl(var(--border))] hover:border-[hsl(var(--accent)/.55)] hover:bg-[hsl(var(--muted)/.55)]'}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-[10px] ${selected ? 'bg-[hsl(var(--card))]' : 'bg-[hsl(var(--muted))]'}`}>{String.fromCharCode(65 + index)}</span><span className="font-semibold">{option}</span>{selected && <span className="ml-auto">{isCorrect ? <Check size={16} /> : <X size={16} />}</span>}
               </button>;
             })}
           </div>
-          {quizAnswer && <div className={`soft-pop mt-5 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">{correct ? '정확해요. 좋은 발견을 뜻하는 단어예요.' : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</div>}
+           {quizAnswer && <div className={`soft-pop mt-5 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">{correct ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요.` : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</div>}
           <button type="button" onClick={onMarkLearned} disabled={learned} data-testid="button-mark-learned" className={`button-pop mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold ${learned ? 'cursor-default bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'}`}>
             {learned ? <><CheckCircle2 size={17} /> 단어장에 저장했어요</> : <><BookOpen size={17} /> 배운 단어로 표시하기</>}
           </button>
         </div>
       </section>
-      <div className="rise-in stagger-2 flex flex-col items-start justify-between gap-4 rounded-2xl bg-[hsl(var(--secondary)/.5)] px-5 py-4 text-xs text-[hsl(var(--secondary-foreground))] sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3"><Lightbulb size={17} /><span><strong>팁:</strong> 카페에서 우연히 좋은 장소를 발견했을 때, “I stumbled upon...”으로 문장을 시작해보세요.</span></div>
+       <div className="rise-in stagger-2 flex flex-col items-start justify-between gap-4 rounded-2xl bg-[hsl(var(--secondary)/.5)] px-5 py-4 text-xs text-[hsl(var(--secondary-foreground))] sm:flex-row sm:items-center">
+         <div className="flex items-start gap-3"><Lightbulb className="mt-0.5 shrink-0" size={17} /><span><strong>팁:</strong> {content.tip}<span className="mt-1 block opacity-75">예문: {content.exampleSentence} · {content.exampleKorean}</span></span></div>
         <Link href="/passage" data-testid="link-passage-practice" className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[hsl(var(--card)/.55)] px-3 py-2 font-bold text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--card))]">지문 전체 연습 <ArrowRight size={14} /></Link>
       </div>
     </div>
   );
 }
 
-function Vocabulary({ learned, onRemove }: { learned: boolean; onRemove: () => void }) {
+function Vocabulary({ learned, onRemove, content }: { learned: boolean; onRemove: () => void; content: LearnContent }) {
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
       <section className="rise-in flex items-end justify-between"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Your collection</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 단어장<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">배운 단어는 다시 만날수록 내 것이 돼요.</p></div><span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-2 font-mono text-xs font-bold text-[hsl(var(--secondary-foreground))]" data-testid="text-vocabulary-count">{learned ? '1 word' : '0 words'}</span></section>
@@ -642,7 +643,7 @@ function Vocabulary({ learned, onRemove }: { learned: boolean; onRemove: () => v
         <article className="card-lift relative overflow-hidden rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6" data-testid="card-vocabulary-serendipity">
           <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[hsl(var(--secondary)/.6)]" />
           <div className="relative flex items-start justify-between"><span className="rounded-full bg-[hsl(var(--muted))] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[.13em] text-[hsl(var(--muted-foreground))]">noun</span><button type="button" onClick={onRemove} data-testid="button-remove-serendipity" className="rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--destructive))]" aria-label="단어장에서 삭제"><X size={16} /></button></div>
-          <p className="relative mt-8 text-3xl font-bold tracking-[-.06em]" data-testid="text-saved-serendipity">serendipity</p><p className="relative mt-1 text-sm font-semibold text-[hsl(var(--accent))]">뜻밖의 행운</p><p className="relative mt-5 border-l-2 border-[hsl(var(--accent)/.6)] pl-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">I stumbled upon a little café.</p>
+           <p className="relative mt-8 text-3xl font-bold tracking-[-.06em]" data-testid="text-saved-serendipity">{content.word}</p><p className="relative mt-1 text-sm font-semibold text-[hsl(var(--accent))]">{content.shortMeaning}</p><p className="relative mt-5 border-l-2 border-[hsl(var(--accent)/.6)] pl-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">{content.exampleSentence}</p>
           <div className="mt-7 flex items-center gap-2 border-t border-[hsl(var(--border))] pt-4 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]"><CheckCircle2 size={14} /> 오늘 배운 단어</div>
         </article>
         <div className="flex min-h-[250px] flex-col items-center justify-center rounded-[26px] border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card)/.45)] p-6 text-center"><span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"><Sparkles size={19} /></span><p className="text-sm font-bold">더 많이 모아볼까요?</p><p className="mt-1 max-w-[220px] text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">매일 하나씩만 저장해도 한 달 뒤엔 30개의 이야기가 생겨요.</p><Link href="/learn" data-testid="link-vocabulary-keep-learning" className="mt-4 text-xs font-bold text-[hsl(var(--accent))] hover:underline">계속 배우기 <ArrowRight className="ml-1 inline" size={13} /></Link></div>
@@ -672,14 +673,14 @@ function NotFound() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] p-6 text-center"><div><p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-[hsl(var(--accent))]">404 / loop lost</p><h1 className="mt-4 text-4xl font-bold">이 페이지는 아직 없어요.</h1><Link href="/" data-testid="link-not-found-home" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[hsl(var(--accent))]">오늘로 돌아가기 <ArrowRight size={16} /></Link></div></div>;
 }
 
-function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress }: {
-  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void;
+function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress, content }: {
+  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void; content: LearnContent;
 }) {
   return <Switch>
-    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} /></Route>
-    <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} /></Route>
+    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} content={content} /></Route>
+    <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={content} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
-    <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} /></Route>
+    <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
     <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>
     <Route path="/admin"><AdminUpload /></Route>
@@ -702,6 +703,7 @@ function HomeRedirect() {
 
 function LearningPortal() {
   const [level, setLevel] = useState<Level>('Intermediate');
+  const [learningContent, setLearningContent] = useState<LearnContent>(getDefaultLearningContent('Intermediate'));
   const [learned, setLearned] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
@@ -713,6 +715,30 @@ function LearningPortal() {
   const handlePassageProgress = useCallback((evaluation: PassageEvaluation) => {
     setPassageEvaluation(evaluation);
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLearningContent(getDefaultLearningContent(level));
+
+    fetch(`/api/learning-content?level=${encodeURIComponent(level)}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json() as Promise<LearnContent>;
+      })
+      .then((content) => {
+        if (content) setLearningContent(content);
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setLearningContent(getDefaultLearningContent(level));
+        }
+      });
+
+    return () => controller.abort();
+  }, [level]);
 
   useEffect(() => {
     if (!listening) return;
@@ -768,6 +794,7 @@ function LearningPortal() {
               onRemove={() => setLearned(false)}
               metrics={metrics}
               onPassageProgress={handlePassageProgress}
+               content={learningContent}
             />
           </Shell>
         </ErrorBoundary>

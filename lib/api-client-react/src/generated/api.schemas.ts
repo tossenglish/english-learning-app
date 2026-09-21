@@ -59,6 +59,76 @@ export const LearningLevel = {
   All: 'All',
 } as const;
 
+export type LearningContentLevel = typeof LearningContentLevel[keyof typeof LearningContentLevel];
+
+
+export const LearningContentLevel = {
+  Beginner: 'Beginner',
+  Intermediate: 'Intermediate',
+  Advanced: 'Advanced',
+} as const;
+
+export interface LearningContent {
+  id: number;
+  level: LearningContentLevel;
+  word: string;
+  pronunciation: string;
+  partOfSpeech: string;
+  shortMeaning: string;
+  meaningDetail: string;
+  englishDefinition: string;
+  exampleSentence: string;
+  exampleKorean: string;
+  /**
+     * @minItems 2
+     * @maxItems 4
+     */
+  quizOptions: string[];
+  correctMeaning: string;
+  tip: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LearningContentInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  word: string;
+  /** @maxLength 120 */
+  pronunciation: string;
+  /** @maxLength 40 */
+  partOfSpeech: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  shortMeaning: string;
+  /** @maxLength 1000 */
+  meaningDetail: string;
+  /** @maxLength 1000 */
+  englishDefinition: string;
+  /** @maxLength 1000 */
+  exampleSentence: string;
+  /** @maxLength 1000 */
+  exampleKorean: string;
+  /**
+     * @minItems 2
+     * @maxItems 4
+     * @items.minLength 1
+     * @items.maxLength 200
+     */
+  quizOptions: string[];
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  correctMeaning: string;
+  /** @maxLength 1000 */
+  tip: string;
+}
+
 export type MaterialType = typeof MaterialType[keyof typeof MaterialType];
 
 
@@ -122,5 +192,9 @@ export interface AssignmentMember {
 
 export type ListAssignmentsParams = {
 level: LearningLevel;
+};
+
+export type GetLearningContentParams = {
+level: LearningContentLevel;
 };
 

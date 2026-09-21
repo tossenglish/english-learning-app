@@ -25,8 +25,12 @@ import type {
   AssignmentMember,
   CreateAssignmentRequest,
   ErrorEnvelope,
+  GetLearningContentParams,
   HealthStatus,
   KoreanTranslationsEnvelope,
+  LearningContent,
+  LearningContentInput,
+  LearningContentLevel,
   ListAssignmentsParams,
   TranslatePracticeSentencesRequest,
   UploadUrlRequest,
@@ -789,6 +793,256 @@ export const useDeleteAssignment = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getDeleteAssignmentMutationOptions(options));
+    }
+
+export const getGetLearningContentUrl = (params: GetLearningContentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/learning-content?${stringifiedParams}` : `/api/learning-content`
+}
+
+/**
+ * @summary 현재 과정의 배우기 콘텐츠 조회
+ */
+export const getLearningContent = async (params: GetLearningContentParams, options?: Parameters<typeof customFetch>[1]): Promise<LearningContent> => {
+
+  return customFetch<LearningContent>(getGetLearningContentUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLearningContentQueryKey = (params?: GetLearningContentParams,) => {
+    return [
+    `/api/learning-content`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetLearningContentQueryOptions = <TData = Awaited<ReturnType<typeof getLearningContent>>, TError = ErrorType<ErrorEnvelope>>(params: GetLearningContentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLearningContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLearningContentQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLearningContent>>> = ({ signal }) => getLearningContent(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLearningContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLearningContentQueryResult = NonNullable<Awaited<ReturnType<typeof getLearningContent>>>
+export type GetLearningContentQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 현재 과정의 배우기 콘텐츠 조회
+ */
+
+export function useGetLearningContent<TData = Awaited<ReturnType<typeof getLearningContent>>, TError = ErrorType<ErrorEnvelope>>(
+ params: GetLearningContentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLearningContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLearningContentQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminLearningContentUrl = () => {
+
+
+
+
+  return `/api/admin/learning-content`
+}
+
+/**
+ * @summary 관리자가 과정별 배우기 콘텐츠 조회
+ */
+export const listAdminLearningContent = async ( options?: Parameters<typeof customFetch>[1]): Promise<LearningContent[]> => {
+
+  return customFetch<LearningContent[]>(getListAdminLearningContentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminLearningContentQueryKey = () => {
+    return [
+    `/api/admin/learning-content`
+    ] as const;
+    }
+
+
+export const getListAdminLearningContentQueryOptions = <TData = Awaited<ReturnType<typeof listAdminLearningContent>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLearningContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminLearningContentQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminLearningContent>>> = ({ signal }) => listAdminLearningContent({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminLearningContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminLearningContentQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminLearningContent>>>
+export type ListAdminLearningContentQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 관리자가 과정별 배우기 콘텐츠 조회
+ */
+
+export function useListAdminLearningContent<TData = Awaited<ReturnType<typeof listAdminLearningContent>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLearningContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminLearningContentQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertLearningContentUrl = (level: LearningContentLevel,) => {
+
+
+
+
+  return `/api/admin/learning-content/${level}`
+}
+
+/**
+ * @summary 과정별 배우기 콘텐츠 저장
+ */
+export const upsertLearningContent = async (level: LearningContentLevel,
+    learningContentInput: LearningContentInput, options?: Parameters<typeof customFetch>[1]): Promise<LearningContent> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LearningContent>(getUpsertLearningContentUrl(level),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(learningContentInput)
+  }
+);}
+
+
+
+
+
+export const getUpsertLearningContentMutationKey = () => ['upsertLearningContent'] as const;
+
+export const getUpsertLearningContentMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertLearningContent>>, TError,UpsertLearningContentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertLearningContent>>, TError,UpsertLearningContentMutationVariables, TContext> => {
+
+const mutationKey = getUpsertLearningContentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertLearningContent>>, UpsertLearningContentMutationVariables> = (props) => {
+          const {level,data} = props ?? {};
+
+          return  upsertLearningContent(level,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertLearningContentMutationResult = NonNullable<Awaited<ReturnType<typeof upsertLearningContent>>>
+    export type UpsertLearningContentMutationBody = BodyType<LearningContentInput>
+    export type UpsertLearningContentMutationError = ErrorType<ErrorEnvelope>
+    export type UpsertLearningContentMutationVariables = {level: LearningContentLevel;data: BodyType<LearningContentInput>}
+
+    /**
+ * @summary 과정별 배우기 콘텐츠 저장
+ */
+export const useUpsertLearningContent = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertLearningContent>>, TError,UpsertLearningContentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertLearningContent>>,
+        TError,
+        UpsertLearningContentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpsertLearningContentMutationOptions(options));
     }
 
 export const getGetStorageObjectUrl = (objectPath: string,) => {
