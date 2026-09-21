@@ -35,7 +35,7 @@ function parseDirectMaterial(
     .split(/\r?\n/)
     .map((line) => line.replace(/^[-*•\d.)\s]+/, '').trim())
     .filter(Boolean)
-    .slice(0, 50);
+    .slice(0, 200);
 
   return entries
     .map((entry, index) => {

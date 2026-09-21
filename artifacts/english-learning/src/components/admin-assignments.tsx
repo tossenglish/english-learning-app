@@ -312,7 +312,7 @@ export default function AdminAssignments({
                 <div>
                   <p className="text-xs font-bold">단어 파일 여러 개 불러오기</p>
                   <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    TXT·CSV를 여러 개 선택할 수 있어요. 한 줄에 단어 하나, CSV는 단어와 뜻 순서예요.
+                    TXT·CSV를 여러 개 선택할 수 있어요. 한 줄에 단어 하나, CSV는 단어와 뜻 순서예요. 한 번에 최대 200개까지 연습할 수 있어요.
                   </p>
                 </div>
                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold transition-colors hover:border-[hsl(var(--accent)/.6)]">
