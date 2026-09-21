@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Plus,
   Trash2,
+  Upload,
 } from 'lucide-react';
 
 export type AssignmentResource = {
@@ -55,6 +56,21 @@ const materialFolders: Array<{
   },
 ];
 
+function parseWordFile(contents: string): string[] {
+  return contents
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.replace(/^\uFEFF/, '').trim())
+    .filter(Boolean)
+    .filter((line) => !/^(word|english|단어)(?:\s*[,;\t]|$)/i.test(line))
+    .map((line) => {
+      if (line.includes('||')) return line;
+      const [word, meaning] = line.split(/\s*[,;\t]\s*/, 2);
+      return meaning ? `${word.trim()}||${meaning.trim()}` : line;
+    })
+    .filter((line) => line.split(/\s*\|\|\s*/, 1)[0].trim().length > 0);
+}
+
 export default function AdminAssignments({
   latestUpload,
 }: {
@@ -75,6 +91,7 @@ export default function AdminAssignments({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [materialImportMessage, setMaterialImportMessage] = useState('');
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
 
@@ -154,6 +171,7 @@ export default function AdminAssignments({
       setDescription('');
       setMaterialContent('');
       setMaterialType('sentence');
+      setMaterialImportMessage('');
       setDueDate('');
       setAssigneeUserId('');
       setResourcePath('');
@@ -163,6 +181,44 @@ export default function AdminAssignments({
       setError(saveError instanceof Error ? saveError.message : '과제 저장 오류');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const importWordFiles = async (fileList: FileList | null) => {
+    if (!fileList?.length || materialType !== 'word') return;
+
+    try {
+      const files = Array.from(fileList);
+      const importedWords = (
+        await Promise.all(
+          files.map(async (file) => {
+            if (!/\.(txt|csv)$/i.test(file.name)) {
+              throw new Error('단어 파일은 TXT 또는 CSV 형식만 불러올 수 있어요.');
+            }
+            return parseWordFile(await file.text());
+          }),
+        )
+      ).flat();
+
+      if (importedWords.length === 0) {
+        throw new Error('파일에서 단어를 찾지 못했습니다.');
+      }
+
+      const currentWords = materialContent
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const nextContent = [...currentWords, ...importedWords].join('\n');
+      if (nextContent.length > 20000) {
+        throw new Error('가져온 단어 자료가 너무 많아요. 20,000자 이내로 나눠 등록해 주세요.');
+      }
+
+      setMaterialContent(nextContent);
+      setMaterialImportMessage(`${files.length}개 파일에서 ${importedWords.length}개 단어를 불러왔어요.`);
+      setError('');
+    } catch (importError) {
+      setMaterialImportMessage('');
+      setError(importError instanceof Error ? importError.message : '단어 파일을 불러오지 못했습니다.');
     }
   };
 
@@ -251,6 +307,32 @@ export default function AdminAssignments({
                 : 'apple||사과\ncurious||호기심 많은'}
               className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
             />
+            {materialType === 'word' && (
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background)/.5)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold">단어 파일 여러 개 불러오기</p>
+                  <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+                    TXT·CSV를 여러 개 선택할 수 있어요. 한 줄에 단어 하나, CSV는 단어와 뜻 순서예요.
+                  </p>
+                </div>
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold transition-colors hover:border-[hsl(var(--accent)/.6)]">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.csv,text/plain,text/csv"
+                    className="sr-only"
+                    onChange={(event) => {
+                      void importWordFiles(event.target.files);
+                      event.target.value = '';
+                    }}
+                  />
+                  <Upload size={15} /> 파일 선택
+                </label>
+              </div>
+            )}
+            {materialImportMessage && (
+              <p className="text-[11px] font-semibold text-[hsl(var(--accent))]">{materialImportMessage}</p>
+            )}
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
               줄바꿈으로 항목을 나눠요. 영어 뒤에 <strong>||</strong>를 쓰면 한글 뜻도 직접 입력할 수 있어요.
             </span>
