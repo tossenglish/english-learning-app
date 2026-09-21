@@ -259,6 +259,9 @@ export default function PassagePractice({
 }) {
   const [initialState] = useState(readStoredPassageState);
   const activeMaterial = useMemo(() => readActivePracticeMaterial(), []);
+  const displayedActiveMaterialTitle = activeMaterial?.title
+    .replace(/^\s*1(?:\s*[.):\-]\s*|\s+|$)/, '')
+    .trim() ?? '';
   const hasSavedCustomPassage = normalizePassage(initialState.passageText) !== normalizePassage(DEFAULT_PASSAGE_TEXT);
   const [usingActiveMaterial, setUsingActiveMaterial] = useState(
     () => Boolean(activeMaterial),
@@ -483,7 +486,7 @@ export default function PassagePractice({
             Sentence studio
           </p>
           <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl" data-testid="text-passage-title">
-            {usingActiveMaterial && activeMaterial ? activeMaterial.title : '지문의 모든 문장을'}<br className="sm:hidden" /> Let&apos;s do it.
+            {usingActiveMaterial && displayedActiveMaterialTitle ? displayedActiveMaterialTitle : '지문의 모든 문장을'}<br className="sm:hidden" /> Let&apos;s do it.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
             한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.
@@ -580,7 +583,7 @@ export default function PassagePractice({
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">
                 Today's passage
               </p>
-              <h2 className="mt-2 text-lg font-bold">{usingActiveMaterial && activeMaterial ? activeMaterial.title : isDefaultPassage ? '작은 발견' : '내 지문'}</h2>
+              <h2 className="mt-2 text-lg font-bold">{usingActiveMaterial && displayedActiveMaterialTitle ? displayedActiveMaterialTitle : isDefaultPassage ? '작은 발견' : '내 지문'}</h2>
             </div>
             <MessageCircle size={19} className="text-[hsl(var(--accent))]" />
           </div>
