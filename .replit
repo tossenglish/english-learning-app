@@ -26,3 +26,6 @@ ADMIN_EMAIL = "ok-mbc@daum.net"
 
 [nix]
 channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-01044e6d-c7e8-4771-9ae5-a36765e3305e"

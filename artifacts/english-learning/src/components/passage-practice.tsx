@@ -11,7 +11,6 @@ import {
   MessageCircle,
   Mic,
   PenLine,
-  Play,
   RotateCcw,
   Repeat2,
   Sparkles,
@@ -526,11 +525,11 @@ export default function PassagePractice({
   };
 
   const nextSentence = () => {
-    stopSpeech();
     if (!sentenceCompleted) {
       setFeedback('hint');
       return;
     }
+    stopSpeech();
     if (safeCurrentIndex < passageSentences.length - 1) {
       setCurrentIndex((index) => index + 1);
       setMode('dictation');
