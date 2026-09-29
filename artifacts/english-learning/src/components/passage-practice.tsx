@@ -15,6 +15,7 @@ import {
   Repeat2,
   Sparkles,
   Square,
+  Upload,
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
@@ -296,6 +297,7 @@ export default function PassagePractice({
   const [speaking, setSpeaking] = useState(false);
   const [dictationRepeating, setDictationRepeating] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const passageFileInputRef = useRef<HTMLInputElement>(null);
   const speechLoopRef = useRef(false);
   const speechGenerationRef = useRef(0);
   const speechTimerRef = useRef<number | null>(null);
@@ -458,6 +460,26 @@ export default function PassagePractice({
     }
   };
 
+  const importPassageFile = async (file: File | null) => {
+    if (!file) return;
+    if (!/\.(txt|md|csv)$/i.test(file.name)) {
+      setEditorError('TXT, Markdown 또는 CSV 지문 파일을 선택해주세요.');
+      return;
+    }
+
+    try {
+      const contents = await file.text();
+      if (!contents.trim()) {
+        setEditorError('선택한 파일에 지문 내용이 없습니다.');
+        return;
+      }
+      setDraftText(contents);
+      applyPassage(contents);
+    } catch {
+      setEditorError('파일을 읽지 못했습니다. 파일을 다시 선택해주세요.');
+    }
+  };
+
   const markComplete = () => {
     stopSpeech();
     setCompleted((previous) => ({
@@ -596,6 +618,18 @@ export default function PassagePractice({
         </div>
 
         <label htmlFor="passage-text-input" className="sr-only">영어 지문</label>
+        <input
+          ref={passageFileInputRef}
+          type="file"
+          accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
+          className="sr-only"
+          aria-label="TXT, Markdown 또는 CSV 지문 파일 선택"
+          data-testid="input-passage-file"
+          onChange={(event) => {
+            void importPassageFile(event.currentTarget.files?.[0] ?? null);
+            event.currentTarget.value = '';
+          }}
+        />
         {hidePassageText ? (
           <div className="mt-5 flex min-h-[150px] flex-col justify-between gap-4 rounded-2xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted)/.35)] p-5 sm:flex-row sm:items-center">
             <div className="flex items-start gap-3">
@@ -609,14 +643,24 @@ export default function PassagePractice({
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowPassageEditor(true)}
-              data-testid="button-show-passage-editor"
-              className="shrink-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
-            >
-              지문 보기·편집
-            </button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => passageFileInputRef.current?.click()}
+                data-testid="button-import-passage-file"
+                className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--primary-foreground))] transition-colors"
+              >
+                <Upload size={14} /> 파일 불러오기
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPassageEditor(true)}
+                data-testid="button-show-passage-editor"
+                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
+              >
+                붙여넣기·편집
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -639,6 +683,14 @@ export default function PassagePractice({
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <span className="mr-1 font-mono text-[10px] text-[hsl(var(--muted-foreground))]">{draftText.length.toLocaleString()}자</span>
+                <button
+                  type="button"
+                  onClick={() => passageFileInputRef.current?.click()}
+                  data-testid="button-import-passage-file"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3.5 py-2.5 text-xs font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.6)]"
+                >
+                  <Upload size={14} /> 파일 불러오기
+                </button>
                 <button
                   type="button"
                   onClick={() => {
