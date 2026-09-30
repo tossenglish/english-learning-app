@@ -589,8 +589,8 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
           <button type="button" onClick={() => setCardFlipped(!cardFlipped)} data-testid="button-flip-word-card" className="group relative h-[360px] w-full [perspective:1200px] sm:h-[410px]">
             <div className={`relative h-full w-full duration-500 [transform-style:preserve-3d] ${cardFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
               <div className="absolute inset-0 flex [backface-visibility:hidden] flex-col justify-between overflow-hidden rounded-[30px] bg-[hsl(var(--sidebar))] p-8 text-left text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-10">
-                <div className="flex items-center justify-between"><span className="rounded-full border border-[hsl(var(--sidebar-foreground)/.2)] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.16em] text-[hsl(var(--sidebar-foreground)/.6)]">{content.partOfSpeech}</span><span className="text-xs text-[hsl(var(--sidebar-foreground)/.5)]">카드를 눌러 뒤집기</span></div>
-                <div><p className="font-sans text-5xl font-bold tracking-[-.07em] sm:text-7xl" data-testid="text-learning-word">{content.word}</p><p className="mt-3 text-sm text-[hsl(var(--sidebar-primary))]">{content.pronunciation}</p></div>
+                <div className="flex items-center justify-end"><span className="text-xs text-[hsl(var(--sidebar-foreground)/.5)]">카드를 눌러 뒤집기</span></div>
+                <div><p className="font-sans text-5xl font-bold tracking-[-.07em] sm:text-7xl" data-testid="text-learning-word">{content.word}</p></div>
                 <div className="flex items-center justify-between border-t border-[hsl(var(--sidebar-foreground)/.14)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]"><span>{content.meaningDetail}</span><RotateCcw size={17} /></div>
               </div>
               <div className="absolute inset-0 flex [backface-visibility:hidden] [transform:rotateY(180deg)] flex-col justify-between rounded-[30px] bg-[hsl(var(--accent))] p-8 text-[hsl(var(--accent-foreground))] shadow-[var(--shadow-md)] sm:p-10">

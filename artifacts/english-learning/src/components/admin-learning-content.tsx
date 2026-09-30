@@ -19,8 +19,8 @@ const fieldClassName =
 function contentToInput(content: LearningContent): LearnContent {
   return {
     word: content.word,
-    pronunciation: content.pronunciation,
-    partOfSpeech: content.partOfSpeech,
+    pronunciation: '',
+    partOfSpeech: '',
     shortMeaning: content.shortMeaning,
     meaningDetail: content.meaningDetail,
     englishDefinition: content.englishDefinition,
@@ -97,8 +97,8 @@ export default function AdminLearningContent() {
     const payload: LearningContentInput = {
       ...draft,
       word: draft.word.trim(),
-      pronunciation: draft.pronunciation.trim(),
-      partOfSpeech: draft.partOfSpeech.trim(),
+      pronunciation: '',
+      partOfSpeech: '',
       shortMeaning: draft.shortMeaning.trim(),
       meaningDetail: draft.meaningDetail.trim(),
       englishDefinition: draft.englishDefinition.trim(),
@@ -183,18 +183,10 @@ export default function AdminLearningContent() {
         <LoaderCircle className="mx-auto mt-8 animate-spin text-[hsl(var(--accent))]" size={24} />
       ) : (
         <form onSubmit={saveContent} className="mt-7 grid gap-5">
-          <div className="grid gap-4 sm:grid-cols-[1.4fr_.8fr_.7fr]">
+          <div className="grid gap-4">
             <label className="grid gap-2">
               <span className="text-xs font-bold">오늘의 단어</span>
               <input value={draft.word} onChange={(event) => updateDraft('word', event.target.value)} maxLength={120} required className={fieldClassName} />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">발음</span>
-              <input value={draft.pronunciation} onChange={(event) => updateDraft('pronunciation', event.target.value)} maxLength={120} placeholder="/ˌ.../" className={fieldClassName} />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">품사</span>
-              <input value={draft.partOfSpeech} onChange={(event) => updateDraft('partOfSpeech', event.target.value)} maxLength={40} placeholder="noun" className={fieldClassName} />
             </label>
           </div>
 
