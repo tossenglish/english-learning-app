@@ -120,6 +120,44 @@ function parseSentenceFile(contents: string, isCsv: boolean): string[] {
     .filter(Boolean);
 }
 
+function combineMaterialColumns(englishText: string, koreanText: string): string {
+  const englishRows = englishText.replace(/\r/g, '').trimEnd().split('\n');
+  const koreanRows = koreanText.replace(/\r/g, '').trimEnd().split('\n');
+  if (!englishText.trim()) return '';
+
+  return englishRows
+    .map((english, index) => {
+      const wordOrSentence = english.trim();
+      if (!wordOrSentence) return '';
+      const meaning = koreanRows[index]?.trim();
+      return meaning ? `${wordOrSentence}||${meaning}` : wordOrSentence;
+    })
+    .join('\n')
+    .trim();
+}
+
+function splitMaterialColumns(content: string): { english: string; korean: string } {
+  const englishRows: string[] = [];
+  const koreanRows: string[] = [];
+
+  content.replace(/\r/g, '').split('\n').forEach((line) => {
+    if (!line.trim()) {
+      englishRows.push('');
+      koreanRows.push('');
+      return;
+    }
+
+    const [english, korean = ''] = line.split(/\s*\|\|\s*/, 2);
+    englishRows.push(english.trim());
+    koreanRows.push(korean.trim());
+  });
+
+  return {
+    english: englishRows.join('\n').trim(),
+    korean: koreanRows.join('\n').trim(),
+  };
+}
+
 export default function AdminAssignments({
   latestUpload,
 }: {
@@ -130,7 +168,8 @@ export default function AdminAssignments({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [materialType, setMaterialType] = useState<MaterialType>('sentence');
-  const [materialContent, setMaterialContent] = useState('');
+  const [materialEnglish, setMaterialEnglish] = useState('');
+  const [materialKorean, setMaterialKorean] = useState('');
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -143,6 +182,7 @@ export default function AdminAssignments({
   const [materialImportMessage, setMaterialImportMessage] = useState('');
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
+  const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
 
   const visibleAssignments = assignments.filter((assignment) => {
     const matchesCourse = listLevel === 'All'
@@ -188,6 +228,10 @@ export default function AdminAssignments({
     if (!title.trim() || saving) return;
 
     if (materialContent.trim()) {
+      if (materialContent.length > 20000) {
+        setError('영어와 한글 자료를 합쳐 20,000자 이내로 등록해 주세요.');
+        return;
+      }
       const entries = parseDirectMaterial(materialContent, materialType);
       if (entries.length === 0) {
         setError('직접 입력한 자료에서 영어 단어 또는 문장을 찾지 못했습니다.');
@@ -196,6 +240,14 @@ export default function AdminAssignments({
       if (entries.length > 200) {
         setError('한 번에 최대 200개까지 등록할 수 있어요. 자료를 나눠 등록해 주세요.');
         return;
+      }
+      if (materialKorean.trim()) {
+        const englishLines = materialEnglish.replace(/\r/g, '').trimEnd().split('\n');
+        const koreanLines = materialKorean.replace(/\r/g, '').trimEnd().split('\n');
+        if (englishLines.length !== koreanLines.length) {
+          setError('영어 목록과 한글 뜻·해석 목록의 줄 수를 맞춰 주세요.');
+          return;
+        }
       }
     }
 
@@ -230,7 +282,8 @@ export default function AdminAssignments({
       setMaterialFolder(materialType);
       setTitle('');
       setDescription('');
-      setMaterialContent('');
+      setMaterialEnglish('');
+      setMaterialKorean('');
       setMaterialType('sentence');
       setMaterialImportMessage('');
       setDueDate('');
@@ -280,7 +333,9 @@ export default function AdminAssignments({
         throw new Error('가져온 자료가 너무 많아요. 20,000자 이내로 나눠 등록해 주세요.');
       }
 
-      setMaterialContent(nextContent);
+      const columns = splitMaterialColumns(nextContent);
+      setMaterialEnglish(columns.english);
+      setMaterialKorean(columns.korean);
       const itemLabel = materialType === 'word' ? '단어' : '문장';
       setMaterialImportMessage(`${files.length}개 파일에서 ${importedItems.length}개 ${itemLabel}를 불러왔어요.`);
       setError('');
@@ -371,19 +426,39 @@ export default function AdminAssignments({
               <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
             </label>
           </div>
-          <label className="grid gap-2">
-            <span className="text-xs font-bold">직접 입력 자료</span>
-            <textarea
-              value={materialContent}
-              onChange={(event) => setMaterialContent(event.target.value)}
-              maxLength={20000}
-              rows={6}
-              data-testid="textarea-assignment-material-content"
-              placeholder={materialType === 'sentence'
-                ? 'I take a short walk every morning.\nSmall habits make a big difference.||작은 습관이 큰 차이를 만들어요.'
-                : 'apple||사과\ncurious||호기심 많은'}
-              className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-xs font-bold">
+                {materialType === 'word' ? '영어 단어' : '영어 원문'}
+              </span>
+              <textarea
+                value={materialEnglish}
+                onChange={(event) => setMaterialEnglish(event.target.value)}
+                maxLength={20000}
+                rows={6}
+                data-testid="textarea-assignment-material-english"
+                placeholder={materialType === 'sentence'
+                  ? 'I take a short walk every morning.\nSmall habits make a big difference.'
+                  : 'apple\ncurious'}
+                className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs font-bold">
+                {materialType === 'word' ? '한글 뜻' : '한글 해석'}
+              </span>
+              <textarea
+                value={materialKorean}
+                onChange={(event) => setMaterialKorean(event.target.value)}
+                maxLength={20000}
+                rows={6}
+                data-testid="textarea-assignment-material-korean"
+                placeholder={materialType === 'sentence'
+                  ? '나는 매일 아침 짧게 산책해요.\n작은 습관이 큰 차이를 만들어요.'
+                  : '사과\n호기심 많은'}
+                className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
             <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background)/.5)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-bold">{materialType === 'word' ? '단어 파일 여러 개 불러오기' : '문장 파일 여러 개 불러오기'}</p>
@@ -410,11 +485,9 @@ export default function AdminAssignments({
               <p className="text-[11px] font-semibold text-[hsl(var(--accent))]" data-testid="status-material-import">{materialImportMessage}</p>
             )}
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              {materialType === 'word'
-                ? '줄바꿈으로 단어를 나눠요. 영어 뒤에 ||를 쓰면 한글 뜻도 함께 입력할 수 있어요.'
-                : '문장은 줄마다 입력하고, 영어 뒤에 ||를 쓰면 한글 뜻도 함께 넣을 수 있어요. 한 줄에 여러 문장을 입력해도 문장별로 나눠 연습해요.'}
+              영어와 한글은 같은 줄끼리 연결돼요. 여러 항목을 입력할 때 각 입력칸의 줄 순서를 맞춰 주세요. 한글 뜻·해석은 비워둘 수 있어요.
             </span>
-          </label>
+          </div>
         </div>
         <label className="grid gap-2">
           <span className="text-xs font-bold">학습 안내</span>
