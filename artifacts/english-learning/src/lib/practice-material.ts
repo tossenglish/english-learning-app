@@ -27,15 +27,25 @@ function splitIntoSentences(text: string): string[] {
     .slice(0, 20);
 }
 
-function parseDirectMaterial(
+function splitDirectSentenceLine(value: string): string[] {
+  return value
+    .split(/(?<=[.!?])\s+(?=[A-Z“"'])/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+export function parseDirectMaterial(
   content: string,
   materialType: Assignment['materialType'],
 ): PracticeSentence[] {
   const entries = content
     .split(/\r?\n/)
-    .map((line) => line.replace(/^[-*•\d.)\s]+/, '').trim())
+    .map((line) => line.replace(/^\s*(?:[-*•]\s+|\d+[.)]\s+)/, '').trim())
     .filter(Boolean)
-    .slice(0, 200);
+    .flatMap((line) => {
+      if (line.includes('||') || materialType === 'word') return [line];
+      return splitDirectSentenceLine(line);
+    });
 
   return entries
     .map((entry, index) => {
@@ -126,6 +136,9 @@ export async function prepareAssignmentPractice(
     );
     if (directSentences.length === 0) {
       throw new Error('직접 입력한 학습자료에서 영어 항목을 찾지 못했습니다.');
+    }
+    if (directSentences.length > 200) {
+      throw new Error('한 번에 최대 200개까지 연습할 수 있어요. 자료를 나눠 등록해 주세요.');
     }
     const material = {
       assignmentId: assignment.id,

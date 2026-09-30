@@ -16,6 +16,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { parseDirectMaterial } from '@/lib/practice-material';
 
 export type AssignmentResource = {
   name: string;
@@ -65,10 +66,58 @@ function parseWordFile(contents: string): string[] {
     .filter((line) => !/^(word|english|단어)(?:\s*[,;\t]|$)/i.test(line))
     .map((line) => {
       if (line.includes('||')) return line;
-      const [word, meaning] = line.split(/\s*[,;\t]\s*/, 2);
+      const delimiter = line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',';
+      const [word, meaning] = splitDelimitedRow(line, delimiter);
       return meaning ? `${word.trim()}||${meaning.trim()}` : line;
     })
     .filter((line) => line.split(/\s*\|\|\s*/, 1)[0].trim().length > 0);
+}
+
+function splitDelimitedRow(line: string, delimiter: string): string[] {
+  const fields: string[] = [];
+  let field = '';
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"') {
+      if (quoted && line[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === delimiter && !quoted) {
+      fields.push(field.trim());
+      field = '';
+    } else {
+      field += character;
+    }
+  }
+
+  fields.push(field.trim());
+  return fields;
+}
+
+function parseSentenceFile(contents: string, isCsv: boolean): string[] {
+  return contents
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.replace(/^\uFEFF/, '').replace(/^\s*[-*•]\s*/, '').trim())
+    .filter(Boolean)
+    .filter((line) => !/^(english|sentence|text|문장)(?:\s*[,;\t]|$)/i.test(line))
+    .flatMap((line) => {
+      if (line.includes('||')) return [line];
+
+      if (isCsv) {
+        const delimiter = line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',';
+        const [sentence, meaning] = splitDelimitedRow(line, delimiter);
+        return sentence ? [meaning ? `${sentence}||${meaning}` : sentence] : [];
+      }
+
+      return [line];
+    })
+    .filter(Boolean);
 }
 
 export default function AdminAssignments({
@@ -138,6 +187,18 @@ export default function AdminAssignments({
     event.preventDefault();
     if (!title.trim() || saving) return;
 
+    if (materialContent.trim()) {
+      const entries = parseDirectMaterial(materialContent, materialType);
+      if (entries.length === 0) {
+        setError('직접 입력한 자료에서 영어 단어 또는 문장을 찾지 못했습니다.');
+        return;
+      }
+      if (entries.length > 200) {
+        setError('한 번에 최대 200개까지 등록할 수 있어요. 자료를 나눠 등록해 주세요.');
+        return;
+      }
+    }
+
     setSaving(true);
     setError('');
     try {
@@ -184,41 +245,48 @@ export default function AdminAssignments({
     }
   };
 
-  const importWordFiles = async (fileList: FileList | null) => {
-    if (!fileList?.length || materialType !== 'word') return;
+  const importMaterialFiles = async (fileList: FileList | null) => {
+    if (!fileList?.length) return;
 
     try {
       const files = Array.from(fileList);
-      const importedWords = (
+      const importedItems = (
         await Promise.all(
           files.map(async (file) => {
-            if (!/\.(txt|csv)$/i.test(file.name)) {
-              throw new Error('단어 파일은 TXT 또는 CSV 형식만 불러올 수 있어요.');
+            if (!/\.(txt|md|csv)$/i.test(file.name)) {
+              throw new Error('TXT, Markdown 또는 CSV 파일을 선택해 주세요.');
             }
-            return parseWordFile(await file.text());
+            const contents = await file.text();
+            return materialType === 'word'
+              ? parseWordFile(contents)
+              : parseSentenceFile(contents, /\.csv$/i.test(file.name));
           }),
         )
       ).flat();
 
-      if (importedWords.length === 0) {
-        throw new Error('파일에서 단어를 찾지 못했습니다.');
+      if (importedItems.length === 0) {
+        throw new Error('파일에서 영어 단어 또는 문장을 찾지 못했습니다.');
       }
 
-      const currentWords = materialContent
+      const currentItems = materialContent
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean);
-      const nextContent = [...currentWords, ...importedWords].join('\n');
+      const nextContent = [...currentItems, ...importedItems].join('\n');
+      if (parseDirectMaterial(nextContent, materialType).length > 200) {
+        throw new Error('한 번에 최대 200개까지 등록할 수 있어요. 자료를 나눠 등록해 주세요.');
+      }
       if (nextContent.length > 20000) {
-        throw new Error('가져온 단어 자료가 너무 많아요. 20,000자 이내로 나눠 등록해 주세요.');
+        throw new Error('가져온 자료가 너무 많아요. 20,000자 이내로 나눠 등록해 주세요.');
       }
 
       setMaterialContent(nextContent);
-      setMaterialImportMessage(`${files.length}개 파일에서 ${importedWords.length}개 단어를 불러왔어요.`);
+      const itemLabel = materialType === 'word' ? '단어' : '문장';
+      setMaterialImportMessage(`${files.length}개 파일에서 ${importedItems.length}개 ${itemLabel}를 불러왔어요.`);
       setError('');
     } catch (importError) {
       setMaterialImportMessage('');
-      setError(importError instanceof Error ? importError.message : '단어 파일을 불러오지 못했습니다.');
+      setError(importError instanceof Error ? importError.message : '자료 파일을 불러오지 못했습니다.');
     }
   };
 
@@ -276,11 +344,15 @@ export default function AdminAssignments({
                 name="material-type"
                 value="sentence"
                 checked={materialType === 'sentence'}
-                onChange={() => setMaterialType('sentence')}
+                onChange={() => {
+                  setMaterialType('sentence');
+                  setMaterialImportMessage('');
+                  setError('');
+                }}
                 className="sr-only"
               />
               <span className="block text-sm font-bold">문장</span>
-              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">한 줄에 영어 문장 하나</span>
+              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 문장을 한 번에 입력하거나 파일로 등록</span>
             </label>
             <label className={`cursor-pointer rounded-xl border p-3 transition-colors ${materialType === 'word' ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]' : 'border-[hsl(var(--border))]'}`}>
               <input
@@ -288,11 +360,15 @@ export default function AdminAssignments({
                 name="material-type"
                 value="word"
                 checked={materialType === 'word'}
-                onChange={() => setMaterialType('word')}
+                onChange={() => {
+                  setMaterialType('word');
+                  setMaterialImportMessage('');
+                  setError('');
+                }}
                 className="sr-only"
               />
               <span className="block text-sm font-bold">단어</span>
-              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">한 줄에 단어 하나</span>
+              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
             </label>
           </div>
           <label className="grid gap-2">
@@ -302,39 +378,41 @@ export default function AdminAssignments({
               onChange={(event) => setMaterialContent(event.target.value)}
               maxLength={20000}
               rows={6}
+              data-testid="textarea-assignment-material-content"
               placeholder={materialType === 'sentence'
                 ? 'I take a short walk every morning.\nSmall habits make a big difference.||작은 습관이 큰 차이를 만들어요.'
                 : 'apple||사과\ncurious||호기심 많은'}
               className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
             />
-            {materialType === 'word' && (
-              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background)/.5)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background)/.5)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-bold">단어 파일 여러 개 불러오기</p>
+                  <p className="text-xs font-bold">{materialType === 'word' ? '단어 파일 여러 개 불러오기' : '문장 파일 여러 개 불러오기'}</p>
                   <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    TXT·CSV를 여러 개 선택할 수 있어요. 한 줄에 단어 하나, CSV는 단어와 뜻 순서예요. 한 번에 최대 200개까지 연습할 수 있어요.
+                    TXT·Markdown·CSV 파일을 여러 개 선택할 수 있어요. {materialType === 'word' ? '한 줄에 단어 하나, CSV는 단어와 뜻 순서예요.' : '문장은 줄마다 하나씩 적거나 CSV에 문장과 뜻을 넣어주세요.'} 한 번에 최대 200개까지 등록할 수 있어요.
                   </p>
                 </div>
                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold transition-colors hover:border-[hsl(var(--accent)/.6)]">
                   <input
                     type="file"
                     multiple
-                    accept=".txt,.csv,text/plain,text/csv"
+                    accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
                     className="sr-only"
                     onChange={(event) => {
-                      void importWordFiles(event.target.files);
+                      void importMaterialFiles(event.target.files);
                       event.target.value = '';
                     }}
+                    data-testid="input-assignment-material-files"
                   />
                   <Upload size={15} /> 파일 선택
                 </label>
-              </div>
-            )}
+            </div>
             {materialImportMessage && (
-              <p className="text-[11px] font-semibold text-[hsl(var(--accent))]">{materialImportMessage}</p>
+              <p className="text-[11px] font-semibold text-[hsl(var(--accent))]" data-testid="status-material-import">{materialImportMessage}</p>
             )}
             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              줄바꿈으로 항목을 나눠요. 영어 뒤에 <strong>||</strong>를 쓰면 한글 뜻도 직접 입력할 수 있어요.
+              {materialType === 'word'
+                ? '줄바꿈으로 단어를 나눠요. 영어 뒤에 ||를 쓰면 한글 뜻도 함께 입력할 수 있어요.'
+                : '문장은 줄마다 입력하고, 영어 뒤에 ||를 쓰면 한글 뜻도 함께 넣을 수 있어요. 한 줄에 여러 문장을 입력해도 문장별로 나눠 연습해요.'}
             </span>
           </label>
         </div>
