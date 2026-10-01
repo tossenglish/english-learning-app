@@ -87,6 +87,7 @@ export const ListAssignmentsResponseItem = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullable(),
   "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
@@ -108,6 +109,7 @@ export const ListAdminAssignmentsResponseItem = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullable(),
   "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
@@ -119,17 +121,6 @@ export const ListAdminAssignmentsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListAdminAssignmentsResponse = zod.array(ListAdminAssignmentsResponseItem)
-
-
-/**
- * @summary 과제 배정을 위한 회원 목록 조회
- */
-export const ListAdminMembersResponseItem = zod.object({
-  "id": zod.string(),
-  "displayName": zod.string(),
-  "email": zod.string().nullish()
-})
-export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
 
 
 /**
@@ -147,6 +138,7 @@ export const CreateAssignmentBody = zod.object({
   "title": zod.string().min(1).max(createAssignmentBodyTitleMax),
   "description": zod.string().max(createAssignmentBodyDescriptionMax),
   "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullish(),
   "materialContent": zod.string().max(createAssignmentBodyMaterialContentMax),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
@@ -162,6 +154,7 @@ export const CreateAssignmentResponse = zod.object({
   "title": zod.string(),
   "description": zod.string(),
   "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullable(),
   "materialContent": zod.string(),
   "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
   "assigneeUserId": zod.string().nullish(),
@@ -172,6 +165,49 @@ export const CreateAssignmentResponse = zod.object({
   "isPublished": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
+
+
+/**
+ * @summary 관리자의 학습자료 하위 폴더 목록 조회
+ */
+export const ListAdminAssignmentFoldersResponseItem = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminAssignmentFoldersResponse = zod.array(ListAdminAssignmentFoldersResponseItem)
+
+
+/**
+ * @summary 문장 또는 단어 자료 하위 폴더 생성
+ */
+export const createAssignmentFolderBodyNameMax = 80;
+
+
+
+export const CreateAssignmentFolderBody = zod.object({
+  "name": zod.string().min(1).max(createAssignmentFolderBodyNameMax),
+  "materialType": zod.enum(['sentence', 'word'])
+})
+
+export const CreateAssignmentFolderResponse = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+export const ListAdminMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "displayName": zod.string(),
+  "email": zod.string().nullish()
+})
+export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
 
 
 /**

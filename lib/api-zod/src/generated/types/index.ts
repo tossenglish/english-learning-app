@@ -8,6 +8,8 @@
 
 export * from './adminStatus';
 export * from './assignment';
+export * from './assignmentFolder';
+export * from './assignmentFolderInput';
 export * from './assignmentMember';
 export * from './createAssignmentRequest';
 export * from './errorEnvelope';

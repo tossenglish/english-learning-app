@@ -13,6 +13,8 @@ export interface Assignment {
   title: string;
   description: string;
   materialType: MaterialType;
+  /** @nullable */
+  folderId: number | null;
   materialContent: string;
   level: LearningLevel;
   /** @nullable */

@@ -22,6 +22,8 @@ import type {
 import type {
   AdminStatus,
   Assignment,
+  AssignmentFolder,
+  AssignmentFolderInput,
   AssignmentMember,
   CreateAssignmentRequest,
   ErrorEnvelope,
@@ -556,89 +558,12 @@ export function useListAdminAssignments<TData = Awaited<ReturnType<typeof listAd
 
 
 
-export const getListAdminMembersUrl = () => {
-
-
-
-
-  return `/api/admin/members`
-}
-
-/**
- * @summary 과제 배정을 위한 회원 목록 조회
- */
-export const listAdminMembers = async ( options?: Parameters<typeof customFetch>[1]): Promise<AssignmentMember[]> => {
-
-  return customFetch<AssignmentMember[]>(getListAdminMembersUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListAdminMembersQueryKey = () => {
-    return [
-    `/api/admin/members`
-    ] as const;
-    }
-
-
-export const getListAdminMembersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAdminMembersQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminMembers>>> = ({ signal }) => listAdminMembers({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListAdminMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminMembers>>>
-export type ListAdminMembersQueryError = ErrorType<ErrorEnvelope>
-
-
-/**
- * @summary 과제 배정을 위한 회원 목록 조회
- */
-
-export function useListAdminMembers<TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListAdminMembersQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
 export const getCreateAssignmentUrl = () => {
 
 
 
 
-  return `/api/admin/members`
+  return `/api/admin/assignments`
 }
 
 /**
@@ -720,6 +645,248 @@ export const useCreateAssignment = <TError = ErrorType<ErrorEnvelope>,
       > => {
       return useMutation(getCreateAssignmentMutationOptions(options));
     }
+
+export const getListAdminAssignmentFoldersUrl = () => {
+
+
+
+
+  return `/api/admin/assignment-folders`
+}
+
+/**
+ * @summary 관리자의 학습자료 하위 폴더 목록 조회
+ */
+export const listAdminAssignmentFolders = async ( options?: Parameters<typeof customFetch>[1]): Promise<AssignmentFolder[]> => {
+
+  return customFetch<AssignmentFolder[]>(getListAdminAssignmentFoldersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAssignmentFoldersQueryKey = () => {
+    return [
+    `/api/admin/assignment-folders`
+    ] as const;
+    }
+
+
+export const getListAdminAssignmentFoldersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAssignmentFolders>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignmentFolders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAssignmentFoldersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAssignmentFolders>>> = ({ signal }) => listAdminAssignmentFolders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignmentFolders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAssignmentFoldersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAssignmentFolders>>>
+export type ListAdminAssignmentFoldersQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 관리자의 학습자료 하위 폴더 목록 조회
+ */
+
+export function useListAdminAssignmentFolders<TData = Awaited<ReturnType<typeof listAdminAssignmentFolders>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAssignmentFolders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAssignmentFoldersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAssignmentFolderUrl = () => {
+
+
+
+
+  return `/api/admin/assignment-folders`
+}
+
+/**
+ * @summary 문장 또는 단어 자료 하위 폴더 생성
+ */
+export const createAssignmentFolder = async (assignmentFolderInput: AssignmentFolderInput, options?: Parameters<typeof customFetch>[1]): Promise<AssignmentFolder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AssignmentFolder>(getCreateAssignmentFolderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(assignmentFolderInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAssignmentFolderMutationKey = () => ['createAssignmentFolder'] as const;
+
+export const getCreateAssignmentFolderMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssignmentFolder>>, TError,CreateAssignmentFolderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAssignmentFolder>>, TError,CreateAssignmentFolderMutationVariables, TContext> => {
+
+const mutationKey = getCreateAssignmentFolderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAssignmentFolder>>, CreateAssignmentFolderMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAssignmentFolder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAssignmentFolderMutationResult = NonNullable<Awaited<ReturnType<typeof createAssignmentFolder>>>
+    export type CreateAssignmentFolderMutationBody = BodyType<AssignmentFolderInput>
+    export type CreateAssignmentFolderMutationError = ErrorType<ErrorEnvelope>
+    export type CreateAssignmentFolderMutationVariables = {data: BodyType<AssignmentFolderInput>}
+
+    /**
+ * @summary 문장 또는 단어 자료 하위 폴더 생성
+ */
+export const useCreateAssignmentFolder = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssignmentFolder>>, TError,CreateAssignmentFolderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAssignmentFolder>>,
+        TError,
+        CreateAssignmentFolderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAssignmentFolderMutationOptions(options));
+    }
+
+export const getListAdminMembersUrl = () => {
+
+
+
+
+  return `/api/admin/members`
+}
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+export const listAdminMembers = async ( options?: Parameters<typeof customFetch>[1]): Promise<AssignmentMember[]> => {
+
+  return customFetch<AssignmentMember[]>(getListAdminMembersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminMembersQueryKey = () => {
+    return [
+    `/api/admin/members`
+    ] as const;
+    }
+
+
+export const getListAdminMembersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminMembers>>> = ({ signal }) => listAdminMembers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminMembers>>>
+export type ListAdminMembersQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 과제 배정을 위한 회원 목록 조회
+ */
+
+export function useListAdminMembers<TData = Awaited<ReturnType<typeof listAdminMembers>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getDeleteAssignmentUrl = (assignmentId: number,) => {
 

@@ -142,6 +142,8 @@ export interface Assignment {
   title: string;
   description: string;
   materialType: MaterialType;
+  /** @nullable */
+  folderId: number | null;
   materialContent: string;
   level: LearningLevel;
   /** @nullable */
@@ -167,6 +169,8 @@ export interface CreateAssignmentRequest {
   /** @maxLength 4000 */
   description: string;
   materialType: MaterialType;
+  /** @nullable */
+  folderId?: number | null;
   /** @maxLength 20000 */
   materialContent: string;
   level: LearningLevel;
@@ -181,6 +185,22 @@ export interface CreateAssignmentRequest {
   /** @nullable */
   resourceName?: string | null;
   isPublished: boolean;
+}
+
+export interface AssignmentFolder {
+  id: number;
+  name: string;
+  materialType: MaterialType;
+  createdAt: string;
+}
+
+export interface AssignmentFolderInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  materialType: MaterialType;
 }
 
 export interface AssignmentMember {

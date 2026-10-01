@@ -17,6 +17,8 @@ export interface CreateAssignmentRequest {
   /** @maxLength 4000 */
   description: string;
   materialType: MaterialType;
+  /** @nullable */
+  folderId?: number | null;
   /** @maxLength 20000 */
   materialContent: string;
   level: LearningLevel;
