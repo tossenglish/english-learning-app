@@ -153,8 +153,8 @@ function splitMaterialColumns(content: string): { english: string; korean: strin
   });
 
   return {
-    english: englishRows.join('\n').trim(),
-    korean: koreanRows.join('\n').trim(),
+    english: englishRows.join('\n'),
+    korean: koreanRows.join('\n'),
   };
 }
 
@@ -243,7 +243,7 @@ export default function AdminAssignments({
       }
       if (materialKorean.trim()) {
         const englishLines = materialEnglish.replace(/\r/g, '').trimEnd().split('\n');
-        const koreanLines = materialKorean.replace(/\r/g, '').trimEnd().split('\n');
+        const koreanLines = materialKorean.replace(/\r/g, '').split('\n');
         if (englishLines.length !== koreanLines.length) {
           setError('영어 목록과 한글 뜻·해석 목록의 줄 수를 맞춰 주세요.');
           return;
