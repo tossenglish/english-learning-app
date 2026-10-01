@@ -172,32 +172,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /admin/members:
-    get:
-      operationId: listAdminMembers
-      tags: [Assignments]
-      summary: 과제 배정을 위한 회원 목록 조회
-      responses:
-        "200":
-          description: 회원 목록
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AssignmentMember"
-        "401":
-          description: 로그인이 필요함
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-        "403":
-          description: 관리자 권한이 필요함
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
     post:
       operationId: createAssignment
       tags: [Assignments]
@@ -221,6 +195,99 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/assignment-folders:
+    get:
+      operationId: listAdminAssignmentFolders
+      tags: [Assignments]
+      summary: 관리자의 학습자료 하위 폴더 목록 조회
+      responses:
+        "200":
+          description: 학습자료 하위 폴더 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentFolder"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    post:
+      operationId: createAssignmentFolder
+      tags: [Assignments]
+      summary: 문장 또는 단어 자료 하위 폴더 생성
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentFolderInput"
+      responses:
+        "201":
+          description: 하위 폴더가 생성됨
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentFolder"
+        "400":
+          description: 잘못된 폴더 정보
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: 같은 자료 유형에 같은 이름의 폴더가 이미 있음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/members:
+    get:
+      operationId: listAdminMembers
+      tags: [Assignments]
+      summary: 과제 배정을 위한 회원 목록 조회
+      responses:
+        "200":
+          description: 회원 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentMember"
         "401":
           description: 로그인이 필요함
           content:
@@ -561,7 +628,7 @@ components:
           maxLength: 1000
     Assignment:
       type: object
-      required: [id, title, description, materialType, materialContent, level, isPublished, createdAt]
+      required: [id, title, description, materialType, folderId, materialContent, level, isPublished, createdAt]
       properties:
         id:
           type: integer
@@ -571,6 +638,8 @@ components:
           type: string
         materialType:
           $ref: "#/components/schemas/MaterialType"
+        folderId:
+          type: [integer, "null"]
         materialContent:
           type: string
         level:
@@ -603,6 +672,8 @@ components:
           maxLength: 4000
         materialType:
           $ref: "#/components/schemas/MaterialType"
+        folderId:
+          type: [integer, "null"]
         materialContent:
           type: string
           maxLength: 20000
@@ -620,6 +691,29 @@ components:
           type: [string, "null"]
         isPublished:
           type: boolean
+    AssignmentFolder:
+      type: object
+      required: [id, name, materialType, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        materialType:
+          $ref: "#/components/schemas/MaterialType"
+        createdAt:
+          type: string
+          format: date-time
+    AssignmentFolderInput:
+      type: object
+      required: [name, materialType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        materialType:
+          $ref: "#/components/schemas/MaterialType"
     MaterialType:
       type: string
       enum: [sentence, word]

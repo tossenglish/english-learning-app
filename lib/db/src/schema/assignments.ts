@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  integer,
   pgTable,
   serial,
   text,
@@ -8,12 +9,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { assignmentFoldersTable } from "./assignment-folders";
 
 export const assignmentsTable = pgTable("assignments", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   materialType: text("material_type").notNull().default("sentence"),
+  folderId: integer("folder_id").references(() => assignmentFoldersTable.id, {
+    onDelete: "set null",
+  }),
   materialContent: text("material_content").notNull().default(""),
   level: text("level").notNull(),
   assigneeUserId: text("assignee_user_id"),
