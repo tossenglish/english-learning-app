@@ -314,6 +314,7 @@ export default function AdminAssignments({
           title: title.trim(),
           description: description.trim(),
           materialType,
+          folderId: assignmentFolderId ? Number(assignmentFolderId) : null,
           materialContent: materialContent.trim(),
           level,
           assigneeUserId: assigneeUserId || null,
@@ -332,11 +333,13 @@ export default function AdminAssignments({
       setAssignments((current) => [created, ...current]);
       setListLevel(level);
       setMaterialFolder(materialType);
+      setFolderListFilter(created.folderId == null ? 'all' : String(created.folderId));
       setTitle('');
       setDescription('');
       setMaterialEnglish('');
       setMaterialKorean('');
       setMaterialType('sentence');
+      setAssignmentFolderId('');
       setMaterialImportMessage('');
       setDueDate('');
       setAssigneeUserId('');
@@ -453,6 +456,7 @@ export default function AdminAssignments({
                 checked={materialType === 'sentence'}
                 onChange={() => {
                   setMaterialType('sentence');
+                  setAssignmentFolderId('');
                   setMaterialImportMessage('');
                   setError('');
                 }}
@@ -469,6 +473,7 @@ export default function AdminAssignments({
                 checked={materialType === 'word'}
                 onChange={() => {
                   setMaterialType('word');
+                  setAssignmentFolderId('');
                   setMaterialImportMessage('');
                   setError('');
                 }}
@@ -477,6 +482,40 @@ export default function AdminAssignments({
               <span className="block text-sm font-bold">단어</span>
               <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
             </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+            <label className="grid gap-2">
+              <span className="text-xs font-bold">저장할 하위 폴더</span>
+              <select
+                value={assignmentFolderId}
+                onChange={(event) => setAssignmentFolderId(event.target.value)}
+                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+              >
+                <option value="">폴더 없이 저장</option>
+                {foldersForMaterialType.map((folder) => (
+                  <option key={folder.id} value={folder.id}>{folder.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs font-bold">새 하위 폴더</span>
+              <input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                maxLength={80}
+                placeholder={materialType === 'word' ? '예: 여행 단어' : '예: 일상 회화'}
+                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void createAssignmentFolder()}
+              disabled={!newFolderName.trim() || creatingFolder}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm font-bold transition-colors hover:border-[hsl(var(--accent)/.6)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creatingFolder ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}
+              하위 폴더 만들기
+            </button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2">
@@ -656,7 +695,10 @@ export default function AdminAssignments({
                role="tab"
                aria-selected={materialFolder === value}
                data-testid={`button-material-folder-${value}`}
-               onClick={() => setMaterialFolder(value)}
+                onClick={() => {
+                  setMaterialFolder(value);
+                  setFolderListFilter('all');
+                }}
                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                  materialFolder === value
                    ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]'
@@ -707,6 +749,30 @@ export default function AdminAssignments({
              </button>
            ))}
          </div>
+          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="자료 하위 폴더 선택">
+            {[
+              { value: 'all', label: '전체 자료' },
+              { value: 'unfiled', label: '폴더 없음' },
+              ...folders
+                .filter((folder) => folder.materialType === materialFolder)
+                .map((folder) => ({ value: String(folder.id), label: folder.name })),
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={folderListFilter === value}
+                onClick={() => setFolderListFilter(value)}
+                className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
+                  folderListFilter === value
+                    ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.1)] text-[hsl(var(--foreground))]'
+                    : 'border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--accent)/.6)]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         {loading ? (
           <LoaderCircle className="mx-auto mt-8 animate-spin text-[hsl(var(--accent))]" size={24} />
          ) : visibleAssignments.length === 0 ? (
@@ -736,6 +802,12 @@ export default function AdminAssignments({
                     <div className="mt-3 flex flex-wrap gap-3 text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">
                       {assignment.dueDate && <span className="flex items-center gap-1"><CalendarDays size={12} /> {assignment.dueDate}</span>}
                       {assignment.resourceName && <span className="flex items-center gap-1"><FileText size={12} /> {assignment.resourceName}</span>}
+                      {assignment.folderId != null && (
+                        <span className="flex items-center gap-1">
+                          <FolderOpen size={12} />
+                          {folders.find((folder) => folder.id === assignment.folderId)?.name || '하위 폴더'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button

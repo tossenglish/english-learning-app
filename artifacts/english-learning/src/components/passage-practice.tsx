@@ -238,6 +238,43 @@ function normalizeAnswer(value: string) {
     .trim();
 }
 
+const clozeStopWords = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'but', 'by', 'for',
+  'from', 'had', 'has', 'have', 'he', 'her', 'him', 'his', 'i', 'in', 'is',
+  'it', 'its', 'me', 'my', 'of', 'on', 'or', 'our', 'she', 'that', 'the',
+  'their', 'them', 'they', 'this', 'to', 'us', 'was', 'we', 'were', 'will',
+  'with', 'you', 'your',
+]);
+
+function buildCloze(english: string) {
+  const matches = [...english.matchAll(/[A-Za-z]+(?:['’][A-Za-z]+)*/g)];
+  const contentWords = matches
+    .map((match, index) => ({ word: match[0], index }))
+    .filter(({ word }) => !clozeStopWords.has(word.toLowerCase()));
+  const candidates = contentWords.length > 0
+    ? contentWords
+    : matches.map((match, index) => ({ word: match[0], index }));
+  const blankCount = candidates.length > 1
+    ? Math.min(candidates.length - 1, Math.ceil(candidates.length / 3))
+    : candidates.length;
+  const blankMatches = Array.from({ length: blankCount }, (_, index) => {
+    const candidateIndex = Math.floor(((index + 1) * candidates.length) / (blankCount + 1));
+    return candidates[candidateIndex];
+  });
+  const blankPositions = new Set(blankMatches.map(({ index }) => index));
+  let wordIndex = 0;
+  const prompt = english.replace(/[A-Za-z]+(?:['’][A-Za-z]+)*/g, (word) => {
+    const isBlank = blankPositions.has(wordIndex);
+    wordIndex += 1;
+    return isBlank ? '＿＿＿＿' : word;
+  });
+
+  return {
+    prompt,
+    answer: blankMatches.map(({ word }) => word).join(' '),
+  };
+}
+
 function speakSentence(sentence: string, onStart: () => void, onEnd: () => void) {
   if (!('speechSynthesis' in window)) {
     onEnd();
@@ -308,6 +345,10 @@ export default function PassagePractice({
 
   const safeCurrentIndex = Math.min(currentIndex, Math.max(0, passageSentences.length - 1));
   const current = passageSentences[safeCurrentIndex] ?? passageSentences[0];
+  const currentCloze = useMemo(
+    () => buildCloze(current?.english ?? ''),
+    [current?.english],
+  );
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
   const completedSteps = passageSentences.reduce(
@@ -506,7 +547,7 @@ export default function PassagePractice({
       return;
     }
 
-    if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(current.english)) {
+    if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(currentCloze.answer)) {
       markComplete();
     } else {
       setFeedback('wrong');
