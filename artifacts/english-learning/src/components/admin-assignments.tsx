@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type {
   Assignment,
+  AssignmentFolder,
   AssignmentMember,
   LearningLevel,
   MaterialType,
@@ -164,10 +165,13 @@ export default function AdminAssignments({
   latestUpload: AssignmentResource | null;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [materialType, setMaterialType] = useState<MaterialType>('sentence');
+  const [assignmentFolderId, setAssignmentFolderId] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
   const [materialEnglish, setMaterialEnglish] = useState('');
   const [materialKorean, setMaterialKorean] = useState('');
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
@@ -182,13 +186,20 @@ export default function AdminAssignments({
   const [materialImportMessage, setMaterialImportMessage] = useState('');
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
+  const [folderListFilter, setFolderListFilter] = useState('all');
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
+  const foldersForMaterialType = folders.filter((folder) => folder.materialType === materialType);
 
   const visibleAssignments = assignments.filter((assignment) => {
     const matchesCourse = listLevel === 'All'
       ? assignment.level === 'All'
       : assignment.level === listLevel;
-    return matchesCourse && assignment.materialType === materialFolder;
+    const matchesSubfolder = folderListFilter === 'all'
+      || (folderListFilter === 'unfiled'
+        ? assignment.folderId == null
+        : assignment.folderId === Number(folderListFilter));
+    return matchesCourse && assignment.materialType === materialFolder && matchesSubfolder;
   });
 
   const loadAssignments = async () => {
@@ -208,6 +219,15 @@ export default function AdminAssignments({
 
   useEffect(() => {
     void loadAssignments();
+    fetch('/api/admin/assignment-folders', { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('자료 폴더를 불러오지 못했습니다.');
+        return response.json() as Promise<AssignmentFolder[]>;
+      })
+      .then(setFolders)
+      .catch((loadError: unknown) => {
+        setError(loadError instanceof Error ? loadError.message : '자료 폴더 오류');
+      });
     fetch('/api/admin/members', { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) return [];
@@ -216,6 +236,38 @@ export default function AdminAssignments({
       .then(setMembers)
       .catch(() => setMembers([]));
   }, []);
+
+  const createAssignmentFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name || creatingFolder) return;
+
+    setCreatingFolder(true);
+    setError('');
+    try {
+      const response = await fetch('/api/admin/assignment-folders', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, materialType }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '하위 폴더를 만들지 못했습니다.');
+      }
+
+      const created = await response.json() as AssignmentFolder;
+      setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
+      setAssignmentFolderId(String(created.id));
+      setNewFolderName('');
+      setMaterialFolder(materialType);
+      setFolderListFilter(String(created.id));
+      setListLevel(level);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : '하위 폴더 생성 오류');
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
 
   useEffect(() => {
     if (!latestUpload) return;

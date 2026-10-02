@@ -1,14 +1,17 @@
 import {
+  CreateAssignmentFolderBody,
+  CreateAssignmentFolderResponse,
   CreateAssignmentBody,
   CreateAssignmentResponse,
   DeleteAssignmentParams,
+  ListAdminAssignmentFoldersResponse,
   ListAdminAssignmentsResponse,
   ListAdminMembersResponse,
   ListAssignmentsQueryParams,
   ListAssignmentsResponse,
 } from "@workspace/api-zod";
 import { clerkClient } from "@clerk/express";
-import { assignmentsTable, db } from "@workspace/db";
+import { assignmentFoldersTable, assignmentsTable, db } from "@workspace/db";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
@@ -87,6 +90,52 @@ router.get(
 );
 
 router.get(
+  "/admin/assignment-folders",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const folders = await db
+      .select()
+      .from(assignmentFoldersTable)
+      .orderBy(desc(assignmentFoldersTable.createdAt));
+
+    res.json(ListAdminAssignmentFoldersResponse.parse(folders));
+  },
+);
+
+router.post(
+  "/admin/assignment-folders",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const parsed = CreateAssignmentFolderBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const name = parsed.data.name.trim();
+    if (!name) {
+      res.status(400).json({ error: "Folder name cannot be empty" });
+      return;
+    }
+
+    const [folder] = await db
+      .insert(assignmentFoldersTable)
+      .values({ ...parsed.data, name })
+      .onConflictDoNothing()
+      .returning();
+
+    if (!folder) {
+      res.status(409).json({ error: "A folder with this name already exists for this material type" });
+      return;
+    }
+
+    res.status(201).json(CreateAssignmentFolderResponse.parse(folder));
+  },
+);
+
+router.get(
   "/admin/members",
   async (req: Request, res: Response): Promise<void> => {
     if (!(await requireAdmin(req, res))) return;
@@ -124,6 +173,23 @@ router.post(
       return;
     }
 
+    const folderId = parsed.data.folderId ?? null;
+    if (folderId !== null) {
+      const [folder] = await db
+        .select({ id: assignmentFoldersTable.id })
+        .from(assignmentFoldersTable)
+        .where(
+          and(
+            eq(assignmentFoldersTable.id, folderId),
+            eq(assignmentFoldersTable.materialType, parsed.data.materialType),
+          ),
+        );
+      if (!folder) {
+        res.status(400).json({ error: "Selected folder does not match the material type" });
+        return;
+      }
+    }
+
     let assigneeName: string | null = null;
     if (parsed.data.assigneeUserId) {
       try {
@@ -139,6 +205,7 @@ router.post(
       .insert(assignmentsTable)
       .values({
         ...parsed.data,
+        folderId,
         assigneeUserId: parsed.data.assigneeUserId || null,
         assigneeName,
       })
