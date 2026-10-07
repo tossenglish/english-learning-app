@@ -927,13 +927,13 @@ export default function PassagePractice({
             })}
           </div>
 
-          <article className="min-w-0 rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
+          <article className="min-w-0 rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-10 lg:p-12">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">
                   Sentence {current.id} / {passageSentences.length}
                 </p>
-                <h2 className="mt-4 max-w-none break-words text-2xl font-bold leading-tight tracking-[-.04em] sm:text-3xl" data-testid="text-current-passage-sentence">
+                <h2 className="mt-4 max-w-none break-words text-3xl font-bold leading-tight tracking-[-.04em] sm:text-4xl lg:text-[2.75rem]" data-testid="text-current-passage-sentence">
                   {hidePassageText ? (
                     <span className="flex items-center gap-3 text-[hsl(var(--sidebar-foreground)/.72)]">
                       <EyeOff className="shrink-0 text-[hsl(var(--sidebar-primary))]" size={24} />
@@ -943,7 +943,7 @@ export default function PassagePractice({
                 </h2>
                 <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
                   <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">한글 해석</p>
-                  <p className="mt-1.5 text-base font-semibold leading-relaxed text-[hsl(var(--sidebar-foreground)/.9)]">
+                  <p className="mt-1.5 text-lg font-semibold leading-relaxed text-[hsl(var(--sidebar-foreground)/.9)] sm:text-xl">
                     {current.korean}
                   </p>
                 </div>
@@ -957,7 +957,7 @@ export default function PassagePractice({
               {mode === 'dictation' && (
                 <div>
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
-                    문장을 완성할 때까지 자동으로 반복해서 들어보세요.
+                    빈칸에 들어갈 단어를 듣고 순서대로 적어보세요. 문장은 자동으로 반복 재생돼요.
                   </p>
                   <button
                     type="button"
@@ -979,11 +979,8 @@ export default function PassagePractice({
               {mode === 'writing' && (
                 <div>
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
-                    {isDefaultPassage
-                      ? '한국어 뜻을 보고 영어 문장을 직접 만들어보세요.'
-                      : '원문을 잠시 가리고 영어 문장을 직접 다시 만들어보세요.'}
+                    한글 해석을 참고해 영어 빈칸을 순서대로 채워보세요.
                   </p>
-                  <p className="mt-3 text-lg font-semibold text-[hsl(var(--sidebar-primary))]">{current.korean}</p>
                   <p className="mt-2 flex items-center gap-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.45)]"><Lightbulb size={13} /> {current.hint}</p>
                 </div>
               )}
@@ -1004,6 +1001,17 @@ export default function PassagePractice({
 
             {mode !== 'shadowing' && (
               <div className="mt-5">
+                <div
+                  className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5"
+                  data-testid="text-passage-cloze"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
+                    {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '빈칸 문장'}
+                  </p>
+                  <p className="mt-2 break-words text-lg font-semibold leading-relaxed sm:text-xl">
+                    {currentCloze.prompt}
+                  </p>
+                </div>
                 <label htmlFor={`passage-answer-${current.id}`} className="sr-only">{currentMode.label} 답안</label>
                 <textarea
                   id={`passage-answer-${current.id}`}
@@ -1017,8 +1025,8 @@ export default function PassagePractice({
                   }}
                   data-testid={`input-passage-${mode}`}
                   rows={3}
-                  className="min-h-[112px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-sm leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[132px] sm:text-base"
-                  placeholder={mode === 'dictation' ? '들은 문장을 영어로 적어보세요' : '영어 문장을 입력해보세요'}
+                  className="min-h-[144px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-base leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[168px] sm:text-lg"
+                  placeholder="빈칸에 들어갈 영어 단어를 순서대로 입력하세요"
                   autoComplete="off"
                 />
               </div>
