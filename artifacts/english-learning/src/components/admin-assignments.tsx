@@ -188,6 +188,7 @@ export default function AdminAssignments({
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
   const [folderListFilter, setFolderListFilter] = useState('all');
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
   const foldersForMaterialType = folders.filter((folder) => folder.materialType === materialType);
 
@@ -274,6 +275,34 @@ export default function AdminAssignments({
     setResourcePath(latestUpload.objectPath);
     setResourceName(latestUpload.name);
   }, [latestUpload]);
+
+  const updateMemberCourse = async (
+    memberId: string,
+    course: AssignmentMember['course'],
+  ) => {
+    setUpdatingMemberIds((current) => [...current, memberId]);
+    setError('');
+    try {
+      const response = await fetch(`/api/admin/members/${encodeURIComponent(memberId)}/course`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '회원의 과정을 변경하지 못했습니다.');
+      }
+      const updated = await response.json() as { memberId: string; course: AssignmentMember['course'] };
+      setMembers((current) => current.map((member) => (
+        member.id === updated.memberId ? { ...member, course: updated.course } : member
+      )));
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : '과정 배정 오류');
+    } finally {
+      setUpdatingMemberIds((current) => current.filter((id) => id !== memberId));
+    }
+  };
 
   const saveAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -602,7 +631,7 @@ export default function AdminAssignments({
               <option value="">레벨 전체에 배정</option>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.displayName}{member.email ? ` · ${member.email}` : ''}
+                  {member.displayName}{member.course ? ` · ${levelLabels[member.course]}` : ''}{member.email ? ` · ${member.email}` : ''}
                 </option>
               ))}
             </select>
@@ -619,6 +648,11 @@ export default function AdminAssignments({
                  <option key={value} value={value}>{label}</option>
               ))}
             </select>
+             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
+               {level === 'All'
+                 ? `모든 회원에게 표시 · 과정 배정 회원 ${members.filter((member) => member.course !== null).length}명`
+                 : `${members.filter((member) => member.course === level).length}명의 배정 회원에게 표시`}
+             </span>
           </label>
           <label className="grid gap-2">
             <span className="text-xs font-bold">마감일</span>
@@ -676,6 +710,53 @@ export default function AdminAssignments({
           {error}
         </p>
       )}
+
+      <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold">과정 회원 배정</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+              회원을 과정에 배정하면 이후 해당 과정에 등록한 과제가 그 회원들에게 함께 표시돼요.
+            </p>
+          </div>
+          <span className="shrink-0 font-mono text-xs text-[hsl(var(--muted-foreground))]">{members.length}명</span>
+        </div>
+        {members.length === 0 ? (
+          <p className="mt-5 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
+            배정할 회원이 없습니다.
+          </p>
+        ) : (
+          <div className="mt-5 divide-y divide-[hsl(var(--border))] rounded-2xl border border-[hsl(var(--border))]">
+            {members.map((member) => (
+              <div key={member.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold">{member.displayName}</p>
+                  {member.email && <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{member.email}</p>}
+                </div>
+                <label className="flex shrink-0 items-center gap-3">
+                  <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">학습 과정</span>
+                  <select
+                    aria-label={`${member.displayName} 학습 과정`}
+                    value={member.course ?? ''}
+                    disabled={updatingMemberIds.includes(member.id)}
+                    onChange={(event) => {
+                      const selectedCourse = event.target.value as AssignmentMember['course'] | '';
+                      void updateMemberCourse(member.id, selectedCourse || null);
+                    }}
+                    className="min-w-32 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                  >
+                    <option value="">과정 미배정</option>
+                    {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
        <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
         <div className="flex items-center justify-between">

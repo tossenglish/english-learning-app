@@ -333,6 +333,7 @@ export default function PassagePractice({
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [dictationRepeating, setDictationRepeating] = useState(false);
+  const [passageListening, setPassageListening] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const passageFileInputRef = useRef<HTMLInputElement>(null);
   const speechLoopRef = useRef(false);
@@ -376,6 +377,7 @@ export default function PassagePractice({
     window.speechSynthesis?.cancel();
     setSpeaking(false);
     setDictationRepeating(false);
+    setPassageListening(false);
   };
 
   const startDictationRepeat = (sentence: string) => {
@@ -572,6 +574,52 @@ export default function PassagePractice({
     speakSentence(current.english, () => setSpeaking(true), () => setSpeaking(false));
   };
 
+  const listenToFullPassage = () => {
+    if (passageListening) {
+      stopSpeech();
+      return;
+    }
+    if (!('speechSynthesis' in window)) {
+      setFeedback('hint');
+      return;
+    }
+
+    stopSpeech();
+    const generation = speechGenerationRef.current;
+    let sentenceIndex = 0;
+    setPassageListening(true);
+
+    const playNextSentence = () => {
+      if (speechGenerationRef.current !== generation) return;
+      const sentence = passageSentences[sentenceIndex];
+      if (!sentence) {
+        setSpeaking(false);
+        setPassageListening(false);
+        return;
+      }
+
+      speakSentence(
+        sentence.english,
+        () => setSpeaking(true),
+        () => {
+          if (speechGenerationRef.current !== generation) return;
+          setSpeaking(false);
+          sentenceIndex += 1;
+          if (sentenceIndex >= passageSentences.length) {
+            setPassageListening(false);
+            return;
+          }
+          speechTimerRef.current = window.setTimeout(() => {
+            speechTimerRef.current = null;
+            playNextSentence();
+          }, 450);
+        },
+      );
+    };
+
+    playNextSentence();
+  };
+
   const selectMode = (nextMode: ExerciseMode) => {
     stopSpeech();
     setMode(nextMode);
@@ -602,7 +650,7 @@ export default function PassagePractice({
   };
 
   return (
-    <div className="mx-auto max-w-[1240px] space-y-8">
+    <div className="mx-auto max-w-[1360px] space-y-8">
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <Link
@@ -772,7 +820,7 @@ export default function PassagePractice({
         )}
       </section>
 
-      <section className="rise-in stagger-1 grid gap-6 lg:grid-cols-[minmax(210px,.58fr)_minmax(0,1.42fr)]">
+      <section className="rise-in stagger-1 grid gap-6 lg:grid-cols-[minmax(230px,.48fr)_minmax(0,1.52fr)]">
         <aside className="min-w-0 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -790,6 +838,19 @@ export default function PassagePractice({
                 ? '작은 카페를 발견한 오후의 이야기예요.'
                 : '내가 고른 지문을 문장별로 반복해서 연습해요.'}
           </p>
+
+          <button
+            type="button"
+            onClick={listenToFullPassage}
+            disabled={passageSentences.length === 0}
+            aria-pressed={passageListening}
+            data-testid="button-listen-full-passage"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(var(--accent))] px-4 py-3 text-sm font-bold text-[hsl(var(--accent-foreground))] transition-colors hover:brightness-95 disabled:opacity-50"
+          >
+            {passageListening
+              ? <><Square size={15} fill="currentColor" /> 지문 듣기 중지</>
+              : <><Headphones size={17} /> 지문 전체 듣기</>}
+          </button>
 
           <div className="mt-7 space-y-2">
             {passageSentences.map((sentence, index) => {
