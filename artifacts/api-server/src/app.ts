@@ -71,7 +71,7 @@ app.use((req, res, next) => {
   next();
 });
 
-export default app;
+
 
 // 프론트엔드 정적 파일 서빙 및 SPA 라우팅 처리
 const frontendDistPath = path.resolve(
