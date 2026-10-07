@@ -1,3 +1,4 @@
+import path from "path";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -46,5 +47,30 @@ app.use(
 );
 
 app.use("/api", router);
+app.use("/api", router);
+
+// 프론트엔드 정적 파일 서빙 및 SPA 라우팅 처리
+const frontendDistPath = path.resolve(
+  process.cwd(),
+  "artifacts/english-learning/dist"
+);
+
+app.use(express.static(frontendDistPath));
+app.use(express.static(path.join(frontendDistPath, "public")));
+
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+  // dist/public/index.html 또는 dist/index.html 전송
+  const indexPath = path.join(frontendDistPath, "public", "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.sendFile(path.join(frontendDistPath, "index.html"), next);
+    }
+  });
+});
+
+export default app;
 
 export default app;
