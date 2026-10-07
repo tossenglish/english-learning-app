@@ -1,7 +1,7 @@
-import path from "path";
-import fs from "fs";
 import express, { type Express } from "express";
 import cors from "cors";
+import path from "path";
+import fs from "fs";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
@@ -49,15 +49,15 @@ app.use(
 
 app.use("/api", router);
 
-// 프론트엔드 정적 파일 서빙 (dist/public 기준)
+// 프론트엔드 빌드 결과물(artifacts/english-learning/dist/public)의 실제 절대 경로 계산
 const clientBuildPath = path.resolve(
-  process.cwd(),
-  "artifacts/english-learning/dist/public"
+  import.meta.dirname,
+  "../../../artifacts/english-learning/dist/public"
 );
 
 app.use(express.static(clientBuildPath));
 
-// SPA 라우팅 폴백: API 요청이 아니면 index.html 전송
+// SPA 라우팅: API가 아닌 요청은 모두 index.html 응답
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) {
     return next();
@@ -71,28 +71,4 @@ app.use((req, res, next) => {
   next();
 });
 
-
-
-// 프론트엔드 정적 파일 서빙 및 SPA 라우팅 처리
-const frontendDistPath = path.resolve(
-  process.cwd(),
-  "artifacts/english-learning/dist"
-);
-
-app.use(express.static(frontendDistPath));
-app.use(express.static(path.join(frontendDistPath, "public")));
-
-app.get("/{*splat}", (req, res, next) => {
-  if (req.path.startsWith("/api")) {
-    return next();
-  }
-  const indexPath = path.join(frontendDistPath, "public", "index.html");
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      res.sendFile(path.join(frontendDistPath, "index.html"), next);
-    }
-  });
-});
-
 export default app;
-
