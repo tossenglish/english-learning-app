@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -48,6 +49,29 @@ app.use(
 
 app.use("/api", router);
 
+// 프론트엔드 정적 파일 서빙 (dist/public 기준)
+const clientBuildPath = path.resolve(
+  process.cwd(),
+  "artifacts/english-learning/dist/public"
+);
+
+app.use(express.static(clientBuildPath));
+
+// SPA 라우팅 폴백: API 요청이 아니면 index.html 전송
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+
+  const indexPath = path.join(clientBuildPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+
+  next();
+});
+
+export default app;
 
 // 프론트엔드 정적 파일 서빙 및 SPA 라우팅 처리
 const frontendDistPath = path.resolve(
