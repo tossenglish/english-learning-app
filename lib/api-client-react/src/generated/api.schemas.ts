@@ -203,11 +203,30 @@ export interface AssignmentFolderInput {
   materialType: MaterialType;
 }
 
+export type CourseLevel = typeof CourseLevel[keyof typeof CourseLevel];
+
+
+export const CourseLevel = {
+  Beginner: 'Beginner',
+  Intermediate: 'Intermediate',
+  Advanced: 'Advanced',
+} as const;
+
 export interface AssignmentMember {
   id: string;
   displayName: string;
   /** @nullable */
   email?: string | null;
+  course: CourseLevel | null;
+}
+
+export interface MemberCourseInput {
+  course: CourseLevel | null;
+}
+
+export interface MemberCourseAssignment {
+  memberId: string;
+  course: CourseLevel | null;
 }
 
 export type ListAssignmentsParams = {

@@ -205,9 +205,30 @@ export const CreateAssignmentFolderResponse = zod.object({
 export const ListAdminMembersResponseItem = zod.object({
   "id": zod.string(),
   "displayName": zod.string(),
-  "email": zod.string().nullish()
+  "email": zod.string().nullish(),
+  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()])
 })
 export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
+
+
+/**
+ * @summary 회원의 학습 과정 배정 또는 변경
+ */
+
+
+
+export const UpdateMemberCourseParams = zod.object({
+  "memberId": zod.coerce.string().min(1)
+})
+
+export const UpdateMemberCourseBody = zod.object({
+  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()])
+})
+
+export const UpdateMemberCourseResponse = zod.object({
+  "memberId": zod.string(),
+  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()])
+})
 
 
 /**

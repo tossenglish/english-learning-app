@@ -7,10 +7,7 @@
  */
 import type { CourseLevel } from './courseLevel';
 
-export interface AssignmentMember {
-  id: string;
-  displayName: string;
-  /** @nullable */
-  email?: string | null;
+export interface MemberCourseAssignment {
+  memberId: string;
   course: CourseLevel | null;
 }

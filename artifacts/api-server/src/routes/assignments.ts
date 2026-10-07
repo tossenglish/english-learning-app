@@ -9,9 +9,17 @@ import {
   ListAdminMembersResponse,
   ListAssignmentsQueryParams,
   ListAssignmentsResponse,
+  UpdateMemberCourseBody,
+  UpdateMemberCourseParams,
+  UpdateMemberCourseResponse,
 } from "@workspace/api-zod";
 import { clerkClient } from "@clerk/express";
-import { assignmentFoldersTable, assignmentsTable, db } from "@workspace/db";
+import {
+  assignmentFoldersTable,
+  assignmentsTable,
+  db,
+  memberCoursesTable,
+} from "@workspace/db";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
@@ -54,6 +62,13 @@ router.get(
       return;
     }
 
+    const memberId = getUserId(req)!;
+    const [course] = await db
+      .select()
+      .from(memberCoursesTable)
+      .where(eq(memberCoursesTable.memberId, memberId));
+    const visibleLevels = course ? [course.courseLevel, "All"] : ["All"];
+
     const assignments = await db
       .select()
       .from(assignmentsTable)
@@ -61,10 +76,10 @@ router.get(
         and(
           eq(assignmentsTable.isPublished, true),
           or(
-            eq(assignmentsTable.assigneeUserId, getUserId(req)!),
+            eq(assignmentsTable.assigneeUserId, memberId),
             and(
               isNull(assignmentsTable.assigneeUserId),
-              inArray(assignmentsTable.level, [query.data.level, "All"]),
+              inArray(assignmentsTable.level, visibleLevels),
             ),
           ),
         ),
@@ -144,6 +159,16 @@ router.get(
       limit: 100,
       orderBy: "-created_at",
     });
+    const userIds = users.data.map((user) => user.id);
+    const courseAssignments = userIds.length > 0
+      ? await db
+        .select()
+        .from(memberCoursesTable)
+        .where(inArray(memberCoursesTable.memberId, userIds))
+      : [];
+    const courseByMember = new Map(
+      courseAssignments.map(({ memberId, courseLevel }) => [memberId, courseLevel]),
+    );
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
     const members = users.data
       .filter(
@@ -156,9 +181,63 @@ router.get(
         id: user.id,
         displayName: getDisplayName(user),
         email: user.primaryEmailAddress?.emailAddress ?? null,
+        course: courseByMember.get(user.id) ?? null,
       }));
 
     res.json(ListAdminMembersResponse.parse(members));
+  },
+);
+
+router.put(
+  "/admin/members/:memberId/course",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const params = UpdateMemberCourseParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const parsed = UpdateMemberCourseBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    try {
+      await clerkClient.users.getUser(params.data.memberId);
+    } catch {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+
+    if (parsed.data.course === null) {
+      await db
+        .delete(memberCoursesTable)
+        .where(eq(memberCoursesTable.memberId, params.data.memberId));
+    } else {
+      await db
+        .insert(memberCoursesTable)
+        .values({
+          memberId: params.data.memberId,
+          courseLevel: parsed.data.course,
+        })
+        .onConflictDoUpdate({
+          target: memberCoursesTable.memberId,
+          set: {
+            courseLevel: parsed.data.course,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    res.json(
+      UpdateMemberCourseResponse.parse({
+        memberId: params.data.memberId,
+        course: parsed.data.course,
+      }),
+    );
   },
 );
 

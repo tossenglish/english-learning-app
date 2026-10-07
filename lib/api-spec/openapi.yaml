@@ -300,6 +300,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/members/{memberId}/course:
+    put:
+      operationId: updateMemberCourse
+      tags: [Assignments]
+      summary: 회원의 학습 과정 배정 또는 변경
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberCourseInput"
+      responses:
+        "200":
+          description: 회원의 학습 과정이 갱신됨
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberCourseAssignment"
+        "400":
+          description: 잘못된 과정 정보
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: 회원을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/assignments/{assignmentId}:
     delete:
       operationId: deleteAssignment
@@ -719,7 +768,7 @@ components:
       enum: [sentence, word]
     AssignmentMember:
       type: object
-      required: [id, displayName]
+      required: [id, displayName, course]
       properties:
         id:
           type: string
@@ -727,4 +776,29 @@ components:
           type: string
         email:
           type: [string, "null"]
+        course:
+          oneOf:
+            - $ref: "#/components/schemas/CourseLevel"
+            - type: "null"
+    CourseLevel:
+      type: string
+      enum: [Beginner, Intermediate, Advanced]
+    MemberCourseInput:
+      type: object
+      required: [course]
+      properties:
+        course:
+          oneOf:
+            - $ref: "#/components/schemas/CourseLevel"
+            - type: "null"
+    MemberCourseAssignment:
+      type: object
+      required: [memberId, course]
+      properties:
+        memberId:
+          type: string
+        course:
+          oneOf:
+            - $ref: "#/components/schemas/CourseLevel"
+            - type: "null"
 
