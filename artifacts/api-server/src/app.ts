@@ -58,11 +58,10 @@ const frontendDistPath = path.resolve(
 app.use(express.static(frontendDistPath));
 app.use(express.static(path.join(frontendDistPath, "public")));
 
-app.get("*", (req, res, next) => {
+app.get("/{*splat}", (req, res, next) => {
   if (req.path.startsWith("/api")) {
     return next();
   }
-  // dist/public/index.html 또는 dist/index.html 전송
   const indexPath = path.join(frontendDistPath, "public", "index.html");
   res.sendFile(indexPath, (err) => {
     if (err) {
