@@ -47,7 +47,7 @@ app.use(
 );
 
 app.use("/api", router);
-app.use("/api", router);
+
 
 // 프론트엔드 정적 파일 서빙 및 SPA 라우팅 처리
 const frontendDistPath = path.resolve(
@@ -73,4 +73,3 @@ app.get("*", (req, res, next) => {
 
 export default app;
 
-export default app;
