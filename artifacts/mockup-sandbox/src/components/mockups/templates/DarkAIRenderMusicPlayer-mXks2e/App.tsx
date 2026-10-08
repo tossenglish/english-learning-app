@@ -72,20 +72,26 @@ const TRACKS = [
     duration: 276,
     img: 'https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=1200&h=1200&fit=crop',
   },
-];
+] as const;
 
-const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+type Track = (typeof TRACKS)[number];
+type TrackId = Track['id'];
+
+const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export default function App() {
-  const [activeId, setActiveId] = useState(1);
+  const [activeId, setActiveId] = useState<TrackId>(1);
   const [playing, setPlaying] = useState(true);
   const [elapsed, setElapsed] = useState(74);
-  const [liked, setLiked] = useState([1, 4]);
+  const [liked, setLiked] = useState<TrackId[]>([1, 4]);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(true);
 
-  const track = useMemo(() => TRACKS.find((t) => t.id === activeId), [activeId]);
-  const idx = TRACKS.findIndex((t) => t.id === activeId);
+  const track = useMemo<Track>(
+    () => TRACKS.find((t) => t.id === activeId) ?? TRACKS[0]!,
+    [activeId],
+  );
+  const idx = Math.max(0, TRACKS.findIndex((t) => t.id === track.id));
 
   useEffect(() => {
     if (!playing) return;
@@ -102,18 +108,18 @@ export default function App() {
     return () => clearInterval(t);
   }, [playing, track, idx]);
 
-  const selectTrack = (id) => {
+  const selectTrack = (id: TrackId) => {
     setActiveId(id);
     setElapsed(0);
     setPlaying(true);
   };
 
-  const skip = (dir) => {
+  const skip = (dir: -1 | 1) => {
     const next = TRACKS[(idx + dir + TRACKS.length) % TRACKS.length].id;
     selectTrack(next);
   };
 
-  const toggleLike = (id) =>
+  const toggleLike = (id: TrackId) =>
     setLiked((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
 
   const pct = (elapsed / track.duration) * 100;
