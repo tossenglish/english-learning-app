@@ -10,6 +10,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
+import { adminIdentityMiddleware } from "./lib/auth";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -47,6 +48,8 @@ app.use(
   })),
 );
 
+app.use("/api/admin", adminIdentityMiddleware);
+app.use("/api/storage/uploads/request-url", adminIdentityMiddleware);
 app.use("/api", router);
 
 // 프론트엔드 빌드 결과물(artifacts/english-learning/dist/public)의 실제 절대 경로 계산
