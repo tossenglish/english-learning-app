@@ -19,7 +19,6 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  CircleHelp,
   Clock3,
   Flame,
   Headphones,
@@ -29,7 +28,6 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
-  Target,
   Trophy,
   Volume2,
   X,
@@ -38,6 +36,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
 import AdminUpload from '@/components/admin-upload';
+import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
@@ -533,35 +532,7 @@ function Home({ level, onLevelChange, learned, onStart, content }: { level: Leve
         onStartPractice={(assignment) => void startPractice(assignment)}
       />
 
-      <section className="rise-in stagger-2 grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
-        <div className="rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-6">
-          <div className="flex items-center justify-between">
-            <div><p className="font-mono text-[10px] font-bold uppercase tracking-[.17em] text-[hsl(var(--muted-foreground))]">Daily path</p><h3 className="mt-2 text-lg font-bold" data-testid="text-lessons-complete">오늘의 학습 · {completed}/5 완료</h3></div>
-            <Target size={20} className="text-[hsl(var(--accent))]" />
-          </div>
-          <div className="mt-6 space-y-4">
-            {['Warm up · 오늘의 단어', 'Context · 문장 속에서', 'Check · 의미 확인', 'Speak · 내 문장 만들기', 'Wrap up · 오늘을 저장하기'].map((item, index) => {
-              const done = index < completed;
-              return <div key={item} className="flex items-center gap-3 text-sm">
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full border ${done ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]'}`}>{done ? <Check size={13} /> : <span className="text-[10px]">{index + 1}</span>}</span>
-                <span className={done ? 'text-[hsl(var(--foreground)/.55)] line-through' : 'font-semibold'}>{item}</span>
-                {index === completed && <span className="ml-auto rounded-full bg-[hsl(var(--secondary))] px-2 py-1 text-[9px] font-bold text-[hsl(var(--secondary-foreground))]">NEXT</span>}
-              </div>;
-            })}
-          </div>
-        </div>
-        <div className="relative overflow-hidden rounded-[24px] bg-[hsl(var(--secondary))] p-7 text-[hsl(var(--secondary-foreground))]">
-          <div className="absolute -right-7 -top-8 h-36 w-36 rounded-full border-[20px] border-[hsl(var(--secondary-foreground)/.08)]" />
-          <div className="relative flex h-full flex-col justify-between gap-7 sm:flex-row sm:items-end">
-            <div>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[.17em] opacity-55">A tiny note</span>
-              <p className="mt-4 max-w-md text-2xl font-bold leading-tight tracking-[-.04em]">“유창함은 많이 아는 게 아니라,<br className="hidden sm:block" /> 아는 것을 꺼내 쓰는 일이에요.”</p>
-              <p className="mt-3 text-xs opacity-65">오늘 배운 단어를 대화에서 한 번 꺼내보세요.</p>
-            </div>
-            <div className="hidden shrink-0 rounded-full border border-[hsl(var(--secondary-foreground)/.2)] p-3 sm:block"><CircleHelp size={22} /></div>
-          </div>
-        </div>
-      </section>
+      <HomeVideoPlayer />
     </div>
   );
 }
