@@ -12,6 +12,7 @@ import {
   type ParsedLearningContentCsvItem,
 } from '@/lib/learning-content-csv';
 import { getDefaultLearningContent, LEARNING_CONTENT_UPDATED_EVENT } from '@/lib/learning-content';
+import { apiFetch } from '@/lib/api-fetch';
 
 const levelOrder: LearningContentLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 const levelLabels: Record<LearningContentLevel, string> = {
@@ -95,7 +96,7 @@ export default function AdminWordContentSettings() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/admin/learning-content', {
+    apiFetch('/api/admin/learning-content', {
       credentials: 'include',
       signal: controller.signal,
     })
@@ -173,7 +174,7 @@ export default function AdminWordContentSettings() {
           correctMeaning: content.shortMeaning,
         },
       }));
-      const response = await fetch('/api/admin/learning-content', {
+      const response = await apiFetch('/api/admin/learning-content', {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

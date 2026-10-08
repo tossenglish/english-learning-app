@@ -10,6 +10,7 @@ import { useAdminAccess } from '@/hooks/use-admin-access';
 import AdminAssignments, { type AssignmentResource } from '@/components/admin-assignments';
 import AdminHomeVideoSettings from '@/components/admin-home-video-settings';
 import AdminWordContentSettings from '@/components/admin-word-content-settings';
+import { apiFetch, openApiFile } from '@/lib/api-fetch';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -35,7 +36,7 @@ export default function AdminUpload() {
     setUploaded(null);
 
     try {
-      const response = await fetch('/api/storage/uploads/request-url', {
+      const response = await apiFetch('/api/storage/uploads/request-url', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -174,6 +175,12 @@ export default function AdminUpload() {
               href={`/api/storage${uploaded.objectPath}`}
               target="_blank"
               rel="noreferrer"
+              onClick={(event) => {
+                event.preventDefault();
+                void openApiFile(`/api/storage${uploaded.objectPath}`).catch((error: unknown) => {
+                  window.alert(error instanceof Error ? error.message : '파일을 열지 못했습니다.');
+                });
+              }}
               className="inline-flex items-center gap-2 text-sm font-bold text-[hsl(var(--accent))] hover:underline"
             >
               <FileText size={16} /> {uploaded.name} 열기

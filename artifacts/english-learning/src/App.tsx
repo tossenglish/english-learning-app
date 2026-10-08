@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,6 +7,7 @@ import {
   Show,
   SignIn,
   SignUp,
+  useAuth,
   useClerk,
   useUser,
 } from '@clerk/react';
@@ -43,6 +44,7 @@ import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
 import type { Assignment, LearningContent } from '@workspace/api-client-react';
 import { prepareAssignmentPractice } from '@/lib/practice-material';
+import { apiFetch, setApiAuthTokenGetter } from '@/lib/api-fetch';
 import {
   getDefaultLearningContent,
   LEARNING_CONTENT_UPDATED_EVENT,
@@ -698,7 +700,7 @@ function LearningPortal() {
     const loadContent = () => {
       controller?.abort();
       controller = new AbortController();
-      fetch(`/api/learning-content?level=${encodeURIComponent(level)}`, {
+      apiFetch(`/api/learning-content?level=${encodeURIComponent(level)}`, {
         credentials: 'include',
         signal: controller.signal,
       })
@@ -804,6 +806,17 @@ function LearningPortal() {
   );
 }
 
+function ClerkApiAuthBridge({ children }: { children: ReactNode }) {
+  const { getToken } = useAuth();
+
+  useLayoutEffect(() => {
+    setApiAuthTokenGetter(getToken);
+    return () => setApiAuthTokenGetter(null);
+  }, [getToken]);
+
+  return children;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -830,17 +843,19 @@ function ClerkProviderWithRoutes() {
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Switch>
-            <Route path="/" component={HomeRedirect} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route component={LearningPortal} />
-          </Switch>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <ClerkApiAuthBridge>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Switch>
+              <Route path="/" component={HomeRedirect} />
+              <Route path="/sign-in/*?" component={SignInPage} />
+              <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route component={LearningPortal} />
+            </Switch>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ClerkApiAuthBridge>
     </ClerkProvider>
   );
 }

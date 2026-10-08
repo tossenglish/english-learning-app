@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/react';
+import { apiFetch } from '@/lib/api-fetch';
 
 export function useAdminAccess() {
   const { isLoaded, isSignedIn } = useUser();
@@ -16,7 +17,7 @@ export function useAdminAccess() {
 
     const controller = new AbortController();
     setIsChecking(true);
-    fetch('/api/admin/status', {
+    apiFetch('/api/admin/status', {
       credentials: 'include',
       signal: controller.signal,
     })

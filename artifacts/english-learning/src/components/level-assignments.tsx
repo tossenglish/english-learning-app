@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Assignment, LearningLevel } from '@workspace/api-client-react';
+import { apiFetch, openApiFile } from '@/lib/api-fetch';
 import {
   ArrowRight,
   CalendarDays,
@@ -30,7 +31,7 @@ export default function LevelAssignments({
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    fetch(`/api/assignments?level=${encodeURIComponent(level)}`, {
+    apiFetch(`/api/assignments?level=${encodeURIComponent(level)}`, {
       credentials: 'include',
       signal: controller.signal,
     })
@@ -97,6 +98,12 @@ export default function LevelAssignments({
                   href={`/api/storage${assignment.resourcePath}`}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void openApiFile(`/api/storage${assignment.resourcePath}`).catch((error: unknown) => {
+                      window.alert(error instanceof Error ? error.message : '첨부 파일을 열지 못했습니다.');
+                    });
+                  }}
                   className="mt-4 flex items-center justify-between border-t border-[hsl(var(--border))] pt-3 text-xs font-bold text-[hsl(var(--accent))]"
                 >
                   <span className="flex min-w-0 items-center gap-2">

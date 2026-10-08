@@ -18,6 +18,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { parseDirectMaterial } from '@/lib/practice-material';
+import { apiFetch } from '@/lib/api-fetch';
 
 export type AssignmentResource = {
   name: string;
@@ -206,7 +207,7 @@ export default function AdminAssignments({
   const loadAssignments = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/assignments', {
+      const response = await apiFetch('/api/admin/assignments', {
         credentials: 'include',
       });
       if (!response.ok) throw new Error('과제 목록을 불러오지 못했습니다.');
@@ -220,7 +221,7 @@ export default function AdminAssignments({
 
   useEffect(() => {
     void loadAssignments();
-    fetch('/api/admin/assignment-folders', { credentials: 'include' })
+    apiFetch('/api/admin/assignment-folders', { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) throw new Error('자료 폴더를 불러오지 못했습니다.');
         return response.json() as Promise<AssignmentFolder[]>;
@@ -229,7 +230,7 @@ export default function AdminAssignments({
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : '자료 폴더 오류');
       });
-    fetch('/api/admin/members', { credentials: 'include' })
+    apiFetch('/api/admin/members', { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) return [];
         return response.json() as Promise<AssignmentMember[]>;
@@ -245,7 +246,7 @@ export default function AdminAssignments({
     setCreatingFolder(true);
     setError('');
     try {
-      const response = await fetch('/api/admin/assignment-folders', {
+      const response = await apiFetch('/api/admin/assignment-folders', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -283,7 +284,7 @@ export default function AdminAssignments({
     setUpdatingMemberIds((current) => [...current, memberId]);
     setError('');
     try {
-      const response = await fetch(`/api/admin/members/${encodeURIComponent(memberId)}/course`, {
+      const response = await apiFetch(`/api/admin/members/${encodeURIComponent(memberId)}/course`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -335,7 +336,7 @@ export default function AdminAssignments({
     setSaving(true);
     setError('');
     try {
-      const response = await fetch('/api/admin/assignments', {
+      const response = await apiFetch('/api/admin/assignments', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -432,7 +433,7 @@ export default function AdminAssignments({
   const removeAssignment = async (assignment: Assignment) => {
     if (!window.confirm(`“${assignment.title}” 과제를 삭제할까요?`)) return;
 
-    const response = await fetch(`/api/admin/assignments/${assignment.id}`, {
+    const response = await apiFetch(`/api/admin/assignments/${assignment.id}`, {
       method: 'DELETE',
       credentials: 'include',
     });

@@ -1,4 +1,5 @@
 import type { Assignment } from '@workspace/api-client-react';
+import { apiFetch } from '@/lib/api-fetch';
 
 export type PracticeSentence = {
   id: number;
@@ -85,7 +86,7 @@ async function translateSentences(sentences: string[]): Promise<string[]> {
     }
   }
 
-  const response = await fetch('/api/openai/translations', {
+  const response = await apiFetch('/api/openai/translations', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -153,7 +154,7 @@ export async function prepareAssignmentPractice(
     assignment.resourcePath &&
     TEXT_EXTENSIONS.some((extension) => resourceName.endsWith(extension))
   ) {
-    const response = await fetch(`/api/storage${assignment.resourcePath}`, {
+    const response = await apiFetch(`/api/storage${assignment.resourcePath}`, {
       credentials: 'include',
     });
     if (!response.ok) throw new Error('첨부 자료를 불러오지 못했습니다.');
