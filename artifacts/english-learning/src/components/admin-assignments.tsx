@@ -728,7 +728,7 @@ export default function AdminAssignments({
         ) : (
           <div className="mt-5 divide-y divide-[hsl(var(--border))] rounded-2xl border border-[hsl(var(--border))]">
             {members.map((member) => (
-              <div key={member.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={member.id} className="flex min-h-[124px] flex-col justify-center gap-3 p-4 sm:min-h-[72px] sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold">{member.displayName}</p>
                   {member.email && <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{member.email}</p>}
