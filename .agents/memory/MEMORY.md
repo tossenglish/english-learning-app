@@ -1,1 +1,2 @@
 - [Direct learning materials](direct-materials.md) — user-entered sentence and word content must be deterministic and avoid AI calls.
+- [GitHub push fallback](github-push.md) — if Git CLI auth fails, preserve Git object bytes and fast-forward through the connected GitHub API.
