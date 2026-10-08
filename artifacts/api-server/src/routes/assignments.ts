@@ -23,7 +23,7 @@ import {
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
-import { getUserId, isAdmin } from "../lib/auth";
+import { getUserId, isAdmin, isAdminEmail } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -169,12 +169,11 @@ router.get(
     const courseByMember = new Map(
       courseAssignments.map(({ memberId, courseLevel }) => [memberId, courseLevel]),
     );
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
     const members = users.data
       .filter(
         (user) =>
           !user.emailAddresses.some(
-            ({ emailAddress }) => emailAddress.toLowerCase() === adminEmail,
+            ({ emailAddress }) => isAdminEmail(emailAddress),
           ),
       )
       .map((user) => ({
