@@ -2,7 +2,7 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/english-learning/PassagePracticeGrid.tsx": () => import("../components/mockups/english-learning/PassagePracticeGrid.tsx"),
-  "./components/mockups/templates/DarkAIRenderMusicPlayer-mXks2e/App.tsx": () => import("../components/mockups/templates/DarkAIRenderMusicPlayer-mXks2e/App.tsx"),
   "./components/mockups/templates/NorthBeachOpenMicFlyer-NZLIq-/OpenMicFlyer.tsx": () => import("../components/mockups/templates/NorthBeachOpenMicFlyer-NZLIq-/OpenMicFlyer.tsx"),
-  "./components/mockups/templates/OctopusJazzNightPoster-h0xUv9/JazzNightPoster.tsx": () => import("../components/mockups/templates/OctopusJazzNightPoster-h0xUv9/JazzNightPoster.tsx")
+  "./components/mockups/templates/OctopusJazzNightPoster-h0xUv9/JazzNightPoster.tsx": () => import("../components/mockups/templates/OctopusJazzNightPoster-h0xUv9/JazzNightPoster.tsx"),
+  "./components/mockups/templates/DarkAIRenderMusicPlayer-mXks2e/App.tsx": () => import("../components/mockups/templates/DarkAIRenderMusicPlayer-mXks2e/App.tsx")
 };
