@@ -25,5 +25,8 @@ export async function isAdmin(req: Request): Promise<boolean> {
   if (!userId) return false;
 
   const user = await clerkClient.users.getUser(userId);
-  return user.emailAddresses.some(({ emailAddress }) => isAdminEmail(emailAddress));
+  return (
+    user.publicMetadata.role === "admin" ||
+    user.emailAddresses.some(({ emailAddress }) => isAdminEmail(emailAddress))
+  );
 }
