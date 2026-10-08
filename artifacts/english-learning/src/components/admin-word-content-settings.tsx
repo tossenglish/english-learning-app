@@ -38,6 +38,50 @@ function getContentInput(saved: LearningContent | undefined, level: LearningCont
   };
 }
 
+function makeQuizOptions(
+  level: LearningContentLevel,
+  word: string,
+  correctMeaning: string,
+  uploadedItems: ParsedLearningContentCsvItem[],
+  currentContent: LearningContent[],
+) {
+  const saved = currentContent.find((item) => item.level === level);
+  if (
+    saved?.shortMeaning === correctMeaning &&
+    saved.correctMeaning === correctMeaning &&
+    saved.quizOptions.includes(correctMeaning)
+  ) {
+    return saved.quizOptions;
+  }
+
+  const defaults = getDefaultLearningContent(level);
+  const candidates = [
+    ...uploadedItems.filter((item) => item.level !== level).map((item) => item.content.shortMeaning),
+    ...currentContent.filter((item) => item.level !== level).map((item) => item.shortMeaning),
+    ...currentContent.flatMap((item) =>
+      item.quizOptions.filter((option) => option !== item.correctMeaning),
+    ),
+    ...defaults.quizOptions.filter((option) => option !== defaults.correctMeaning),
+  ];
+  const distractors = [...new Set(
+    candidates
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0 && value !== correctMeaning),
+  )];
+  if (distractors.length === 0) distractors.push('다른 뜻');
+  if (distractors.length === 1) {
+    distractors.push(distractors[0] === '다른 뜻' ? '비슷한 표현' : '다른 뜻');
+  }
+
+  const options = distractors.slice(0, 3);
+  const correctIndex = [...`${level}:${word}`].reduce(
+    (sum, character) => sum + character.charCodeAt(0),
+    0,
+  ) % (options.length + 1);
+  options.splice(correctIndex, 0, correctMeaning);
+  return options;
+}
+
 export default function AdminWordContentSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentContent, setCurrentContent] = useState<LearningContent[]>([]);
@@ -119,6 +163,14 @@ export default function AdminWordContentSettings() {
         content: {
           ...getContentInput(currentByLevel.get(level), level),
           ...content,
+          quizOptions: makeQuizOptions(
+            level,
+            content.word,
+            content.shortMeaning,
+            preview,
+            currentContent,
+          ),
+          correctMeaning: content.shortMeaning,
         },
       }));
       const response = await fetch('/api/admin/learning-content', {
@@ -203,7 +255,7 @@ export default function AdminWordContentSettings() {
           <div>
             <p className="text-sm font-bold">CSV 파일 선택</p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-              레벨별 한 행씩, 최대 3행까지 올릴 수 있어요. 발음·품사 등 입력 항목 외의 학습 상세 정보는 기존 값을 유지합니다. 퀴즈 보기는 <code className="rounded bg-[hsl(var(--muted))] px-1">|</code>로 구분하고 정답은 보기 중 하나와 같아야 합니다.
+              레벨별 한 행씩, 최대 3행까지 올릴 수 있어요. 퀴즈 정답은 뜻으로 자동 설정하고 보기는 다른 레벨의 뜻과 기본 보기로 자동 구성합니다. 발음·품사 등 나머지 학습 상세 정보는 기존 값을 유지합니다.
             </p>
           </div>
           <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm font-bold hover:border-[hsl(var(--accent)/.6)]">
@@ -261,7 +313,7 @@ export default function AdminWordContentSettings() {
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-          파일 열은 레벨, 단어, 뜻, 예문, 예문 해석, 퀴즈 보기, 정답 순서입니다.
+          파일 열은 레벨, 단어, 뜻, 예문, 예문 해석 순서입니다.
         </p>
         <button
           type="button"

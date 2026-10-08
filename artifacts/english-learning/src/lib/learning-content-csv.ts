@@ -6,7 +6,7 @@ import type {
 
 export type LearningContentCsvFields = Pick<
   LearningContentInput,
-  'word' | 'shortMeaning' | 'exampleSentence' | 'exampleKorean' | 'quizOptions' | 'correctMeaning'
+  'word' | 'shortMeaning' | 'exampleSentence' | 'exampleKorean'
 >;
 
 export type ParsedLearningContentCsvItem = {
@@ -20,8 +20,6 @@ const contentHeaders = [
   { key: 'shortMeaning', label: '뜻', aliases: ['shortmeaning', 'meaning', '뜻', '간단한뜻', '한글뜻'] },
   { key: 'exampleSentence', label: '예문', aliases: ['examplesentence', '영어예문', '예문'] },
   { key: 'exampleKorean', label: '예문 해석', aliases: ['examplekorean', '예문해석', '예문뜻', '한글예문'] },
-  { key: 'quizOptions', label: '퀴즈 보기', aliases: ['quizoptions', '퀴즈보기', '선택지'] },
-  { key: 'correctMeaning', label: '정답', aliases: ['correctmeaning', '정답', '정답뜻'] },
 ] as const;
 
 const fieldLimits: Record<keyof LearningContentCsvFields, number> = {
@@ -29,8 +27,6 @@ const fieldLimits: Record<keyof LearningContentCsvFields, number> = {
   shortMeaning: 200,
   exampleSentence: 1000,
   exampleKorean: 1000,
-  quizOptions: 200,
-  correctMeaning: 200,
 };
 
 function normalizeHeader(value: string) {
@@ -136,34 +132,15 @@ export function parseLearningContentCsv(text: string): ParsedLearningContentCsvI
     if (seenLevels.has(level)) throw new Error(`${lineNumber}행: ${level} 레벨이 중복되어 있습니다.`);
     seenLevels.add(level);
 
-    const quizOptions = cell('quizOptions')
-      .split('|')
-      .map((option) => option.trim())
-      .filter(Boolean);
     const content: LearningContentCsvFields = {
       word: cell('word'),
       shortMeaning: cell('shortMeaning'),
       exampleSentence: cell('exampleSentence'),
       exampleKorean: cell('exampleKorean'),
-      quizOptions,
-      correctMeaning: cell('correctMeaning'),
     };
 
     if (!content.word) throw new Error(`${lineNumber}행: 단어를 입력해 주세요.`);
     if (!content.shortMeaning) throw new Error(`${lineNumber}행: 간단한 뜻을 입력해 주세요.`);
-    if (!content.correctMeaning) throw new Error(`${lineNumber}행: 정답을 입력해 주세요.`);
-    if (quizOptions.length < 2 || quizOptions.length > 4) {
-      throw new Error(`${lineNumber}행: 퀴즈 보기는 |로 구분해 2~4개 입력해 주세요.`);
-    }
-    if (new Set(quizOptions).size !== quizOptions.length) {
-      throw new Error(`${lineNumber}행: 같은 퀴즈 보기가 중복되어 있습니다.`);
-    }
-    if (quizOptions.some((option) => option.length > fieldLimits.quizOptions)) {
-      throw new Error(`${lineNumber}행: 퀴즈 보기 하나당 ${fieldLimits.quizOptions}자 이내로 입력해 주세요.`);
-    }
-    if (!quizOptions.includes(content.correctMeaning)) {
-      throw new Error(`${lineNumber}행: 정답이 퀴즈 보기 안에 있어야 합니다.`);
-    }
 
     for (const [key, value] of Object.entries(content)) {
       const limit = fieldLimits[key as keyof LearningContentCsvFields];
@@ -191,8 +168,6 @@ export function createLearningContentCsv(items: LearningContentBatchItem[]) {
     content.shortMeaning,
     content.exampleSentence,
     content.exampleKorean,
-    content.quizOptions.join('|'),
-    content.correctMeaning,
   ]);
   return `\uFEFF${[headerRow, ...contentRows]
     .map((row) => row.map(escapeCsv).join(','))
