@@ -18,6 +18,8 @@ export * from './getLearningContentParams';
 export * from './healthStatus';
 export * from './koreanTranslationsEnvelope';
 export * from './learningContent';
+export * from './learningContentBatch';
+export * from './learningContentBatchItem';
 export * from './learningContentInput';
 export * from './learningContentLevel';
 export * from './learningLevel';

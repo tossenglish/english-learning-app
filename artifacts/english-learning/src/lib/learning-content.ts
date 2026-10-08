@@ -4,6 +4,7 @@ import type {
 } from '@workspace/api-client-react';
 
 export type LearnContent = LearningContentInput;
+export const LEARNING_CONTENT_UPDATED_EVENT = 'learning-content-updated';
 
 export const defaultLearningContent: Record<LearningContentLevel, LearnContent> = {
   Beginner: {

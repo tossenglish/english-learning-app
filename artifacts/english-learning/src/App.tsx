@@ -41,9 +41,13 @@ import AdminUpload from '@/components/admin-upload';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
-import type { Assignment } from '@workspace/api-client-react';
+import type { Assignment, LearningContent } from '@workspace/api-client-react';
 import { prepareAssignmentPractice } from '@/lib/practice-material';
-import { getDefaultLearningContent, type LearnContent } from '@/lib/learning-content';
+import {
+  getDefaultLearningContent,
+  LEARNING_CONTENT_UPDATED_EVENT,
+  type LearnContent,
+} from '@/lib/learning-content';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -717,27 +721,50 @@ function LearningPortal() {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let controller: AbortController | null = null;
     setLearningContent(getDefaultLearningContent(level));
 
-    fetch(`/api/learning-content?level=${encodeURIComponent(level)}`, {
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return response.json() as Promise<LearnContent>;
+    const loadContent = () => {
+      controller?.abort();
+      controller = new AbortController();
+      fetch(`/api/learning-content?level=${encodeURIComponent(level)}`, {
+        credentials: 'include',
+        signal: controller.signal,
       })
-      .then((content) => {
-        if (content) setLearningContent(content);
-      })
-      .catch((error) => {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          setLearningContent(getDefaultLearningContent(level));
-        }
-      });
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return response.json() as Promise<LearnContent>;
+        })
+        .then((content) => {
+          if (content) setLearningContent(content);
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            setLearningContent(getDefaultLearningContent(level));
+          }
+        });
+    };
 
-    return () => controller.abort();
+    const handleContentUpdate = (event: Event) => {
+      const updated = (event as CustomEvent<LearningContent[]>).detail
+        ?.find((item) => item.level === level);
+      if (!updated) return;
+      controller?.abort();
+      setLearningContent(updated);
+      setCardFlipped(false);
+      setQuizAnswer(null);
+      setQuizAttempts(0);
+    };
+
+    loadContent();
+    window.addEventListener('focus', loadContent);
+    window.addEventListener(LEARNING_CONTENT_UPDATED_EVENT, handleContentUpdate);
+
+    return () => {
+      controller?.abort();
+      window.removeEventListener('focus', loadContent);
+      window.removeEventListener(LEARNING_CONTENT_UPDATED_EVENT, handleContentUpdate);
+    };
   }, [level]);
 
   useEffect(() => {

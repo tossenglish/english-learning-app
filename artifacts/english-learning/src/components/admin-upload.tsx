@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import AdminAssignments, { type AssignmentResource } from '@/components/admin-assignments';
+import AdminWordContentSettings from '@/components/admin-word-content-settings';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -188,6 +189,7 @@ export default function AdminUpload() {
           </button>
         </div>
       </section>
+      <AdminWordContentSettings />
       <AdminAssignments latestUpload={uploaded} />
     </div>
   );

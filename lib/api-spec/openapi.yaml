@@ -449,6 +449,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+    put:
+      operationId: bulkUpsertLearningContent
+      tags: [LearningContent]
+      summary: 여러 과정의 배우기 콘텐츠를 한 번에 저장
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LearningContentBatch"
+      responses:
+        "200":
+          description: 저장된 과정별 배우기 콘텐츠
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LearningContent"
+        "400":
+          description: 잘못된 콘텐츠 또는 중복된 과정
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/learning-content/{level}:
     put:
       operationId: upsertLearningContent
@@ -675,6 +712,24 @@ components:
         tip:
           type: string
           maxLength: 1000
+    LearningContentBatch:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/LearningContentBatchItem"
+    LearningContentBatchItem:
+      type: object
+      required: [level, content]
+      properties:
+        level:
+          $ref: "#/components/schemas/LearningContentLevel"
+        content:
+          $ref: "#/components/schemas/LearningContentInput"
     Assignment:
       type: object
       required: [id, title, description, materialType, folderId, materialContent, level, isPublished, createdAt]

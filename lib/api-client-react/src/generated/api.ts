@@ -31,6 +31,7 @@ import type {
   HealthStatus,
   KoreanTranslationsEnvelope,
   LearningContent,
+  LearningContentBatch,
   LearningContentInput,
   LearningContentLevel,
   ListAssignmentsParams,
@@ -1213,6 +1214,94 @@ export function useListAdminLearningContent<TData = Awaited<ReturnType<typeof li
 
 
 
+
+export const getBulkUpsertLearningContentUrl = () => {
+
+
+
+
+  return `/api/admin/learning-content`
+}
+
+/**
+ * @summary 여러 과정의 배우기 콘텐츠를 한 번에 저장
+ */
+export const bulkUpsertLearningContent = async (learningContentBatch: LearningContentBatch, options?: Parameters<typeof customFetch>[1]): Promise<LearningContent[]> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LearningContent[]>(getBulkUpsertLearningContentUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(learningContentBatch)
+  }
+);}
+
+
+
+
+
+export const getBulkUpsertLearningContentMutationKey = () => ['bulkUpsertLearningContent'] as const;
+
+export const getBulkUpsertLearningContentMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUpsertLearningContent>>, TError,BulkUpsertLearningContentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkUpsertLearningContent>>, TError,BulkUpsertLearningContentMutationVariables, TContext> => {
+
+const mutationKey = getBulkUpsertLearningContentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkUpsertLearningContent>>, BulkUpsertLearningContentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkUpsertLearningContent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkUpsertLearningContentMutationResult = NonNullable<Awaited<ReturnType<typeof bulkUpsertLearningContent>>>
+    export type BulkUpsertLearningContentMutationBody = BodyType<LearningContentBatch>
+    export type BulkUpsertLearningContentMutationError = ErrorType<ErrorEnvelope>
+    export type BulkUpsertLearningContentMutationVariables = {data: BodyType<LearningContentBatch>}
+
+    /**
+ * @summary 여러 과정의 배우기 콘텐츠를 한 번에 저장
+ */
+export const useBulkUpsertLearningContent = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUpsertLearningContent>>, TError,BulkUpsertLearningContentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkUpsertLearningContent>>,
+        TError,
+        BulkUpsertLearningContentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBulkUpsertLearningContentMutationOptions(options));
+    }
 
 export const getUpsertLearningContentUrl = (level: LearningContentLevel,) => {
 

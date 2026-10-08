@@ -301,6 +301,82 @@ export const ListAdminLearningContentResponse = zod.array(ListAdminLearningConte
 
 
 /**
+ * @summary 여러 과정의 배우기 콘텐츠를 한 번에 저장
+ */
+export const bulkUpsertLearningContentBodyItemsItemContentWordMax = 120;
+
+export const bulkUpsertLearningContentBodyItemsItemContentPronunciationMax = 120;
+
+export const bulkUpsertLearningContentBodyItemsItemContentPartOfSpeechMax = 40;
+
+export const bulkUpsertLearningContentBodyItemsItemContentShortMeaningMax = 200;
+
+export const bulkUpsertLearningContentBodyItemsItemContentMeaningDetailMax = 1000;
+
+export const bulkUpsertLearningContentBodyItemsItemContentEnglishDefinitionMax = 1000;
+
+export const bulkUpsertLearningContentBodyItemsItemContentExampleSentenceMax = 1000;
+
+export const bulkUpsertLearningContentBodyItemsItemContentExampleKoreanMax = 1000;
+
+export const bulkUpsertLearningContentBodyItemsItemContentQuizOptionsItemMax = 200;
+
+export const bulkUpsertLearningContentBodyItemsItemContentQuizOptionsMin = 2;
+export const bulkUpsertLearningContentBodyItemsItemContentQuizOptionsMax = 4;
+
+export const bulkUpsertLearningContentBodyItemsItemContentCorrectMeaningMax = 200;
+
+export const bulkUpsertLearningContentBodyItemsItemContentTipMax = 1000;
+
+export const bulkUpsertLearningContentBodyItemsMax = 3;
+
+
+
+export const BulkUpsertLearningContentBody = zod.object({
+  "items": zod.array(zod.object({
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "content": zod.object({
+  "word": zod.string().min(1).max(bulkUpsertLearningContentBodyItemsItemContentWordMax),
+  "pronunciation": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentPronunciationMax),
+  "partOfSpeech": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentPartOfSpeechMax),
+  "shortMeaning": zod.string().min(1).max(bulkUpsertLearningContentBodyItemsItemContentShortMeaningMax),
+  "meaningDetail": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentMeaningDetailMax),
+  "englishDefinition": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentEnglishDefinitionMax),
+  "exampleSentence": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentExampleSentenceMax),
+  "exampleKorean": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentExampleKoreanMax),
+  "quizOptions": zod.array(zod.string().min(1).max(bulkUpsertLearningContentBodyItemsItemContentQuizOptionsItemMax)).min(bulkUpsertLearningContentBodyItemsItemContentQuizOptionsMin).max(bulkUpsertLearningContentBodyItemsItemContentQuizOptionsMax),
+  "correctMeaning": zod.string().min(1).max(bulkUpsertLearningContentBodyItemsItemContentCorrectMeaningMax),
+  "tip": zod.string().max(bulkUpsertLearningContentBodyItemsItemContentTipMax)
+})
+})).min(1).max(bulkUpsertLearningContentBodyItemsMax)
+})
+
+export const bulkUpsertLearningContentResponseQuizOptionsMin = 2;
+export const bulkUpsertLearningContentResponseQuizOptionsMax = 4;
+
+
+
+export const BulkUpsertLearningContentResponseItem = zod.object({
+  "id": zod.number().int(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "word": zod.string(),
+  "pronunciation": zod.string(),
+  "partOfSpeech": zod.string(),
+  "shortMeaning": zod.string(),
+  "meaningDetail": zod.string(),
+  "englishDefinition": zod.string(),
+  "exampleSentence": zod.string(),
+  "exampleKorean": zod.string(),
+  "quizOptions": zod.array(zod.string()).min(bulkUpsertLearningContentResponseQuizOptionsMin).max(bulkUpsertLearningContentResponseQuizOptionsMax),
+  "correctMeaning": zod.string(),
+  "tip": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const BulkUpsertLearningContentResponse = zod.array(BulkUpsertLearningContentResponseItem)
+
+
+/**
  * @summary 과정별 배우기 콘텐츠 저장
  */
 export const UpsertLearningContentParams = zod.object({

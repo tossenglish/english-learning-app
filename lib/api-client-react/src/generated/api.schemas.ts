@@ -129,6 +129,19 @@ export interface LearningContentInput {
   tip: string;
 }
 
+export interface LearningContentBatchItem {
+  level: LearningContentLevel;
+  content: LearningContentInput;
+}
+
+export interface LearningContentBatch {
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  items: LearningContentBatchItem[];
+}
+
 export type MaterialType = typeof MaterialType[keyof typeof MaterialType];
 
 
