@@ -29,6 +29,8 @@ import type {
   ErrorEnvelope,
   GetLearningContentParams,
   HealthStatus,
+  HomeVideoSettings,
+  HomeVideoSettingsInput,
   KoreanTranslationsEnvelope,
   LearningContent,
   LearningContentBatch,
@@ -1137,6 +1139,171 @@ export function useGetLearningContent<TData = Awaited<ReturnType<typeof getLearn
 
 
 
+
+export const getGetHomeVideoSettingsUrl = () => {
+
+
+
+
+  return `/api/home-video`
+}
+
+/**
+ * @summary 홈 영상 설정 조회
+ */
+export const getHomeVideoSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<HomeVideoSettings> => {
+
+  return customFetch<HomeVideoSettings>(getGetHomeVideoSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeVideoSettingsQueryKey = () => {
+    return [
+    `/api/home-video`
+    ] as const;
+    }
+
+
+export const getGetHomeVideoSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getHomeVideoSettings>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomeVideoSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeVideoSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomeVideoSettings>>> = ({ signal }) => getHomeVideoSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHomeVideoSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHomeVideoSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getHomeVideoSettings>>>
+export type GetHomeVideoSettingsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 홈 영상 설정 조회
+ */
+
+export function useGetHomeVideoSettings<TData = Awaited<ReturnType<typeof getHomeVideoSettings>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHomeVideoSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHomeVideoSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateHomeVideoSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/home-video`
+}
+
+/**
+ * @summary 홈 YouTube 영상 설정 저장
+ */
+export const updateHomeVideoSettings = async (homeVideoSettingsInput: HomeVideoSettingsInput, options?: Parameters<typeof customFetch>[1]): Promise<HomeVideoSettings> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<HomeVideoSettings>(getUpdateHomeVideoSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(homeVideoSettingsInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateHomeVideoSettingsMutationKey = () => ['updateHomeVideoSettings'] as const;
+
+export const getUpdateHomeVideoSettingsMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHomeVideoSettings>>, TError,UpdateHomeVideoSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateHomeVideoSettings>>, TError,UpdateHomeVideoSettingsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateHomeVideoSettingsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateHomeVideoSettings>>, UpdateHomeVideoSettingsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateHomeVideoSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateHomeVideoSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateHomeVideoSettings>>>
+    export type UpdateHomeVideoSettingsMutationBody = BodyType<HomeVideoSettingsInput>
+    export type UpdateHomeVideoSettingsMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateHomeVideoSettingsMutationVariables = {data: BodyType<HomeVideoSettingsInput>}
+
+    /**
+ * @summary 홈 YouTube 영상 설정 저장
+ */
+export const useUpdateHomeVideoSettings = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHomeVideoSettings>>, TError,UpdateHomeVideoSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateHomeVideoSettings>>,
+        TError,
+        UpdateHomeVideoSettingsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateHomeVideoSettingsMutationOptions(options));
+    }
 
 export const getListAdminLearningContentUrl = () => {
 

@@ -21,3 +21,4 @@ export * from "./assignments";
 export * from "./assignment-folders";
 export * from "./learning-content";
 export * from "./member-courses";
+export * from "./home-video-settings";

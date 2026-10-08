@@ -49,6 +49,21 @@ export interface AdminStatus {
   isAdmin: boolean;
 }
 
+export interface HomeVideoSettings {
+  /**
+     * @maxLength 11
+     * @nullable
+     */
+  videoId: string | null;
+  /** @nullable */
+  youtubeUrl: string | null;
+}
+
+export interface HomeVideoSettingsInput {
+  /** @maxLength 2048 */
+  youtubeUrl: string;
+}
+
 export type LearningLevel = typeof LearningLevel[keyof typeof LearningLevel];
 
 

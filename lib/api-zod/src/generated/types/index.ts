@@ -16,6 +16,8 @@ export * from './createAssignmentRequest';
 export * from './errorEnvelope';
 export * from './getLearningContentParams';
 export * from './healthStatus';
+export * from './homeVideoSettings';
+export * from './homeVideoSettingsInput';
 export * from './koreanTranslationsEnvelope';
 export * from './learningContent';
 export * from './learningContentBatch';

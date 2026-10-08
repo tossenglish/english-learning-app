@@ -273,6 +273,40 @@ export const GetLearningContentResponse = zod.object({
 
 
 /**
+ * @summary 홈 영상 설정 조회
+ */
+export const getHomeVideoSettingsResponseVideoIdMax = 11;
+
+
+
+export const GetHomeVideoSettingsResponse = zod.object({
+  "videoId": zod.string().max(getHomeVideoSettingsResponseVideoIdMax).nullable(),
+  "youtubeUrl": zod.string().url().nullable()
+})
+
+
+/**
+ * @summary 홈 YouTube 영상 설정 저장
+ */
+export const updateHomeVideoSettingsBodyYoutubeUrlMax = 2048;
+
+
+
+export const UpdateHomeVideoSettingsBody = zod.object({
+  "youtubeUrl": zod.string().max(updateHomeVideoSettingsBodyYoutubeUrlMax)
+})
+
+export const updateHomeVideoSettingsResponseVideoIdMax = 11;
+
+
+
+export const UpdateHomeVideoSettingsResponse = zod.object({
+  "videoId": zod.string().max(updateHomeVideoSettingsResponseVideoIdMax).nullable(),
+  "youtubeUrl": zod.string().url().nullable()
+})
+
+
+/**
  * @summary 관리자가 과정별 배우기 콘텐츠 조회
  */
 export const listAdminLearningContentResponseQuizOptionsMin = 2;

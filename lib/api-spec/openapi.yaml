@@ -423,6 +423,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /home-video:
+    get:
+      operationId: getHomeVideoSettings
+      tags: [LearningContent]
+      summary: 홈 영상 설정 조회
+      responses:
+        "200":
+          description: 홈 YouTube 영상 설정
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeVideoSettings"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/home-video:
+    put:
+      operationId: updateHomeVideoSettings
+      tags: [LearningContent]
+      summary: 홈 YouTube 영상 설정 저장
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HomeVideoSettingsInput"
+      responses:
+        "200":
+          description: 저장된 홈 영상 설정
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeVideoSettings"
+        "400":
+          description: 유효하지 않은 YouTube 링크
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 권한이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/learning-content:
     get:
       operationId: listAdminLearningContent
@@ -619,6 +673,23 @@ components:
       properties:
         isAdmin:
           type: boolean
+    HomeVideoSettings:
+      type: object
+      required: [videoId, youtubeUrl]
+      properties:
+        videoId:
+          type: [string, "null"]
+          maxLength: 11
+        youtubeUrl:
+          type: [string, "null"]
+          format: uri
+    HomeVideoSettingsInput:
+      type: object
+      required: [youtubeUrl]
+      properties:
+        youtubeUrl:
+          type: string
+          maxLength: 2048
     LearningLevel:
       type: string
       enum: [Beginner, Intermediate, Advanced, All]
