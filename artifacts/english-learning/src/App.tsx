@@ -28,6 +28,7 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
+  Target,
   Trophy,
   Volume2,
   X,
