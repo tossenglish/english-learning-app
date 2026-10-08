@@ -3,11 +3,13 @@ import type {
   LearningContent,
   LearningContentBatchItem,
   LearningContentLevel,
+  LearningContentInput,
 } from '@workspace/api-client-react';
 import { CheckCircle2, Download, FileSpreadsheet, LoaderCircle, UploadCloud } from 'lucide-react';
 import {
   createLearningContentCsv,
   parseLearningContentCsv,
+  type ParsedLearningContentCsvItem,
 } from '@/lib/learning-content-csv';
 import { getDefaultLearningContent, LEARNING_CONTENT_UPDATED_EVENT } from '@/lib/learning-content';
 
@@ -19,12 +21,29 @@ const levelLabels: Record<LearningContentLevel, string> = {
 };
 const maxFileSize = 1024 * 1024;
 
+function getContentInput(saved: LearningContent | undefined, level: LearningContentLevel): LearningContentInput {
+  if (!saved) return getDefaultLearningContent(level);
+  return {
+    word: saved.word,
+    pronunciation: saved.pronunciation,
+    partOfSpeech: saved.partOfSpeech,
+    shortMeaning: saved.shortMeaning,
+    meaningDetail: saved.meaningDetail,
+    englishDefinition: saved.englishDefinition,
+    exampleSentence: saved.exampleSentence,
+    exampleKorean: saved.exampleKorean,
+    quizOptions: saved.quizOptions,
+    correctMeaning: saved.correctMeaning,
+    tip: saved.tip,
+  };
+}
+
 export default function AdminWordContentSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentContent, setCurrentContent] = useState<LearningContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFileName, setSelectedFileName] = useState('');
-  const [preview, setPreview] = useState<LearningContentBatchItem[]>([]);
+  const [preview, setPreview] = useState<ParsedLearningContentCsvItem[]>([]);
   const [parseError, setParseError] = useState('');
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -76,21 +95,7 @@ export default function AdminWordContentSettings() {
       const saved = currentByLevel.get(level);
       return {
         level,
-        content: saved
-          ? {
-              word: saved.word,
-              pronunciation: saved.pronunciation,
-              partOfSpeech: saved.partOfSpeech,
-              shortMeaning: saved.shortMeaning,
-              meaningDetail: saved.meaningDetail,
-              englishDefinition: saved.englishDefinition,
-              exampleSentence: saved.exampleSentence,
-              exampleKorean: saved.exampleKorean,
-              quizOptions: saved.quizOptions,
-              correctMeaning: saved.correctMeaning,
-              tip: saved.tip,
-            }
-          : getDefaultLearningContent(level),
+        content: getContentInput(saved, level),
       };
     });
     const file = new Blob([createLearningContentCsv(items)], { type: 'text/csv;charset=utf-8' });
@@ -108,11 +113,19 @@ export default function AdminWordContentSettings() {
     setStatusMessage('');
     setStatusIsError(false);
     try {
+      const currentByLevel = new Map(currentContent.map((item) => [item.level, item]));
+      const items: LearningContentBatchItem[] = preview.map(({ level, content }) => ({
+        level,
+        content: {
+          ...getContentInput(currentByLevel.get(level), level),
+          ...content,
+        },
+      }));
       const response = await fetch('/api/admin/learning-content', {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: preview }),
+        body: JSON.stringify({ items }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null;
@@ -190,7 +203,7 @@ export default function AdminWordContentSettings() {
           <div>
             <p className="text-sm font-bold">CSV 파일 선택</p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-              레벨별 한 행씩, 최대 3행까지 올릴 수 있어요. 퀴즈 보기는 <code className="rounded bg-[hsl(var(--muted))] px-1">|</code>로 구분하고 정답은 보기 중 하나와 같아야 합니다.
+              레벨별 한 행씩, 최대 3행까지 올릴 수 있어요. 발음·품사 등 입력 항목 외의 학습 상세 정보는 기존 값을 유지합니다. 퀴즈 보기는 <code className="rounded bg-[hsl(var(--muted))] px-1">|</code>로 구분하고 정답은 보기 중 하나와 같아야 합니다.
             </p>
           </div>
           <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm font-bold hover:border-[hsl(var(--accent)/.6)]">
@@ -248,7 +261,7 @@ export default function AdminWordContentSettings() {
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-          파일 열은 레벨, 단어, 발음, 품사, 간단한 뜻, 자세한 뜻, 영어 정의, 영어 예문, 예문 해석, 퀴즈 보기, 정답, 학습 팁 순서입니다.
+          파일 열은 레벨, 단어, 뜻, 예문, 예문 해석, 퀴즈 보기, 정답 순서입니다.
         </p>
         <button
           type="button"

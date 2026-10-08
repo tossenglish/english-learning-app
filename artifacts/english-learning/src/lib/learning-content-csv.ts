@@ -4,33 +4,33 @@ import type {
   LearningContentLevel,
 } from '@workspace/api-client-react';
 
+export type LearningContentCsvFields = Pick<
+  LearningContentInput,
+  'word' | 'shortMeaning' | 'exampleSentence' | 'exampleKorean' | 'quizOptions' | 'correctMeaning'
+>;
+
+export type ParsedLearningContentCsvItem = {
+  level: LearningContentLevel;
+  content: LearningContentCsvFields;
+};
+
 const contentHeaders = [
   { key: 'level', label: '레벨', aliases: ['level', '레벨', '과정'] },
   { key: 'word', label: '단어', aliases: ['word', '단어', '영단어'] },
-  { key: 'pronunciation', label: '발음', aliases: ['pronunciation', '발음'] },
-  { key: 'partOfSpeech', label: '품사', aliases: ['partofspeech', 'part_of_speech', '품사'] },
-  { key: 'shortMeaning', label: '간단한 뜻', aliases: ['shortmeaning', 'meaning', '뜻', '간단한뜻', '한글뜻'] },
-  { key: 'meaningDetail', label: '자세한 뜻', aliases: ['meaningdetail', '자세한뜻', '상세뜻'] },
-  { key: 'englishDefinition', label: '영어 정의', aliases: ['englishdefinition', '영어정의'] },
-  { key: 'exampleSentence', label: '영어 예문', aliases: ['examplesentence', '영어예문', '예문'] },
+  { key: 'shortMeaning', label: '뜻', aliases: ['shortmeaning', 'meaning', '뜻', '간단한뜻', '한글뜻'] },
+  { key: 'exampleSentence', label: '예문', aliases: ['examplesentence', '영어예문', '예문'] },
   { key: 'exampleKorean', label: '예문 해석', aliases: ['examplekorean', '예문해석', '예문뜻', '한글예문'] },
   { key: 'quizOptions', label: '퀴즈 보기', aliases: ['quizoptions', '퀴즈보기', '선택지'] },
   { key: 'correctMeaning', label: '정답', aliases: ['correctmeaning', '정답', '정답뜻'] },
-  { key: 'tip', label: '학습 팁', aliases: ['tip', '학습팁', '팁'] },
 ] as const;
 
-const fieldLimits: Record<keyof LearningContentInput, number> = {
+const fieldLimits: Record<keyof LearningContentCsvFields, number> = {
   word: 120,
-  pronunciation: 120,
-  partOfSpeech: 40,
   shortMeaning: 200,
-  meaningDetail: 1000,
-  englishDefinition: 1000,
   exampleSentence: 1000,
   exampleKorean: 1000,
   quizOptions: 200,
   correctMeaning: 200,
-  tip: 1000,
 };
 
 function normalizeHeader(value: string) {
@@ -101,7 +101,7 @@ function parseLevel(value: string): LearningContentLevel | null {
   return null;
 }
 
-export function parseLearningContentCsv(text: string): LearningContentBatchItem[] {
+export function parseLearningContentCsv(text: string): ParsedLearningContentCsvItem[] {
   const rows = parseRows(text);
   if (rows.length < 2) throw new Error('헤더 아래에 단어 콘텐츠 행을 한 개 이상 넣어 주세요.');
 
@@ -125,7 +125,7 @@ export function parseLearningContentCsv(text: string): LearningContentBatchItem[
     throw new Error(`필수 열을 찾지 못했습니다: ${missingHeaders.join(', ')}`);
   }
 
-  const items: LearningContentBatchItem[] = [];
+  const items: ParsedLearningContentCsvItem[] = [];
   const seenLevels = new Set<LearningContentLevel>();
 
   rows.slice(1).forEach((row, rowIndex) => {
@@ -140,18 +140,13 @@ export function parseLearningContentCsv(text: string): LearningContentBatchItem[
       .split('|')
       .map((option) => option.trim())
       .filter(Boolean);
-    const content: LearningContentInput = {
+    const content: LearningContentCsvFields = {
       word: cell('word'),
-      pronunciation: cell('pronunciation'),
-      partOfSpeech: cell('partOfSpeech'),
       shortMeaning: cell('shortMeaning'),
-      meaningDetail: cell('meaningDetail'),
-      englishDefinition: cell('englishDefinition'),
       exampleSentence: cell('exampleSentence'),
       exampleKorean: cell('exampleKorean'),
       quizOptions,
       correctMeaning: cell('correctMeaning'),
-      tip: cell('tip'),
     };
 
     if (!content.word) throw new Error(`${lineNumber}행: 단어를 입력해 주세요.`);
@@ -171,7 +166,7 @@ export function parseLearningContentCsv(text: string): LearningContentBatchItem[
     }
 
     for (const [key, value] of Object.entries(content)) {
-      const limit = fieldLimits[key as keyof LearningContentInput];
+      const limit = fieldLimits[key as keyof LearningContentCsvFields];
       if (typeof value === 'string' && value.length > limit) {
         throw new Error(`${lineNumber}행: ${key} 항목은 ${limit}자 이내로 입력해 주세요.`);
       }
@@ -193,16 +188,11 @@ export function createLearningContentCsv(items: LearningContentBatchItem[]) {
   const contentRows = items.map(({ level, content }) => [
     level,
     content.word,
-    content.pronunciation,
-    content.partOfSpeech,
     content.shortMeaning,
-    content.meaningDetail,
-    content.englishDefinition,
     content.exampleSentence,
     content.exampleKorean,
     content.quizOptions.join('|'),
     content.correctMeaning,
-    content.tip,
   ]);
   return `\uFEFF${[headerRow, ...contentRows]
     .map((row) => row.map(escapeCsv).join(','))
