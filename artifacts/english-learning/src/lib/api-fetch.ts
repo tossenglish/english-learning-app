@@ -1,7 +1,13 @@
 import {
+  setBaseUrl,
   setAuthTokenGetter,
   type AuthTokenGetter,
 } from '@workspace/api-client-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const normalizedApiBaseUrl = API_BASE_URL.replace(/\/+$/, '');
+
+setBaseUrl(API_BASE_URL || null);
 
 let authTokenGetter: AuthTokenGetter | null = null;
 
@@ -10,20 +16,45 @@ export function setApiAuthTokenGetter(getter: AuthTokenGetter | null): void {
   setAuthTokenGetter(getter);
 }
 
-function isApiRequest(input: RequestInfo | URL): boolean {
-  const requestUrl =
+function getRequestUrl(input: RequestInfo | URL): string {
+  return (
     typeof input === 'string'
       ? input
       : input instanceof URL
         ? input.toString()
-        : input.url;
+        : input.url
+  );
+}
+
+function isApiPath(pathname: string): boolean {
+  return pathname === '/api' || pathname.startsWith('/api/');
+}
+
+function applyApiBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (!normalizedApiBaseUrl) return input;
 
   try {
-    const url = new URL(requestUrl, window.location.href);
-    return (
-      url.origin === window.location.origin &&
-      (url.pathname === '/api' || url.pathname.startsWith('/api/'))
-    );
+    const url = new URL(getRequestUrl(input), window.location.href);
+    if (url.origin !== window.location.origin || !isApiPath(url.pathname)) {
+      return input;
+    }
+
+    const targetUrl = `${normalizedApiBaseUrl}${url.pathname}${url.search}${url.hash}`;
+    if (typeof input === 'string') return targetUrl;
+    if (input instanceof URL) return new URL(targetUrl);
+    return new Request(targetUrl, input);
+  } catch {
+    return input;
+  }
+}
+
+function isApiRequest(input: RequestInfo | URL): boolean {
+  try {
+    const url = new URL(getRequestUrl(input), window.location.href);
+    const apiOrigin = normalizedApiBaseUrl
+      ? new URL(normalizedApiBaseUrl, window.location.href).origin
+      : window.location.origin;
+    return url.origin === apiOrigin && isApiPath(url.pathname);
   } catch {
     return false;
   }
@@ -33,6 +64,7 @@ export async function apiFetch(
   input: RequestInfo | URL,
   init: RequestInit = {},
 ): Promise<Response> {
+  input = applyApiBaseUrl(input);
   const headers = new Headers(
     typeof Request !== 'undefined' && input instanceof Request
       ? input.headers
