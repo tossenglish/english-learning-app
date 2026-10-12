@@ -4,7 +4,9 @@ import { z } from "zod/v4";
 
 export const homeVideoSettingsTable = pgTable("home_video_settings", {
   id: integer("id").primaryKey().default(1),
-  videoId: varchar("video_id", { length: 11 }).notNull(),
+  videoId: varchar("video_id", { length: 11 }),
+  objectPath: varchar("object_path", { length: 1024 }),
+  resourceName: varchar("resource_name", { length: 255 }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

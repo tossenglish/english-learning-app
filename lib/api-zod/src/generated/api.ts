@@ -277,32 +277,47 @@ export const GetLearningContentResponse = zod.object({
  */
 export const getHomeVideoSettingsResponseVideoIdMax = 11;
 
+export const getHomeVideoSettingsResponseObjectPathMax = 1024;
+
+export const getHomeVideoSettingsResponseResourceNameMax = 255;
+
 
 
 export const GetHomeVideoSettingsResponse = zod.object({
   "videoId": zod.string().max(getHomeVideoSettingsResponseVideoIdMax).nullable(),
-  "youtubeUrl": zod.string().url().nullable()
+  "youtubeUrl": zod.string().url().nullable(),
+  "objectPath": zod.string().max(getHomeVideoSettingsResponseObjectPathMax).nullable(),
+  "resourceName": zod.string().max(getHomeVideoSettingsResponseResourceNameMax).nullable()
 })
 
 
 /**
- * @summary 홈 YouTube 영상 설정 저장
+ * @summary 업로드한 홈 영상 설정 저장
  */
-export const updateHomeVideoSettingsBodyYoutubeUrlMax = 2048;
+export const updateHomeVideoSettingsBodyObjectPathMax = 1024;
+
+export const updateHomeVideoSettingsBodyResourceNameMax = 255;
 
 
 
 export const UpdateHomeVideoSettingsBody = zod.object({
-  "youtubeUrl": zod.string().max(updateHomeVideoSettingsBodyYoutubeUrlMax)
+  "objectPath": zod.string().max(updateHomeVideoSettingsBodyObjectPathMax).nullable(),
+  "resourceName": zod.string().max(updateHomeVideoSettingsBodyResourceNameMax).nullable()
 })
 
 export const updateHomeVideoSettingsResponseVideoIdMax = 11;
+
+export const updateHomeVideoSettingsResponseObjectPathMax = 1024;
+
+export const updateHomeVideoSettingsResponseResourceNameMax = 255;
 
 
 
 export const UpdateHomeVideoSettingsResponse = zod.object({
   "videoId": zod.string().max(updateHomeVideoSettingsResponseVideoIdMax).nullable(),
-  "youtubeUrl": zod.string().url().nullable()
+  "youtubeUrl": zod.string().url().nullable(),
+  "objectPath": zod.string().max(updateHomeVideoSettingsResponseObjectPathMax).nullable(),
+  "resourceName": zod.string().max(updateHomeVideoSettingsResponseResourceNameMax).nullable()
 })
 
 

@@ -14,4 +14,14 @@ export interface HomeVideoSettings {
   videoId: string | null;
   /** @nullable */
   youtubeUrl: string | null;
+  /**
+     * @maxLength 1024
+     * @nullable
+     */
+  objectPath: string | null;
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  resourceName: string | null;
 }

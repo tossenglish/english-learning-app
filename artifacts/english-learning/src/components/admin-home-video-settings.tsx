@@ -1,99 +1,122 @@
-import { useEffect, useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import {
   getGetHomeVideoSettingsQueryKey,
   useGetHomeVideoSettings,
   useUpdateHomeVideoSettings,
-  type HomeVideoSettingsInput,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Play } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Play, UploadCloud } from 'lucide-react';
+import { apiFetch } from '@/lib/api-fetch';
 
-const youtubeHosts = new Set([
-  'youtube.com',
-  'www.youtube.com',
-  'm.youtube.com',
-  'music.youtube.com',
-  'youtube-nocookie.com',
-  'www.youtube-nocookie.com',
-  'youtu.be',
-  'www.youtu.be',
-]);
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MIME_BY_EXTENSION: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'video/ogg',
+  mov: 'video/quicktime',
+};
 
-function isValidYoutubeUrl(value: string): boolean {
-  const input = value.trim();
-  if (!input) return true;
-
-  try {
-    const url = new URL(input);
-    if (url.protocol !== 'https:' || !youtubeHosts.has(url.hostname.toLowerCase())) {
-      return false;
-    }
-
-    const videoId = url.hostname.endsWith('youtu.be')
-      ? url.pathname.split('/').filter(Boolean)[0]
-      : url.pathname === '/watch'
-        ? url.searchParams.get('v')
-        : url.pathname.match(/^\/(?:embed|live|shorts)\/([^/]+)/)?.[1];
-
-    return Boolean(videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId));
-  } catch {
-    return false;
-  }
+function getVideoContentType(file: File): string | null {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const fallbackType = MIME_BY_EXTENSION[extension];
+  const contentType = file.type || fallbackType;
+  return contentType && contentType.startsWith('video/') ? contentType : null;
 }
-
-const homeVideoFormSchema = z.object({
-  youtubeUrl: z
-    .string()
-    .max(2048, '링크가 너무 깁니다.')
-    .refine(isValidYoutubeUrl, 'YouTube 영상 또는 라이브 링크를 입력해 주세요.'),
-});
 
 export default function AdminHomeVideoSettings() {
   const queryClient = useQueryClient();
   const { data, isLoading, error: loadError } = useGetHomeVideoSettings();
   const updateSettings = useUpdateHomeVideoSettings();
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [statusIsError, setStatusIsError] = useState(false);
-  const form = useForm<HomeVideoSettingsInput>({
-    resolver: zodResolver(homeVideoFormSchema),
-    defaultValues: { youtubeUrl: '' },
-  });
 
-  useEffect(() => {
-    form.reset({ youtubeUrl: data?.youtubeUrl ?? '' });
-  }, [data?.youtubeUrl, form]);
-
-  const saveSettings = async (values: HomeVideoSettingsInput) => {
+  const saveSettings = async (
+    objectPath: string | null,
+    resourceName: string | null,
+  ) => {
     setStatusMessage('');
     setStatusIsError(false);
     try {
-      const updated = await updateSettings.mutateAsync({ data: values });
+      const updated = await updateSettings.mutateAsync({
+        data: { objectPath, resourceName },
+      });
       queryClient.setQueryData(getGetHomeVideoSettingsQueryKey(), updated);
-      form.reset({ youtubeUrl: updated.youtubeUrl ?? '' });
-      setStatusMessage(
-        updated.videoId
-          ? '홈 영상 링크를 저장했습니다.'
-          : '홈 영상 연결을 해제했습니다.',
-      );
+      setFile(null);
+      setProgress(0);
+      setStatusMessage(objectPath ? '홈 영상을 적용했습니다.' : '홈 영상 연결을 해제했습니다.');
     } catch (error) {
       setStatusIsError(true);
       setStatusMessage(
         error instanceof Error
           ? error.message
-          : '홈 영상 링크를 저장하지 못했습니다.',
+          : '홈 영상 설정을 저장하지 못했습니다.',
       );
     }
   };
 
-  const clearSettings = async () => {
-    form.setValue('youtubeUrl', '');
-    await saveSettings({ youtubeUrl: '' });
+  const uploadAndApply = async () => {
+    if (!file || isUploading || updateSettings.isPending) return;
+    const contentType = getVideoContentType(file);
+    if (!contentType) {
+      setStatusIsError(true);
+      setStatusMessage('MP4, WebM, OGG 또는 MOV 동영상 파일을 선택해 주세요.');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setStatusIsError(true);
+      setStatusMessage('파일 크기는 50MB 이하여야 해요.');
+      return;
+    }
+
+    setIsUploading(true);
+    setProgress(0);
+    setStatusMessage('');
+    setStatusIsError(false);
+    try {
+      const response = await apiFetch('/api/storage/uploads/request-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType }),
+      });
+      const body = await response.json().catch(() => null) as
+        | { uploadURL?: string; objectPath?: string; error?: string }
+        | null;
+      if (!response.ok || !body?.uploadURL || !body.objectPath) {
+        throw new Error(body?.error || '업로드 주소를 만들지 못했습니다.');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open('PUT', body.uploadURL!);
+        request.setRequestHeader('Content-Type', contentType);
+        request.upload.onprogress = (event) => {
+          if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
+        };
+        request.onload = () => {
+          if (request.status >= 200 && request.status < 300) resolve();
+          else reject(new Error('동영상 업로드에 실패했습니다.'));
+        };
+        request.onerror = () => reject(new Error('업로드 중 네트워크 오류가 발생했습니다.'));
+        request.send(file);
+      });
+
+      await saveSettings(body.objectPath, file.name);
+    } catch (error) {
+      setStatusIsError(true);
+      setStatusMessage(error instanceof Error ? error.message : '동영상 업로드에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  const clearSettings = async () => {
+    await saveSettings(null, null);
+  };
+
+  const busy = isUploading || updateSettings.isPending;
 
   return (
     <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8">
@@ -104,71 +127,67 @@ export default function AdminHomeVideoSettings() {
         <div>
           <h2 className="text-lg font-bold">홈 영상 스트리밍</h2>
           <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-            YouTube 일반 영상이나 라이브 링크를 등록하면 모든 회원의 초기 화면에 표시돼요.
+            동영상 파일을 직접 올리면 모든 회원의 초기 화면에서 재생돼요. 최대 50MB까지 업로드할 수 있어요.
           </p>
         </div>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(saveSettings)} className="mt-6 grid gap-4">
-          <FormField
-            control={form.control}
-            name="youtubeUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-bold">YouTube 링크</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="url"
-                    placeholder="https://www.youtube.com/live/..."
-                    autoComplete="url"
-                    data-testid="input-home-video-url"
-                  />
-                </FormControl>
-                <FormDescription>
-                  영상 주소를 비우고 저장하면 홈 영상 연결이 해제됩니다.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
+      <div className="mt-6 grid gap-4">
+        <label className="grid gap-2 text-xs font-bold">
+          동영상 파일
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.webm,.ogg,.mov"
+            onChange={(event) => {
+              setFile(event.currentTarget.files?.[0] ?? null);
+              setProgress(0);
+              setStatusMessage('');
+            }}
+            disabled={busy || isLoading}
+            className="block w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3 text-sm"
+            data-testid="input-home-video-file"
           />
-
-          {(loadError || statusMessage) && (
-            <p
-              className={`text-xs font-semibold ${statusIsError || loadError ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--accent))]'}`}
-              role={statusIsError || loadError ? 'alert' : 'status'}
-              data-testid="status-home-video-settings"
-            >
-              {loadError
-                ? '현재 홈 영상 설정을 불러오지 못했습니다.'
-                : statusMessage}
-            </p>
-          )}
-
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {data?.videoId && (
-              <button
-                type="button"
-                onClick={() => void clearSettings()}
-                disabled={updateSettings.isPending}
-                className="rounded-xl border border-[hsl(var(--border))] px-4 py-3 text-sm font-bold transition-colors hover:bg-[hsl(var(--secondary))] disabled:cursor-not-allowed disabled:opacity-50"
-                data-testid="button-clear-home-video"
-              >
-                연결 해제
-              </button>
-            )}
+        </label>
+        {file && <p className="text-xs text-[hsl(var(--muted-foreground))]">{file.name}</p>}
+        {(isUploading || progress > 0) && (
+          <progress className="h-2 w-full accent-[hsl(var(--primary))]" max={100} value={progress} />
+        )}
+        {(loadError || statusMessage) && (
+          <p
+            className={`text-xs font-semibold ${statusIsError || loadError ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--accent))]'}`}
+            role={statusIsError || loadError ? 'alert' : 'status'}
+            data-testid="status-home-video-settings"
+          >
+            {loadError ? '현재 홈 영상 설정을 불러오지 못했습니다.' : statusMessage}
+          </p>
+        )}
+        {data?.resourceName && (
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">현재 영상: {data.resourceName}</p>
+        )}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {(data?.objectPath || data?.videoId) && (
             <button
-              type="submit"
-              disabled={isLoading || updateSettings.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-              data-testid="button-save-home-video"
+              type="button"
+              onClick={() => void clearSettings()}
+              disabled={busy || isLoading}
+              className="rounded-xl border border-[hsl(var(--border))] px-4 py-3 text-sm font-bold transition-colors hover:bg-[hsl(var(--secondary))] disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="button-clear-home-video"
             >
-              {updateSettings.isPending ? '저장 중...' : '영상 링크 저장'}
+              연결 해제
             </button>
-          </div>
-        </form>
-      </Form>
+          )}
+          <button
+            type="button"
+            onClick={() => void uploadAndApply()}
+            disabled={!file || busy || isLoading}
+            className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="button-save-home-video"
+          >
+            <UploadCloud size={16} />
+            {isUploading ? `업로드 중 ${progress}%` : updateSettings.isPending ? '저장 중...' : '업로드하고 적용'}
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

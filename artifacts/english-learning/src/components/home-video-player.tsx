@@ -1,13 +1,60 @@
+import { useEffect, useState } from 'react';
 import { useGetHomeVideoSettings } from '@workspace/api-client-react';
 import { LoaderCircle, Play } from 'lucide-react';
+import { apiFetch } from '@/lib/api-fetch';
 
 const youtubeVideoIdPattern = /^[A-Za-z0-9_-]{11}$/;
 
 export default function HomeVideoPlayer() {
   const { data, isLoading, error } = useGetHomeVideoSettings();
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
+  const [isLoadingUploadedVideo, setIsLoadingUploadedVideo] = useState(false);
+  const [uploadedVideoError, setUploadedVideoError] = useState(false);
+  const objectPath = data?.objectPath?.startsWith('/objects/uploads/')
+    ? data.objectPath
+    : null;
   const videoId = data?.videoId && youtubeVideoIdPattern.test(data.videoId)
     ? data.videoId
     : null;
+
+  useEffect(() => {
+    if (!objectPath) {
+      setUploadedVideoUrl(null);
+      setUploadedVideoError(false);
+      setIsLoadingUploadedVideo(false);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setUploadedVideoUrl(null);
+    setUploadedVideoError(false);
+    setIsLoadingUploadedVideo(true);
+
+    void apiFetch(`/api/storage${objectPath}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('영상 파일을 불러오지 못했습니다.');
+        return URL.createObjectURL(await response.blob());
+      })
+      .then((url) => {
+        objectUrl = url;
+        if (cancelled) URL.revokeObjectURL(url);
+        else setUploadedVideoUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setUploadedVideoError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingUploadedVideo(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectPath]);
+
+  const isLoadingVideo = isLoading || isLoadingUploadedVideo;
 
   return (
     <section
@@ -30,11 +77,11 @@ export default function HomeVideoPlayer() {
       </div>
 
       <div className="mt-5 overflow-hidden rounded-2xl bg-[#080a10]">
-        {isLoading ? (
+        {isLoadingVideo ? (
           <div className="flex aspect-video items-center justify-center text-[hsl(var(--muted-foreground))]">
             <LoaderCircle className="animate-spin" size={28} />
           </div>
-        ) : error ? (
+        ) : error || uploadedVideoError ? (
           <div
             className="flex aspect-video flex-col items-center justify-center gap-3 px-6 text-center text-sm text-white/70"
             data-testid="status-home-video-error"
@@ -42,6 +89,16 @@ export default function HomeVideoPlayer() {
             <Play size={25} />
             <p>영상 설정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
           </div>
+        ) : uploadedVideoUrl ? (
+          <video
+            src={uploadedVideoUrl}
+            title={data?.resourceName ?? '오늘의 영상'}
+            className="aspect-video w-full"
+            controls
+            playsInline
+            preload="metadata"
+            data-testid="video-home-uploaded"
+          />
         ) : videoId ? (
           <div className="aspect-video">
             <iframe
@@ -64,7 +121,7 @@ export default function HomeVideoPlayer() {
             <div>
               <p className="text-sm font-bold text-white">아직 등록된 영상이 없어요</p>
               <p className="mt-1 text-xs">
-                관리자가 홈 영상으로 설정한 YouTube 영상이나 라이브가 여기에 표시됩니다.
+                관리자가 업로드한 동영상이 여기에 표시됩니다.
               </p>
             </div>
           </div>

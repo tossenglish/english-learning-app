@@ -57,11 +57,29 @@ export interface HomeVideoSettings {
   videoId: string | null;
   /** @nullable */
   youtubeUrl: string | null;
+  /**
+     * @maxLength 1024
+     * @nullable
+     */
+  objectPath: string | null;
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  resourceName: string | null;
 }
 
 export interface HomeVideoSettingsInput {
-  /** @maxLength 2048 */
-  youtubeUrl: string;
+  /**
+     * @maxLength 1024
+     * @nullable
+     */
+  objectPath: string | null;
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  resourceName: string | null;
 }
 
 export type LearningLevel = typeof LearningLevel[keyof typeof LearningLevel];

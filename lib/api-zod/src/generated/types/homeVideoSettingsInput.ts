@@ -7,6 +7,14 @@
  */
 
 export interface HomeVideoSettingsInput {
-  /** @maxLength 2048 */
-  youtubeUrl: string;
+  /**
+     * @maxLength 1024
+     * @nullable
+     */
+  objectPath: string | null;
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  resourceName: string | null;
 }

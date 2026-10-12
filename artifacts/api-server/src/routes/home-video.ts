@@ -24,58 +24,19 @@ async function requireAdmin(req: Request, res: Response): Promise<boolean> {
   return true;
 }
 
-function getYoutubeVideoId(value: string): string | null | undefined {
-  const input = value.trim();
-  if (!input) return null;
-
-  let url: URL;
-  try {
-    url = new URL(input);
-  } catch {
-    return undefined;
-  }
-
-  if (
-    url.protocol !== "https:" ||
-    url.username ||
-    url.password
-  ) {
-    return undefined;
-  }
-
-  const hostname = url.hostname.toLowerCase();
-  const allowedHosts = new Set([
-    "youtube.com",
-    "www.youtube.com",
-    "m.youtube.com",
-    "music.youtube.com",
-    "youtube-nocookie.com",
-    "www.youtube-nocookie.com",
-    "youtu.be",
-    "www.youtu.be",
-  ]);
-  if (!allowedHosts.has(hostname)) return undefined;
-
-  let videoId: string | null = null;
-  if (hostname === "youtu.be" || hostname === "www.youtu.be") {
-    videoId = url.pathname.split("/").filter(Boolean)[0] ?? null;
-  } else if (url.pathname === "/watch") {
-    videoId = url.searchParams.get("v");
-  } else {
-    videoId = url.pathname.match(/^\/(?:embed|live|shorts)\/([^/]+)/)?.[1] ?? null;
-  }
-
-  return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId)
-    ? videoId
-    : undefined;
-}
-
-function toSettingsResponse(videoId: string | null) {
+function toSettingsResponse(setting?: {
+  videoId: string | null;
+  objectPath: string | null;
+  resourceName: string | null;
+} | null) {
+  const videoId = setting?.videoId ?? null;
   return {
     videoId,
     youtubeUrl: videoId
       ? `https://www.youtube.com/watch?v=${videoId}`
       : null,
+    objectPath: setting?.objectPath ?? null,
+    resourceName: setting?.resourceName ?? null,
   };
 }
 
@@ -88,13 +49,17 @@ router.get(
     }
 
     const [setting] = await db
-      .select({ videoId: homeVideoSettingsTable.videoId })
+      .select({
+        videoId: homeVideoSettingsTable.videoId,
+        objectPath: homeVideoSettingsTable.objectPath,
+        resourceName: homeVideoSettingsTable.resourceName,
+      })
       .from(homeVideoSettingsTable)
       .where(eq(homeVideoSettingsTable.id, settingId))
       .limit(1);
 
     res.json(GetHomeVideoSettingsResponse.parse(
-      toSettingsResponse(setting?.videoId ?? null),
+      toSettingsResponse(setting ?? null),
     ));
   },
 );
@@ -110,29 +75,42 @@ router.put(
       return;
     }
 
-    const videoId = getYoutubeVideoId(parsed.data.youtubeUrl);
-    if (videoId === undefined) {
+    const { objectPath, resourceName } = parsed.data;
+    const validPath =
+      objectPath === null ||
+      /^\/objects\/uploads\/[A-Za-z0-9-]+$/.test(objectPath);
+    const validName =
+      resourceName === null ||
+      (resourceName.trim().length > 0 && resourceName.length <= 255);
+    if (!validPath || !validName || (objectPath === null) !== (resourceName === null)) {
       res.status(400).json({
-        error: "유효한 YouTube 영상 또는 라이브 링크를 입력해 주세요.",
+        error: "업로드된 영상 파일 정보가 올바르지 않습니다.",
       });
       return;
     }
 
-    if (videoId === null) {
+    if (objectPath === null) {
       await db
         .delete(homeVideoSettingsTable)
         .where(eq(homeVideoSettingsTable.id, settingId));
     } else {
       await db
         .insert(homeVideoSettingsTable)
-        .values({ id: settingId, videoId })
+        .values({ id: settingId, videoId: null, objectPath, resourceName })
         .onConflictDoUpdate({
           target: homeVideoSettingsTable.id,
-          set: { videoId, updatedAt: new Date() },
+          set: { videoId: null, objectPath, resourceName, updatedAt: new Date() },
         });
     }
 
-    res.json(UpdateHomeVideoSettingsResponse.parse(toSettingsResponse(videoId)));
+    res.json(
+      UpdateHomeVideoSettingsResponse.parse({
+        videoId: null,
+        youtubeUrl: null,
+        objectPath,
+        resourceName,
+      }),
+    );
   },
 );
 

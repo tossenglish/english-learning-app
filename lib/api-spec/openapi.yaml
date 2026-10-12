@@ -430,7 +430,7 @@ paths:
       summary: 홈 영상 설정 조회
       responses:
         "200":
-          description: 홈 YouTube 영상 설정
+          description: 홈 영상 파일 설정
           content:
             application/json:
               schema:
@@ -445,7 +445,7 @@ paths:
     put:
       operationId: updateHomeVideoSettings
       tags: [LearningContent]
-      summary: 홈 YouTube 영상 설정 저장
+      summary: 업로드한 홈 영상 설정 저장
       requestBody:
         required: true
         content:
@@ -460,7 +460,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/HomeVideoSettings"
         "400":
-          description: 유효하지 않은 YouTube 링크
+          description: 유효하지 않은 영상 파일 경로
           content:
             application/json:
               schema:
@@ -675,7 +675,7 @@ components:
           type: boolean
     HomeVideoSettings:
       type: object
-      required: [videoId, youtubeUrl]
+      required: [videoId, youtubeUrl, objectPath, resourceName]
       properties:
         videoId:
           type: [string, "null"]
@@ -683,13 +683,22 @@ components:
         youtubeUrl:
           type: [string, "null"]
           format: uri
+        objectPath:
+          type: [string, "null"]
+          maxLength: 1024
+        resourceName:
+          type: [string, "null"]
+          maxLength: 255
     HomeVideoSettingsInput:
       type: object
-      required: [youtubeUrl]
+      required: [objectPath, resourceName]
       properties:
-        youtubeUrl:
-          type: string
-          maxLength: 2048
+        objectPath:
+          type: [string, "null"]
+          maxLength: 1024
+        resourceName:
+          type: [string, "null"]
+          maxLength: 255
     LearningLevel:
       type: string
       enum: [Beginner, Intermediate, Advanced, All]
