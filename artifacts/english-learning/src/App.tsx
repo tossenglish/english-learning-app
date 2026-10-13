@@ -619,7 +619,10 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
           <div className="flex items-center justify-between"><span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Quick check</span><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--muted))] text-xs font-bold">01</span></div>
           <h2 className="mt-8 text-xl font-bold leading-snug tracking-[-.03em]" data-testid="text-quiz-question">“{content.word}”는 어떤 뜻일까요?</h2>
           <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">가장 가까운 의미를 골라보세요.</p>
-          <div className="mt-7 space-y-2.5">
+          <button type="button" onClick={onListen} data-testid="button-listen-quiz-word" aria-label={`${content.word} 발음 듣기`} className="button-pop mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-bold text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]">
+            <Volume2 size={16} /> {listening ? '발음 재생 중...' : '단어 발음 듣기'}
+          </button>
+          <div className="mt-5 space-y-2.5">
             {content.quizOptions.map((option, index) => {
               const selected = quizAnswer === option;
               const isCorrect = option === content.correctMeaning;
@@ -776,12 +779,6 @@ function LearningPortal() {
     };
   }, [level]);
 
-  useEffect(() => {
-    if (!listening) return;
-    const timer = window.setTimeout(() => setListening(false), 1100);
-    return () => window.clearTimeout(timer);
-  }, [listening]);
-
   const startSession = async (assignment?: Assignment) => {
     if (assignment) {
       await prepareAssignmentPractice(assignment);
@@ -824,8 +821,25 @@ function LearningPortal() {
               onMarkLearned={() => { setLearned(true); setCardFlipped(true); }}
               listening={listening}
               onListen={() => {
+                if (!('speechSynthesis' in window)) {
+                  setListening(false);
+                  return;
+                }
+
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(learningContent.word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.82;
+                utterance.onend = () => setListening(false);
+                utterance.onerror = () => setListening(false);
+
                 setListening(true);
                 setHasListened(true);
+                try {
+                  window.speechSynthesis.speak(utterance);
+                } catch {
+                  setListening(false);
+                }
               }}
               onRemove={() => setLearned(false)}
               metrics={metrics}
