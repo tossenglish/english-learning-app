@@ -11,6 +11,7 @@ export type PracticeSentence = {
 export type PracticeMaterial = {
   assignmentId: number;
   title: string;
+  materialType: Assignment['materialType'];
   sentences: PracticeSentence[];
 };
 
@@ -120,6 +121,7 @@ async function createMaterial(assignment: Assignment, text: string): Promise<Pra
   return {
     assignmentId: assignment.id,
     title: assignment.title,
+    materialType: assignment.materialType,
     sentences,
   };
 }
@@ -144,6 +146,7 @@ export async function prepareAssignmentPractice(
     const material = {
       assignmentId: assignment.id,
       title: assignment.title,
+      materialType: assignment.materialType,
       sentences: directSentences,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(material));
@@ -178,7 +181,12 @@ export function readActivePracticeMaterial(): PracticeMaterial | null {
     if (!parsed.title || !Array.isArray(parsed.sentences) || parsed.sentences.length === 0) {
       return null;
     }
-    return parsed;
+    const materialType = parsed.materialType === 'word' || parsed.materialType === 'sentence'
+      ? parsed.materialType
+      : parsed.sentences.every((sentence) => typeof sentence.english === 'string' && !/\s/.test(sentence.english.trim()))
+        ? 'word'
+        : 'sentence';
+    return { ...parsed, materialType };
   } catch {
     return null;
   }

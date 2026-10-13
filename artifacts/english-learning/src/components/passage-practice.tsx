@@ -343,6 +343,7 @@ export default function PassagePractice({
   const passageSentences = usingActiveMaterial && activeMaterial
     ? activeMaterial.sentences
     : parsedPassageSentences;
+  const isWordMaterial = usingActiveMaterial && activeMaterial?.materialType === 'word';
 
   const safeCurrentIndex = Math.min(currentIndex, Math.max(0, passageSentences.length - 1));
   const current = passageSentences[safeCurrentIndex] ?? passageSentences[0];
@@ -352,12 +353,17 @@ export default function PassagePractice({
   );
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
-  const completedSteps = passageSentences.reduce(
-    (total, sentence) => total + Object.values(completed[sentence.id] ?? blankCompletion()).filter(Boolean).length,
-    0,
-  );
-  const allCompleted = passageSentences.length > 0 && completedSteps === passageSentences.length * modes.length;
-  const sentenceCompleted = modes.every((item) => currentCompletion[item.id]);
+  const totalProgressSteps = passageSentences.length * (isWordMaterial ? 1 : modes.length);
+  const completedSteps = passageSentences.reduce((total, sentence) => {
+    const doneModes = Object.values(completed[sentence.id] ?? blankCompletion());
+    return total + (isWordMaterial
+      ? (doneModes.some(Boolean) ? 1 : 0)
+      : doneModes.filter(Boolean).length);
+  }, 0);
+  const allCompleted = passageSentences.length > 0 && completedSteps === totalProgressSteps;
+  const sentenceCompleted = isWordMaterial
+    ? Object.values(currentCompletion).some(Boolean)
+    : modes.every((item) => currentCompletion[item.id]);
   const isDefaultPassage = !usingActiveMaterial && normalizePassage(passageText) === normalizePassage(DEFAULT_PASSAGE_TEXT);
   const isAnswerMode = mode === 'dictation' || mode === 'writing';
   const hidePassageText = isAnswerMode && !showPassageEditor;
@@ -431,7 +437,7 @@ export default function PassagePractice({
 
     onProgressChange?.({
       completedSteps,
-      totalSteps: passageSentences.length * modes.length,
+      totalSteps: totalProgressSteps,
       dictationCompleted: byMode.dictation,
       writingCompleted: byMode.writing,
       shadowingCompleted: byMode.shadowing,
@@ -440,7 +446,7 @@ export default function PassagePractice({
         totalAnswerAttempts - byMode.dictation - byMode.writing,
       ),
     });
-  }, [attempts, completed, completedSteps, onProgressChange, passageSentences]);
+  }, [attempts, completed, completedSteps, onProgressChange, passageSentences, totalProgressSteps]);
 
   useEffect(() => {
     try {
@@ -661,26 +667,28 @@ export default function PassagePractice({
             <ArrowLeft size={14} /> 오늘의 단어로 돌아가기
           </Link>
           <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">
-            Sentence studio
+            {isWordMaterial ? 'Word quiz' : 'Sentence studio'}
           </p>
           <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl" data-testid="text-passage-title">
             {usingActiveMaterial && displayedActiveMaterialTitle ? displayedActiveMaterialTitle : '지문의 모든 문장을'}<br className="sm:hidden" /> Let&apos;s do it.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
-            한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.
+            {isWordMaterial
+              ? '단어의 뜻을 맞히면 다음 단어로 넘어갈 수 있어요.'
+              : '한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.'}
           </p>
         </div>
         <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] px-4 py-3">
           <div className="flex items-center justify-between gap-8">
             <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">전체 진행률</span>
             <span className="font-mono text-sm font-bold text-[hsl(var(--foreground))]" data-testid="text-passage-progress">
-              {completedSteps}/{passageSentences.length * modes.length}
+              {completedSteps}/{totalProgressSteps}
             </span>
           </div>
           <div className="mt-2 h-1.5 w-44 overflow-hidden rounded-full bg-[hsl(var(--muted))]">
             <div
               className="h-full rounded-full bg-[hsl(var(--accent))] transition-all duration-500"
-              style={{ width: `${(completedSteps / (passageSentences.length * modes.length)) * 100}%` }}
+              style={{ width: `${(completedSteps / totalProgressSteps) * 100}%` }}
               data-testid="progress-passage"
             />
           </div>
@@ -833,7 +841,7 @@ export default function PassagePractice({
           </div>
           <p className="mt-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
             {usingActiveMaterial && activeMaterial
-              ? `업로드한 자료에서 ${passageSentences.length}개의 연습 문장을 불러왔어요.`
+              ? `업로드한 자료에서 ${passageSentences.length}개의 연습 ${isWordMaterial ? '단어' : '문장'}을 불러왔어요.`
               : isDefaultPassage
                 ? '작은 카페를 발견한 오후의 이야기예요.'
                 : '내가 고른 지문을 문장별로 반복해서 연습해요.'}
@@ -931,7 +939,7 @@ export default function PassagePractice({
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">
-                  Sentence {current.id} / {passageSentences.length}
+                  {isWordMaterial ? 'Word' : 'Sentence'} {current.id} / {passageSentences.length}
                 </p>
                 <h2 className="mt-4 max-w-none break-words text-3xl font-bold leading-tight tracking-[-.04em] sm:text-4xl lg:text-[2.75rem]" data-testid="text-current-passage-sentence">
                   {hidePassageText ? (
@@ -1045,7 +1053,9 @@ export default function PassagePractice({
                 <span>
                   {feedback === 'correct' && (mode === 'shadowing' ? '좋아요. 입으로 직접 말해본 문장이에요.' : '정확해요. 이 문장은 이제 내 것이 됐어요.')}
                   {feedback === 'wrong' && `조금 달라요. 정답을 확인하고 다시 한 번 써볼까요? ${showAnswer ? current.english : ''}`}
-                  {feedback === 'hint' && (sentenceCompleted ? '세 가지 연습을 모두 끝냈어요. 다음 문장으로 가볼까요?' : '이 문장의 받아쓰기, 영작, 따라 말하기를 모두 끝내면 다음으로 갈 수 있어요.')}
+                  {feedback === 'hint' && (sentenceCompleted
+                    ? (isWordMaterial ? '정답이에요. 다음 단어로 넘어가 볼까요?' : '세 가지 연습을 모두 끝냈어요. 다음 문장으로 가볼까요?')
+                    : (isWordMaterial ? '단어의 뜻을 맞히면 다음 단어로 넘어갈 수 있어요.' : '이 문장의 받아쓰기, 영작, 따라 말하기를 모두 끝내면 다음으로 갈 수 있어요.'))}
                 </span>
               </div>
             )}
@@ -1081,7 +1091,9 @@ export default function PassagePractice({
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[hsl(var(--muted-foreground))]">
-              {sentenceCompleted ? '이 문장의 모든 연습을 완료했어요.' : `${currentMode.label}을 완료해보세요.`}
+              {sentenceCompleted
+                ? (isWordMaterial ? '이 단어를 맞혔어요.' : '이 문장의 모든 연습을 완료했어요.')
+                : `${currentMode.label}을 완료해보세요.`}
             </p>
             <button
               type="button"
@@ -1090,7 +1102,11 @@ export default function PassagePractice({
               data-testid="button-next-passage-sentence"
               className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-45"
             >
-              {allCompleted ? '지문 연습 완료' : currentIndex === passageSentences.length - 1 ? '마지막 문장' : '다음 문장'} <ArrowRight size={14} />
+              {allCompleted
+                ? (isWordMaterial ? '단어 퀴즈 완료' : '지문 연습 완료')
+                : currentIndex === passageSentences.length - 1
+                  ? (isWordMaterial ? '마지막 단어' : '마지막 문장')
+                  : (isWordMaterial ? '다음 단어' : '다음 문장')} <ArrowRight size={14} />
             </button>
           </div>
         </div>
@@ -1099,8 +1115,10 @@ export default function PassagePractice({
       {allCompleted && (
         <section className="rise-in rounded-[26px] border border-[hsl(var(--accent)/.35)] bg-[hsl(var(--secondary)/.65)] p-6 text-center" data-testid="status-passage-complete">
           <CheckCircle2 className="mx-auto text-[hsl(var(--accent))]" size={28} />
-          <h2 className="mt-3 text-xl font-bold">지문의 모든 문장을 완주했어요.</h2>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.</p>
+          <h2 className="mt-3 text-xl font-bold">{isWordMaterial ? '단어 퀴즈를 모두 풀었어요.' : '지문의 모든 문장을 완주했어요.'}</h2>
+          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+            {isWordMaterial ? '모든 단어를 확인했어요.' : '이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.'}
+          </p>
         </section>
       )}
     </div>
