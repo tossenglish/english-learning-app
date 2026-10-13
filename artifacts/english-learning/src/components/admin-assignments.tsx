@@ -751,13 +751,13 @@ export default function AdminAssignments() {
             className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
           />
         </label>
-         <div className="grid gap-4 sm:grid-cols-3">
-          <label className="grid gap-2">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+          <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">배정 대상</span>
             <select
               value={assigneeUserId}
               onChange={(event) => setAssigneeUserId(event.target.value)}
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))]"
+              className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))]"
             >
               <option value="">레벨 전체에 배정</option>
               {members.map((member) => (
@@ -767,8 +767,8 @@ export default function AdminAssignments() {
               ))}
             </select>
           </label>
-          <label className="grid gap-2">
-             <span className="text-xs font-bold">배정 과정</span>
+          <label className="grid min-w-0 content-start gap-2">
+            <span className="text-xs font-bold">배정 과정</span>
             <select
               value={level}
               onChange={(event) => {
@@ -781,28 +781,28 @@ export default function AdminAssignments() {
                 setSelectedSourceKeys([]);
               }}
               disabled={Boolean(assigneeUserId)}
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
             >
                {courseOptions.map(({ value, label }) => (
                  <option key={value} value={value}>{label}</option>
               ))}
             </select>
-             <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-               {level === 'All'
-                 ? `모든 회원에게 표시 · 과정 배정 회원 ${members.filter((member) => member.course !== null).length}명`
-                 : `${members.filter((member) => member.course === level).length}명의 배정 회원에게 표시`}
-             </span>
           </label>
-          <label className="grid gap-2">
+          <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">마감일</span>
             <input
               type="date"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+              className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm outline-none focus:border-[hsl(var(--accent))]"
             />
           </label>
         </div>
+        <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+          {level === 'All'
+            ? `모든 회원에게 표시 · 과정 배정 회원 ${members.filter((member) => member.course !== null).length}명`
+            : `${members.filter((member) => member.course === level).length}명의 배정 회원에게 표시`}
+        </p>
 
         {resourcePath && (
           <div className="flex items-center justify-between gap-3 rounded-xl bg-[hsl(var(--secondary)/.7)] px-4 py-3">
