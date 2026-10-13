@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -43,7 +43,7 @@ import LearningReport, { type LearningMetrics } from '@/components/learning-repo
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
 import type { Assignment, LearningContent } from '@workspace/api-client-react';
-import { prepareAssignmentPractice } from '@/lib/practice-material';
+import { parseDirectMaterial, prepareAssignmentPractice } from '@/lib/practice-material';
 import { apiFetch, setApiAuthTokenGetter } from '@/lib/api-fetch';
 import {
   getDefaultLearningContent,
@@ -52,6 +52,43 @@ import {
 } from '@/lib/learning-content';
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
+
+function makeWordQuizSequence(assignments: Assignment[], fallback: LearnContent): LearnContent[] {
+  const entries = assignments
+    .filter((assignment) => assignment.materialType === 'word' && assignment.materialContent?.trim())
+    .flatMap((assignment) => parseDirectMaterial(assignment.materialContent ?? '', 'word'))
+    .filter((entry) => entry.korean !== '한글 뜻을 직접 입력해 주세요.')
+    .filter((entry, index, all) => all.findIndex((candidate) => candidate.english.toLowerCase() === entry.english.toLowerCase()) === index);
+
+  if (entries.length === 0) return [fallback];
+
+  const meanings = [...new Set(entries.map((entry) => entry.korean))];
+  return entries.map((entry, index) => {
+    const distractors = [
+      ...meanings.filter((meaning) => meaning !== entry.korean),
+      ...fallback.quizOptions.filter((meaning) => meaning !== fallback.correctMeaning && meaning !== entry.korean),
+    ];
+    const options = [entry.korean];
+    for (const distractor of distractors) {
+      if (!options.includes(distractor)) options.push(distractor);
+      if (options.length === 4) break;
+    }
+    for (const distractor of ['다른 뜻', '다른 의미', '추가 선택지', `뜻 선택지 ${index + 1}`]) {
+      if (!options.includes(distractor) && options.length < 4) options.push(distractor);
+    }
+    const correctIndex = [...`${entry.english}:${index}`]
+      .reduce((sum, character) => sum + character.charCodeAt(0), 0) % options.length;
+    options.splice(correctIndex, 0, options.shift()!);
+
+    return {
+      ...fallback,
+      word: entry.english,
+      shortMeaning: entry.korean,
+      correctMeaning: entry.korean,
+      quizOptions: options,
+    };
+  });
+}
 
 function playQuizFeedbackSound(correct: boolean) {
   if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
@@ -569,7 +606,7 @@ function Home({ level, onLevelChange, learned, onStart, content }: { level: Leve
   );
 }
 
-function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, learned, onMarkLearned, listening, onListen, content }: {
+function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, learned, onMarkLearned, listening, onListen, content, hasNextWord, onNextWord, quizPosition, quizTotal }: {
   level: Level;
   onLevelChange: (level: Level) => void;
   cardFlipped: boolean;
@@ -581,12 +618,16 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
   listening: boolean;
   onListen: () => void;
   content: LearnContent;
+  hasNextWord: boolean;
+  onNextWord: () => void;
+  quizPosition: number;
+  quizTotal: number;
 }) {
   const correct = quizAnswer === content.correctMeaning;
   return (
     <div className="mx-auto max-w-[1000px] space-y-8">
       <section className="rise-in flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Session 01 / 05</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">오늘의 단어를<br className="sm:hidden" /> 만나볼까요<span className="text-[hsl(var(--accent))]">?</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{levelCopy[level].detail}</p></div>
+        <div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Word {quizPosition} / {quizTotal}</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">오늘의 단어를<br className="sm:hidden" /> 만나볼까요<span className="text-[hsl(var(--accent))]">?</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{levelCopy[level].detail}</p></div>
         <div className="flex items-center gap-3"><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">레벨</span><LevelPills level={level} onChange={onLevelChange} /></div>
       </section>
       <div className="h-1.5 overflow-hidden rounded-full bg-[hsl(var(--muted))]"><div className={`h-full rounded-full bg-[hsl(var(--accent))] transition-all duration-700 ${learned ? 'w-[80%]' : 'w-[20%]'}`} data-testid="progress-learn-session" /></div>
@@ -638,6 +679,11 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
              <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 font-mono text-lg font-bold ${correct ? 'border-[hsl(var(--secondary-foreground)/.35)]' : 'border-[hsl(var(--destructive)/.35)]'}`}>{correct ? 'O' : 'X'}</span>
              <span>{correct ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요.` : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</span>
            </div>}
+          {quizAnswer && correct && hasNextWord && (
+            <button type="button" onClick={onNextWord} data-testid="button-next-quiz-word" className="button-pop mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))]">
+              다음 단어 <ArrowRight size={16} />
+            </button>
+          )}
           <button type="button" onClick={onMarkLearned} disabled={learned} data-testid="button-mark-learned" className={`button-pop mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold ${learned ? 'cursor-default bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'}`}>
             {learned ? <><CheckCircle2 size={17} /> 단어장에 저장했어요</> : <><BookOpen size={17} /> 배운 단어로 표시하기</>}
           </button>
