@@ -1,3 +1,4 @@
 - [Direct learning materials](direct-materials.md) — user-entered sentence and word content must be deterministic and avoid AI calls.
 - [GitHub push fallback](github-push.md) — if Git CLI auth fails, preserve Git object bytes and fast-forward through the connected GitHub API.
 - [Database schema push safety](database-schema-push.md) — avoid force-pushing when Drizzle requests unrelated data truncation; apply only the needed safe schema change.
+- [Separate word quiz flows](word-quiz-flows.md) — the home quick check and course assignment practice are distinct paths; validate both when word progression is reported broken.
