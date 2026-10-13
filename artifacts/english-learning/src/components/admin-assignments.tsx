@@ -8,7 +8,9 @@ import type {
   MaterialType,
 } from '@workspace/api-client-react';
 import {
+  ArrowLeft,
   CalendarDays,
+  ChevronRight,
   ClipboardList,
   FileText,
   FolderOpen,
@@ -183,6 +185,7 @@ export default function AdminAssignments() {
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
   const [folderListFilter, setFolderListFilter] = useState('all');
+  const [courseFolderOpen, setCourseFolderOpen] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
@@ -220,6 +223,14 @@ export default function AdminAssignments() {
         : assignment.folderId === Number(folderListFilter));
     return matchesCourse && assignment.materialType === materialFolder && matchesSubfolder;
   });
+  const courseAssignments = assignments.filter((assignment) =>
+    assignment.level === listLevel && assignment.materialType === materialFolder,
+  );
+  const courseSubfolders = folders.filter((folder) =>
+    folder.materialType === materialFolder && courseAssignments.some((assignment) =>
+      assignment.folderId === folder.id,
+    ),
+  );
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -414,6 +425,7 @@ export default function AdminAssignments() {
       setAssignments((current) => [created, ...current]);
       setListLevel(level);
       setMaterialFolder(materialType);
+      setCourseFolderOpen(true);
       setFolderListFilter(created.folderId == null ? 'all' : String(created.folderId));
       setTitle('');
       setDescription('');
@@ -905,7 +917,9 @@ export default function AdminAssignments() {
                입력한 단어와 문장을 서로 다른 폴더에서 다시 이용할 수 있어요.
              </p>
            </div>
-           <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{visibleAssignments.length}개</span>
+            <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">
+              {courseFolderOpen ? visibleAssignments.length : assignments.filter((assignment) => assignment.materialType === materialFolder).length}개
+            </span>
         </div>
          <div className="mt-5 grid gap-3 sm:grid-cols-2" role="tablist" aria-label="학습자료 폴더 선택">
            {materialFolders.map(({ value, label, description, icon: Icon }) => (
@@ -917,7 +931,8 @@ export default function AdminAssignments() {
                data-testid={`button-material-folder-${value}`}
                 onClick={() => {
                   setMaterialFolder(value);
-                  setFolderListFilter('all');
+                   setFolderListFilter('');
+                   setCourseFolderOpen(false);
                 }}
                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                  materialFolder === value
@@ -940,62 +955,110 @@ export default function AdminAssignments() {
              </button>
            ))}
          </div>
-         <div className="mt-7 flex items-center justify-between gap-4">
-           <div>
-             <h3 className="font-bold">
-               {materialFolders.find((folder) => folder.value === materialFolder)?.label} · 과정별 목록
-             </h3>
-             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-               {courseOptions.find((course) => course.value === listLevel)?.label}에 저장된 자료
-             </p>
-           </div>
-         </div>
-         <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="과제 과정 선택">
-           {courseOptions.map(({ value, label }) => (
-             <button
-               key={value}
-               type="button"
-               role="tab"
-               aria-selected={listLevel === value}
-               data-testid={`button-assignment-course-${value.toLowerCase()}`}
-               onClick={() => setListLevel(value)}
-               className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
-                 listLevel === value
-                   ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                   : 'border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--accent)/.6)] hover:text-[hsl(var(--foreground))]'
-               }`}
-             >
-               {label}
-             </button>
-           ))}
-         </div>
-          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="자료 하위 폴더 선택">
-            {[
-              { value: 'all', label: '전체 자료' },
-              { value: 'unfiled', label: '폴더 없음' },
-              ...folders
-                .filter((folder) => folder.materialType === materialFolder)
-                .map((folder) => ({ value: String(folder.id), label: folder.name })),
-            ].map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={folderListFilter === value}
-                onClick={() => setFolderListFilter(value)}
-                className={`rounded-full border px-3.5 py-2 text-xs font-bold transition-colors ${
-                  folderListFilter === value
-                    ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.1)] text-[hsl(var(--foreground))]'
-                    : 'border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--accent)/.6)]'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {!courseFolderOpen ? (
+            <div className="mt-7">
+              <h3 className="font-bold">과정 폴더 선택</h3>
+              <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                과정을 선택하면 해당 과정의 과제 하위 폴더로 이동합니다.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  ...courseOptions.filter(({ value }) => value !== 'All'),
+                  ...(assignments.some((assignment) => assignment.level === 'All' && assignment.materialType === materialFolder)
+                    ? courseOptions.filter(({ value }) => value === 'All')
+                    : []),
+                ].map(({ value, label }) => {
+                  const count = assignments.filter((assignment) =>
+                    assignment.level === value && assignment.materialType === materialFolder,
+                  ).length;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      data-testid={`button-assignment-course-${value.toLowerCase()}`}
+                      onClick={() => {
+                        setListLevel(value);
+                        setFolderListFilter('');
+                        setCourseFolderOpen(true);
+                      }}
+                      className="flex min-h-24 items-center gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 text-left transition-colors hover:border-[hsl(var(--accent)/.6)] hover:bg-[hsl(var(--accent)/.06)]"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
+                        <FolderOpen size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold">{label}</span>
+                        <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{count}개 과제</span>
+                      </span>
+                      <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={18} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-7">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCourseFolderOpen(false);
+                    setFolderListFilter('');
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+                >
+                  <ArrowLeft size={14} /> 과정 폴더
+                </button>
+                <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={14} />
+                <h3 className="font-bold">{courseOptions.find((course) => course.value === listLevel)?.label} 하위 폴더</h3>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  { value: 'all', label: '전체 자료', count: courseAssignments.length },
+                  ...courseSubfolders.map((folder) => ({
+                    value: String(folder.id),
+                    label: folder.name,
+                    count: courseAssignments.filter((assignment) => assignment.folderId === folder.id).length,
+                  })),
+                  ...(courseAssignments.some((assignment) => assignment.folderId == null)
+                    ? [{
+                        value: 'unfiled',
+                        label: '폴더 없음',
+                        count: courseAssignments.filter((assignment) => assignment.folderId == null).length,
+                      }]
+                    : []),
+                ].map(({ value, label, count }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    data-testid={`button-assignment-subfolder-${value}`}
+                    aria-pressed={folderListFilter === value}
+                    onClick={() => setFolderListFilter(value)}
+                    className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                      folderListFilter === value
+                        ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]'
+                        : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] hover:border-[hsl(var(--accent)/.55)]'
+                    }`}
+                  >
+                    <FolderOpen className="shrink-0 text-[hsl(var(--accent))]" size={18} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold">{label}</span>
+                      <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{count}개 과제</span>
+                    </span>
+                    <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={16} />
+                  </button>
+                ))}
+              </div>
+              {courseAssignments.length === 0 && (
+                <p className="mt-4 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-5 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                  이 과정에 등록된 과제가 없어요.
+                </p>
+              )}
+            </div>
+          )}
         {loading ? (
           <LoaderCircle className="mx-auto mt-8 animate-spin text-[hsl(var(--accent))]" size={24} />
-         ) : visibleAssignments.length === 0 ? (
+         ) : !courseFolderOpen || folderListFilter === '' ? null : visibleAssignments.length === 0 ? (
           <p className="mt-6 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
              이 과정에 등록된 과제가 없어요.
           </p>
