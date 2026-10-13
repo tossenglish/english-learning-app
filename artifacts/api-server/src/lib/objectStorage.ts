@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { Readable } from 'stream';
 import { File, Storage } from '@google-cloud/storage';
 
@@ -40,6 +42,14 @@ export class ObjectNotFoundError extends Error {
 
 export class ObjectStorageService {
   constructor() {}
+
+  isLocalStorageEnabled(): boolean {
+    return !process.env.REPL_ID && !process.env.REPLIT_DEPLOYMENT;
+  }
+
+  private getLocalStorageDirectory(): string {
+    return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
+  }
 
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || '';
@@ -112,6 +122,21 @@ export class ObjectStorageService {
   }
 
   async getObjectEntityUploadURL(): Promise<string> {
+    return (await this.getObjectEntityUploadTarget()).uploadURL;
+  }
+
+  async getObjectEntityUploadTarget(): Promise<{
+    uploadURL: string;
+    objectPath: string;
+  }> {
+    const objectId = randomUUID();
+    if (this.isLocalStorageEnabled()) {
+      return {
+        uploadURL: `/api/storage/uploads/local/${objectId}`,
+        objectPath: `/objects/uploads/${objectId}`,
+      };
+    }
+
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
@@ -120,17 +145,85 @@ export class ObjectStorageService {
       );
     }
 
-    const objectId = randomUUID();
     const fullPath = `${privateObjectDir}/uploads/${objectId}`;
 
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
-    return signObjectURL({
+    const uploadURL = await signObjectURL({
       bucketName,
       objectName,
       method: 'PUT',
       ttlSec: 900,
     });
+    return {
+      uploadURL,
+      objectPath: this.normalizeObjectEntityPath(uploadURL),
+    };
+  }
+
+  async saveLocalObject(
+    objectId: string,
+    contents: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    if (!this.isLocalStorageEnabled()) {
+      throw new Error('Local uploads are disabled in this environment');
+    }
+    const directory = this.getLocalStorageDirectory();
+    await fs.promises.mkdir(directory, { recursive: true, mode: 0o700 });
+    const filePath = path.join(directory, objectId);
+    const metadataPath = path.join(directory, `${objectId}.json`);
+    try {
+      await fs.promises.writeFile(filePath, contents, {
+        flag: 'wx',
+        mode: 0o600,
+      });
+      await fs.promises.writeFile(
+        metadataPath,
+        JSON.stringify({ contentType }),
+        { flag: 'wx', mode: 0o600 },
+      );
+    } catch (error) {
+      await Promise.all([
+        fs.promises.unlink(filePath).catch(() => undefined),
+        fs.promises.unlink(metadataPath).catch(() => undefined),
+      ]);
+      throw error;
+    }
+  }
+
+  async getLocalObject(objectId: string): Promise<{
+    stream: Readable;
+    contentType: string;
+    size: number;
+  } | null> {
+    if (!this.isLocalStorageEnabled()) return null;
+
+    const directory = this.getLocalStorageDirectory();
+    const filePath = path.join(directory, objectId);
+    try {
+      const [stat, metadataContents] = await Promise.all([
+        fs.promises.stat(filePath),
+        fs.promises.readFile(path.join(directory, `${objectId}.json`), 'utf8').catch(() => ''),
+      ]);
+      let contentType = 'application/octet-stream';
+      if (metadataContents) {
+        try {
+          const metadata = JSON.parse(metadataContents) as { contentType?: unknown };
+          if (typeof metadata.contentType === 'string') contentType = metadata.contentType;
+        } catch {
+          // Keep the safe generic content type if metadata is corrupt.
+        }
+      }
+      return {
+        stream: fs.createReadStream(filePath),
+        contentType,
+        size: stat.size,
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
   }
 
   async getObjectEntityFile(objectPath: string): Promise<File> {

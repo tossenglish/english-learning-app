@@ -1,9 +1,16 @@
 import { Readable } from 'stream';
+import { raw } from 'express';
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from '@workspace/api-zod';
-import { Router, type IRouter, type Request, type Response } from 'express';
+import {
+  Router,
+  type IRouter,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express';
 
 import {
   ObjectNotFoundError,
@@ -13,6 +20,30 @@ import { getUserId, isAdmin } from '../lib/auth';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+
+const requireLocalStorage: RequestHandler = (_req, res, next) => {
+  if (!objectStorageService.isLocalStorageEnabled()) {
+    res.status(404).json({ error: 'Local uploads are not enabled' });
+    return;
+  }
+  next();
+};
+
+const requireLocalUploadAdmin: RequestHandler = async (req, res, next) => {
+  if (!getUserId(req)) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    if (!(await isAdmin(req))) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 
 router.get('/admin/status', async (req: Request, res: Response) => {
   if (!getUserId(req)) {
@@ -57,9 +88,8 @@ router.post(
     try {
       const { name, size, contentType } = parsed.data;
 
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      const objectPath =
-        objectStorageService.normalizeObjectEntityPath(uploadURL);
+      const { uploadURL, objectPath } =
+        await objectStorageService.getObjectEntityUploadTarget();
 
       res.json(
         RequestUploadUrlResponse.parse({
@@ -71,6 +101,33 @@ router.post(
     } catch (error) {
       req.log.error({ err: error }, 'Error generating upload URL');
       res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+  },
+);
+
+router.put(
+  '/storage/uploads/local/:objectId',
+  requireLocalStorage,
+  requireLocalUploadAdmin,
+  raw({ type: '*/*', limit: '50mb' }),
+  async (req: Request, res: Response) => {
+    const objectId = req.params.objectId;
+    if (typeof objectId !== 'string' || !/^[0-9a-f-]{36}$/i.test(objectId)) {
+      res.status(400).json({ error: 'Invalid upload ID' });
+      return;
+    }
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: 'Upload body is empty or invalid' });
+      return;
+    }
+
+    try {
+      const contentType = req.get('content-type')?.split(';')[0]?.trim() || 'application/octet-stream';
+      await objectStorageService.saveLocalObject(objectId, req.body, contentType);
+      res.status(204).end();
+    } catch (error) {
+      req.log.error({ err: error }, 'Error saving local upload');
+      res.status(500).json({ error: 'Failed to save uploaded file' });
     }
   },
 );
@@ -130,6 +187,29 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
+    if (objectStorageService.isLocalStorageEnabled()) {
+      const match = /^uploads\/([0-9a-f-]{36})$/i.exec(wildcardPath);
+      if (!match) {
+        res.status(404).json({ error: 'Object not found' });
+        return;
+      }
+      try {
+        const object = await objectStorageService.getLocalObject(match[1]);
+        if (!object) {
+          res.status(404).json({ error: 'Object not found' });
+          return;
+        }
+        res.setHeader('Content-Type', object.contentType);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Length', String(object.size));
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        object.stream.pipe(res);
+      } catch (error) {
+        req.log.error({ err: error }, 'Error serving local object');
+        res.status(500).json({ error: 'Failed to serve object' });
+      }
+      return;
+    }
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);

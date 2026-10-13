@@ -48,6 +48,15 @@ function applyApiBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
   }
 }
 
+export function resolveApiUrl(input: string): string {
+  const resolved = applyApiBaseUrl(input);
+  return typeof resolved === 'string'
+    ? resolved
+    : resolved instanceof URL
+      ? resolved.toString()
+      : resolved.url;
+}
+
 function isApiRequest(input: RequestInfo | URL): boolean {
   try {
     const url = new URL(getRequestUrl(input), window.location.href);
@@ -58,6 +67,12 @@ function isApiRequest(input: RequestInfo | URL): boolean {
   } catch {
     return false;
   }
+}
+
+export async function getApiAuthorizationHeader(url: string): Promise<string | null> {
+  if (!authTokenGetter || !isApiRequest(url)) return null;
+  const token = await authTokenGetter();
+  return token ? `Bearer ${token}` : null;
 }
 
 export async function apiFetch(

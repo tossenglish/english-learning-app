@@ -10,7 +10,12 @@ import { useAdminAccess } from '@/hooks/use-admin-access';
 import AdminAssignments, { type AssignmentResource } from '@/components/admin-assignments';
 import AdminHomeVideoSettings from '@/components/admin-home-video-settings';
 import AdminWordContentSettings from '@/components/admin-word-content-settings';
-import { apiFetch, openApiFile } from '@/lib/api-fetch';
+import {
+  apiFetch,
+  getApiAuthorizationHeader,
+  openApiFile,
+  resolveApiUrl,
+} from '@/lib/api-fetch';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -59,19 +64,23 @@ export default function AdminUpload() {
 
       await new Promise<void>((resolve, reject) => {
         const request = new XMLHttpRequest();
-        request.open('PUT', uploadURL);
+        const resolvedUploadUrl = resolveApiUrl(uploadURL);
+        request.open('PUT', resolvedUploadUrl);
         request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        request.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            setProgress(Math.round((event.loaded / event.total) * 100));
-          }
-        };
-        request.onload = () => {
-          if (request.status >= 200 && request.status < 300) resolve();
-          else reject(new Error('파일 전송에 실패했습니다.'));
-        };
-        request.onerror = () => reject(new Error('파일 전송 중 네트워크 오류가 발생했습니다.'));
-        request.send(file);
+        void getApiAuthorizationHeader(resolvedUploadUrl).then((authorization) => {
+          if (authorization) request.setRequestHeader('Authorization', authorization);
+          request.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              setProgress(Math.round((event.loaded / event.total) * 100));
+            }
+          };
+          request.onload = () => {
+            if (request.status >= 200 && request.status < 300) resolve();
+            else reject(new Error('파일 전송에 실패했습니다.'));
+          };
+          request.onerror = () => reject(new Error('파일 전송 중 네트워크 오류가 발생했습니다.'));
+          request.send(file);
+        }).catch(reject);
       });
 
       setProgress(100);
@@ -112,7 +121,7 @@ export default function AdminUpload() {
         </p>
         <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">학습 자료 업로드</h1>
         <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-          문서, 이미지, 음원, 영상을 최대 50MB까지 App Storage에 저장할 수 있어요.
+          문서, 이미지, 음원, 영상을 최대 50MB까지 업로드할 수 있어요.
         </p>
       </section>
 

@@ -6,7 +6,7 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Play, UploadCloud } from 'lucide-react';
-import { apiFetch } from '@/lib/api-fetch';
+import { apiFetch, getApiAuthorizationHeader, resolveApiUrl } from '@/lib/api-fetch';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MIME_BY_EXTENSION: Record<string, string> = {
@@ -90,17 +90,21 @@ export default function AdminHomeVideoSettings() {
 
       await new Promise<void>((resolve, reject) => {
         const request = new XMLHttpRequest();
-        request.open('PUT', body.uploadURL!);
+        const uploadUrl = resolveApiUrl(body.uploadURL!);
+        request.open('PUT', uploadUrl);
         request.setRequestHeader('Content-Type', contentType);
-        request.upload.onprogress = (event) => {
-          if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
-        };
-        request.onload = () => {
-          if (request.status >= 200 && request.status < 300) resolve();
-          else reject(new Error('동영상 업로드에 실패했습니다.'));
-        };
-        request.onerror = () => reject(new Error('업로드 중 네트워크 오류가 발생했습니다.'));
-        request.send(file);
+        void getApiAuthorizationHeader(uploadUrl).then((authorization) => {
+          if (authorization) request.setRequestHeader('Authorization', authorization);
+          request.upload.onprogress = (event) => {
+            if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
+          };
+          request.onload = () => {
+            if (request.status >= 200 && request.status < 300) resolve();
+            else reject(new Error('동영상 업로드에 실패했습니다.'));
+          };
+          request.onerror = () => reject(new Error('업로드 중 네트워크 오류가 발생했습니다.'));
+          request.send(file);
+        }).catch(reject);
       });
 
       await saveSettings(body.objectPath, file.name);
