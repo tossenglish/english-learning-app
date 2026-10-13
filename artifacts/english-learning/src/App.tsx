@@ -775,7 +775,7 @@ function LearningPortal() {
   const [listening, setListening] = useState(false);
   const [hasListened, setHasListened] = useState(false);
   const [passageEvaluation, setPassageEvaluation] = useState<PassageEvaluation>(emptyPassageEvaluation);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const handlePassageProgress = useCallback((evaluation: PassageEvaluation) => {
     setPassageEvaluation(evaluation);
   }, []);
@@ -808,7 +808,7 @@ function LearningPortal() {
         }
       });
     return () => controller.abort();
-  }, [level]);
+  }, [level, location]);
 
   useEffect(() => {
     let controller: AbortController | null = null;
