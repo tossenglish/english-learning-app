@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Play, UploadCloud } from 'lucide-react';
 import { apiFetch, getApiAuthorizationHeader, resolveApiUrl } from '@/lib/api-fetch';
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024;
 const MIME_BY_EXTENSION: Record<string, string> = {
   mp4: 'video/mp4',
   webm: 'video/webm',
@@ -67,7 +67,7 @@ export default function AdminHomeVideoSettings() {
     }
     if (file.size > MAX_FILE_SIZE) {
       setStatusIsError(true);
-      setStatusMessage('파일 크기는 50MB 이하여야 해요.');
+      setStatusMessage('파일 크기는 5GB 이하여야 해요.');
       return;
     }
 

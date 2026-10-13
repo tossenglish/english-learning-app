@@ -39,7 +39,7 @@ export const TranslatePracticeSentencesResponse = zod.object({
  * @summary 관리자용 파일 업로드 주소 발급
  */
 
-export const requestUploadUrlBodySizeMax = 52428800;
+export const requestUploadUrlBodySizeMax = 5368709120;
 
 
 
@@ -51,7 +51,7 @@ export const RequestUploadUrlBody = zod.object({
 })
 
 
-export const requestUploadUrlResponseMetadataSizeMax = 52428800;
+export const requestUploadUrlResponseMetadataSizeMax = 5368709120;
 
 
 

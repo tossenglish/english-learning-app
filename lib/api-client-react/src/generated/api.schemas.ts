@@ -28,7 +28,7 @@ export interface UploadUrlRequest {
   name: string;
   /**
      * @minimum 1
-     * @maximum 52428800
+     * @maximum 5368709120
      */
   size: number;
   /** @minLength 1 */
