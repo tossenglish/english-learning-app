@@ -430,7 +430,7 @@ paths:
       summary: 홈 영상 설정 조회
       responses:
         "200":
-          description: 홈 영상 파일 설정
+          description: 홈 영상 스트리밍 설정
           content:
             application/json:
               schema:
@@ -445,7 +445,7 @@ paths:
     put:
       operationId: updateHomeVideoSettings
       tags: [LearningContent]
-      summary: 업로드한 홈 영상 설정 저장
+      summary: 홈 영상 스트리밍 설정 저장
       requestBody:
         required: true
         content:
@@ -675,7 +675,7 @@ components:
           type: boolean
     HomeVideoSettings:
       type: object
-      required: [videoId, youtubeUrl, objectPath, resourceName]
+      required: [videoId, youtubeUrl, objectPath, streamUrl, resourceName]
       properties:
         videoId:
           type: [string, "null"]
@@ -686,16 +686,24 @@ components:
         objectPath:
           type: [string, "null"]
           maxLength: 1024
+        streamUrl:
+          type: [string, "null"]
+          format: uri
+          maxLength: 2048
         resourceName:
           type: [string, "null"]
           maxLength: 255
     HomeVideoSettingsInput:
       type: object
-      required: [objectPath, resourceName]
+      required: [objectPath, streamUrl, resourceName]
       properties:
         objectPath:
           type: [string, "null"]
           maxLength: 1024
+        streamUrl:
+          type: [string, "null"]
+          format: uri
+          maxLength: 2048
         resourceName:
           type: [string, "null"]
           maxLength: 255

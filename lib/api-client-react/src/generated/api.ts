@@ -1226,7 +1226,7 @@ export const getUpdateHomeVideoSettingsUrl = () => {
 }
 
 /**
- * @summary 업로드한 홈 영상 설정 저장
+ * @summary 홈 영상 스트리밍 설정 저장
  */
 export const updateHomeVideoSettings = async (homeVideoSettingsInput: HomeVideoSettingsInput, options?: Parameters<typeof customFetch>[1]): Promise<HomeVideoSettings> => {
 
@@ -1292,7 +1292,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateHomeVideoSettingsMutationVariables = {data: BodyType<HomeVideoSettingsInput>}
 
     /**
- * @summary 업로드한 홈 영상 설정 저장
+ * @summary 홈 영상 스트리밍 설정 저장
  */
 export const useUpdateHomeVideoSettings = <TError = ErrorType<ErrorEnvelope>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHomeVideoSettings>>, TError,UpdateHomeVideoSettingsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

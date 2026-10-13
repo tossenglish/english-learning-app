@@ -279,6 +279,8 @@ export const getHomeVideoSettingsResponseVideoIdMax = 11;
 
 export const getHomeVideoSettingsResponseObjectPathMax = 1024;
 
+export const getHomeVideoSettingsResponseStreamUrlMax = 2048;
+
 export const getHomeVideoSettingsResponseResourceNameMax = 255;
 
 
@@ -287,14 +289,17 @@ export const GetHomeVideoSettingsResponse = zod.object({
   "videoId": zod.string().max(getHomeVideoSettingsResponseVideoIdMax).nullable(),
   "youtubeUrl": zod.string().url().nullable(),
   "objectPath": zod.string().max(getHomeVideoSettingsResponseObjectPathMax).nullable(),
+  "streamUrl": zod.string().url().max(getHomeVideoSettingsResponseStreamUrlMax).nullable(),
   "resourceName": zod.string().max(getHomeVideoSettingsResponseResourceNameMax).nullable()
 })
 
 
 /**
- * @summary 업로드한 홈 영상 설정 저장
+ * @summary 홈 영상 스트리밍 설정 저장
  */
 export const updateHomeVideoSettingsBodyObjectPathMax = 1024;
+
+export const updateHomeVideoSettingsBodyStreamUrlMax = 2048;
 
 export const updateHomeVideoSettingsBodyResourceNameMax = 255;
 
@@ -302,12 +307,15 @@ export const updateHomeVideoSettingsBodyResourceNameMax = 255;
 
 export const UpdateHomeVideoSettingsBody = zod.object({
   "objectPath": zod.string().max(updateHomeVideoSettingsBodyObjectPathMax).nullable(),
+  "streamUrl": zod.string().url().max(updateHomeVideoSettingsBodyStreamUrlMax).nullable(),
   "resourceName": zod.string().max(updateHomeVideoSettingsBodyResourceNameMax).nullable()
 })
 
 export const updateHomeVideoSettingsResponseVideoIdMax = 11;
 
 export const updateHomeVideoSettingsResponseObjectPathMax = 1024;
+
+export const updateHomeVideoSettingsResponseStreamUrlMax = 2048;
 
 export const updateHomeVideoSettingsResponseResourceNameMax = 255;
 
@@ -317,6 +325,7 @@ export const UpdateHomeVideoSettingsResponse = zod.object({
   "videoId": zod.string().max(updateHomeVideoSettingsResponseVideoIdMax).nullable(),
   "youtubeUrl": zod.string().url().nullable(),
   "objectPath": zod.string().max(updateHomeVideoSettingsResponseObjectPathMax).nullable(),
+  "streamUrl": zod.string().url().max(updateHomeVideoSettingsResponseStreamUrlMax).nullable(),
   "resourceName": zod.string().max(updateHomeVideoSettingsResponseResourceNameMax).nullable()
 })
 

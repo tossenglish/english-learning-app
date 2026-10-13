@@ -63,6 +63,11 @@ export interface HomeVideoSettings {
      */
   objectPath: string | null;
   /**
+     * @maxLength 2048
+     * @nullable
+     */
+  streamUrl: string | null;
+  /**
      * @maxLength 255
      * @nullable
      */
@@ -75,6 +80,11 @@ export interface HomeVideoSettingsInput {
      * @nullable
      */
   objectPath: string | null;
+  /**
+     * @maxLength 2048
+     * @nullable
+     */
+  streamUrl: string | null;
   /**
      * @maxLength 255
      * @nullable

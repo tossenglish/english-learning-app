@@ -20,11 +20,6 @@ import {
 import { parseDirectMaterial } from '@/lib/practice-material';
 import { apiFetch } from '@/lib/api-fetch';
 
-export type AssignmentResource = {
-  name: string;
-  objectPath: string;
-};
-
 const levelLabels: Record<LearningLevel, string> = {
   Beginner: '초급',
   Intermediate: '중급',
@@ -160,11 +155,7 @@ function splitMaterialColumns(content: string): { english: string; korean: strin
   };
 }
 
-export default function AdminAssignments({
-  latestUpload,
-}: {
-  latestUpload: AssignmentResource | null;
-}) {
+export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
@@ -270,12 +261,6 @@ export default function AdminAssignments({
       setCreatingFolder(false);
     }
   };
-
-  useEffect(() => {
-    if (!latestUpload) return;
-    setResourcePath(latestUpload.objectPath);
-    setResourceName(latestUpload.name);
-  }, [latestUpload]);
 
   const updateMemberCourse = async (
     memberId: string,

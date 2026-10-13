@@ -27,6 +27,7 @@ async function requireAdmin(req: Request, res: Response): Promise<boolean> {
 function toSettingsResponse(setting?: {
   videoId: string | null;
   objectPath: string | null;
+  streamUrl: string | null;
   resourceName: string | null;
 } | null) {
   const videoId = setting?.videoId ?? null;
@@ -36,6 +37,7 @@ function toSettingsResponse(setting?: {
       ? `https://www.youtube.com/watch?v=${videoId}`
       : null,
     objectPath: setting?.objectPath ?? null,
+    streamUrl: setting?.streamUrl ?? null,
     resourceName: setting?.resourceName ?? null,
   };
 }
@@ -52,6 +54,7 @@ router.get(
       .select({
         videoId: homeVideoSettingsTable.videoId,
         objectPath: homeVideoSettingsTable.objectPath,
+        streamUrl: homeVideoSettingsTable.streamUrl,
         resourceName: homeVideoSettingsTable.resourceName,
       })
       .from(homeVideoSettingsTable)
@@ -75,31 +78,44 @@ router.put(
       return;
     }
 
-    const { objectPath, resourceName } = parsed.data;
+    const { objectPath, streamUrl, resourceName } = parsed.data;
     const validPath =
       objectPath === null ||
       /^\/objects\/uploads\/[A-Za-z0-9-]+$/.test(objectPath);
+    let validStreamUrl = streamUrl === null;
+    if (streamUrl !== null) {
+      try {
+        const url = new URL(streamUrl);
+        validStreamUrl = url.protocol === "https:" && Boolean(url.hostname);
+      } catch {
+        validStreamUrl = false;
+      }
+    }
     const validName =
       resourceName === null ||
       (resourceName.trim().length > 0 && resourceName.length <= 255);
-    if (!validPath || !validName || (objectPath === null) !== (resourceName === null)) {
+    const validSource =
+      !(objectPath !== null && streamUrl !== null) &&
+      (objectPath === null || resourceName !== null) &&
+      (streamUrl === null || resourceName === null);
+    if (!validPath || !validStreamUrl || !validName || !validSource) {
       res.status(400).json({
-        error: "업로드된 영상 파일 정보가 올바르지 않습니다.",
+        error: "홈 영상 설정이 올바르지 않습니다.",
       });
       return;
     }
 
-    if (objectPath === null) {
+    if (objectPath === null && streamUrl === null) {
       await db
         .delete(homeVideoSettingsTable)
         .where(eq(homeVideoSettingsTable.id, settingId));
     } else {
       await db
         .insert(homeVideoSettingsTable)
-        .values({ id: settingId, videoId: null, objectPath, resourceName })
+        .values({ id: settingId, videoId: null, objectPath, streamUrl, resourceName })
         .onConflictDoUpdate({
           target: homeVideoSettingsTable.id,
-          set: { videoId: null, objectPath, resourceName, updatedAt: new Date() },
+          set: { videoId: null, objectPath, streamUrl, resourceName, updatedAt: new Date() },
         });
     }
 
@@ -108,6 +124,7 @@ router.put(
         videoId: null,
         youtubeUrl: null,
         objectPath,
+        streamUrl,
         resourceName,
       }),
     );

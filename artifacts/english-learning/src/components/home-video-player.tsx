@@ -5,6 +5,24 @@ import { apiFetch } from '@/lib/api-fetch';
 
 const youtubeVideoIdPattern = /^[A-Za-z0-9_-]{11}$/;
 
+function getYoutubeVideoId(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId: string | null = null;
+    if (hostname === 'youtu.be') videoId = url.pathname.split('/').filter(Boolean)[0] ?? null;
+    else if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(hostname)) {
+      videoId = url.searchParams.get('v')
+        || url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/)?.[1]
+        || null;
+    }
+    return videoId && youtubeVideoIdPattern.test(videoId) ? videoId : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function HomeVideoPlayer() {
   const { data, isLoading, error } = useGetHomeVideoSettings();
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
@@ -15,7 +33,8 @@ export default function HomeVideoPlayer() {
     : null;
   const videoId = data?.videoId && youtubeVideoIdPattern.test(data.videoId)
     ? data.videoId
-    : null;
+    : getYoutubeVideoId(data?.streamUrl);
+  const streamUrl = data?.streamUrl && !videoId ? data.streamUrl : null;
 
   useEffect(() => {
     if (!objectPath) {
@@ -112,6 +131,16 @@ export default function HomeVideoPlayer() {
               data-testid="iframe-home-video"
             />
           </div>
+        ) : streamUrl ? (
+          <video
+            src={streamUrl}
+            title="오늘의 영상"
+            className="aspect-video w-full"
+            controls
+            playsInline
+            preload="metadata"
+            data-testid="video-home-stream-url"
+          />
         ) : (
           <div
             className="flex aspect-video flex-col items-center justify-center gap-3 px-6 text-center text-white/70"
@@ -121,7 +150,7 @@ export default function HomeVideoPlayer() {
             <div>
               <p className="text-sm font-bold text-white">아직 등록된 영상이 없어요</p>
               <p className="mt-1 text-xs">
-                관리자가 업로드한 동영상이 여기에 표시됩니다.
+                관리자가 업로드하거나 영상 URL을 등록하면 여기에 표시됩니다.
               </p>
             </div>
           </div>
