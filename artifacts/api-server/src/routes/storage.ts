@@ -89,7 +89,7 @@ router.post(
       const { name, size, contentType } = parsed.data;
 
       const { uploadURL, objectPath } =
-        await objectStorageService.getObjectEntityUploadTarget();
+        await objectStorageService.getObjectEntityUploadTarget(contentType);
 
       res.json(
         RequestUploadUrlResponse.parse({
@@ -145,6 +145,19 @@ router.get(
     try {
       const raw = req.params.filePath;
       const filePath = Array.isArray(raw) ? raw.join('/') : raw;
+      if (objectStorageService.isR2StorageEnabled()) {
+        const object = await objectStorageService.getR2Object(filePath);
+        if (!object) {
+          res.status(404).json({ error: 'File not found' });
+          return;
+        }
+        res.setHeader('Content-Type', object.contentType);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        if (object.size !== null) res.setHeader('Content-Length', String(object.size));
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        object.stream.pipe(res);
+        return;
+      }
       const file = await objectStorageService.searchPublicObject(filePath);
       if (!file) {
         res.status(404).json({ error: 'File not found' });
@@ -187,6 +200,19 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
+    if (objectStorageService.isR2StorageEnabled()) {
+      const object = await objectStorageService.getR2Object(wildcardPath);
+      if (!object) {
+        res.status(404).json({ error: 'Object not found' });
+        return;
+      }
+      res.setHeader('Content-Type', object.contentType);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (object.size !== null) res.setHeader('Content-Length', String(object.size));
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      object.stream.pipe(res);
+      return;
+    }
     if (objectStorageService.isLocalStorageEnabled()) {
       const match = /^uploads\/([0-9a-f-]{36})$/i.exec(wildcardPath);
       if (!match) {

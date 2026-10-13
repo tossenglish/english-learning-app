@@ -3,6 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { File, Storage } from '@google-cloud/storage';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import {
   canAccessObject,
@@ -13,6 +19,55 @@ import {
 } from './objectAcl';
 
 const REPLIT_SIDECAR_ENDPOINT = 'http://127.0.0.1:1106';
+const R2_ENV_NAMES = [
+  'R2_ENDPOINT',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET_NAME',
+] as const;
+
+type R2Config = {
+  endpoint: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+};
+
+let r2Client: S3Client | null = null;
+
+function getR2Config(): R2Config | null {
+  const values = R2_ENV_NAMES.map((name) => process.env[name]?.trim() || '');
+  if (values.every((value) => !value)) return null;
+  if (values.some((value) => !value)) {
+    throw new Error(`Incomplete Cloudflare R2 configuration. Set: ${R2_ENV_NAMES.join(', ')}`);
+  }
+  const [endpoint, accessKeyId, secretAccessKey, bucketName] = values as [
+    string,
+    string,
+    string,
+    string,
+  ];
+  const parsedEndpoint = new URL(endpoint);
+  if (parsedEndpoint.protocol !== 'https:') {
+    throw new Error('R2_ENDPOINT must use HTTPS');
+  }
+  return { endpoint: parsedEndpoint.origin, accessKeyId, secretAccessKey, bucketName };
+}
+
+function getR2Client(config: R2Config): S3Client {
+  if (!r2Client) {
+    r2Client = new S3Client({
+      region: 'auto',
+      endpoint: config.endpoint,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
+  }
+  return r2Client;
+}
 
 export const objectStorageClient = new Storage({
   credentials: {
@@ -43,8 +98,14 @@ export class ObjectNotFoundError extends Error {
 export class ObjectStorageService {
   constructor() {}
 
+  isR2StorageEnabled(): boolean {
+    return getR2Config() !== null;
+  }
+
   isLocalStorageEnabled(): boolean {
-    return !process.env.REPL_ID && !process.env.REPLIT_DEPLOYMENT;
+    return !this.isR2StorageEnabled() &&
+      !process.env.REPL_ID &&
+      !process.env.REPLIT_DEPLOYMENT;
   }
 
   private getLocalStorageDirectory(): string {
@@ -125,11 +186,23 @@ export class ObjectStorageService {
     return (await this.getObjectEntityUploadTarget()).uploadURL;
   }
 
-  async getObjectEntityUploadTarget(): Promise<{
+  async getObjectEntityUploadTarget(contentType = 'application/octet-stream'): Promise<{
     uploadURL: string;
     objectPath: string;
   }> {
     const objectId = randomUUID();
+    const r2Config = getR2Config();
+    if (r2Config) {
+      const command = new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: `uploads/${objectId}`,
+        ContentType: contentType,
+      });
+      return {
+        uploadURL: await getSignedUrl(getR2Client(r2Config), command, { expiresIn: 900 }),
+        objectPath: `/objects/uploads/${objectId}`,
+      };
+    }
     if (this.isLocalStorageEnabled()) {
       return {
         uploadURL: `/api/storage/uploads/local/${objectId}`,
@@ -159,6 +232,34 @@ export class ObjectStorageService {
       uploadURL,
       objectPath: this.normalizeObjectEntityPath(uploadURL),
     };
+  }
+
+  async getR2Object(key: string): Promise<{
+    stream: Readable;
+    contentType: string;
+    size: number | null;
+  } | null> {
+    const config = getR2Config();
+    if (!config) return null;
+    try {
+      const object = await getR2Client(config).send(
+        new GetObjectCommand({ Bucket: config.bucketName, Key: key }),
+      );
+      if (!object.Body || typeof (object.Body as Readable).pipe !== 'function') {
+        throw new Error('R2 returned an unreadable object body');
+      }
+      return {
+        stream: object.Body as Readable,
+        contentType: object.ContentType || 'application/octet-stream',
+        size: object.ContentLength ?? null,
+      };
+    } catch (error) {
+      const name = (error as { name?: string }).name;
+      const statusCode = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      if (name === 'NoSuchKey' || statusCode === 404) return null;
+      throw error;
+    }
   }
 
   async saveLocalObject(
