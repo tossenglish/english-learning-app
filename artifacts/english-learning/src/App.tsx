@@ -53,6 +53,36 @@ import {
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
+function playQuizFeedbackSound(correct: boolean) {
+  if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
+
+  try {
+    const context = new window.AudioContext();
+    const notes = correct ? [660, 880] : [240, 180];
+    const noteDuration = 0.12;
+
+    void context.resume().catch(() => undefined);
+    notes.forEach((frequency, index) => {
+      const startAt = context.currentTime + index * noteDuration;
+      const oscillator = context.createOscillator();
+      const volume = context.createGain();
+      oscillator.type = correct ? 'sine' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      volume.gain.setValueAtTime(0.0001, startAt);
+      volume.gain.exponentialRampToValueAtTime(0.12, startAt + 0.015);
+      volume.gain.exponentialRampToValueAtTime(0.0001, startAt + noteDuration);
+      oscillator.connect(volume);
+      volume.connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + noteDuration);
+    });
+
+    window.setTimeout(() => void context.close().catch(() => undefined), 500);
+  } catch {
+    // Keep answer feedback usable when browser audio is unavailable.
+  }
+}
+
 const levelCopy: Record<Level, { korean: string; detail: string; next: string }> = {
   Beginner: {
     korean: '기초부터 천천히, 입에 붙는 표현을 배워요.',
@@ -593,12 +623,18 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
             {content.quizOptions.map((option, index) => {
               const selected = quizAnswer === option;
               const isCorrect = option === content.correctMeaning;
-              return <button key={option} type="button" onClick={() => setQuizAnswer(option)} data-testid={`button-quiz-option-${index + 1}`} className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left text-sm transition-all ${selected ? (isCorrect ? 'border-[hsl(var(--secondary-foreground)/.45)] bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'border-[hsl(var(--destructive)/.45)] bg-[hsl(var(--destructive)/.08)]') : 'border-[hsl(var(--border))] hover:border-[hsl(var(--accent)/.55)] hover:bg-[hsl(var(--muted)/.55)]'}`}>
+              return <button key={option} type="button" onClick={() => {
+                setQuizAnswer(option);
+                playQuizFeedbackSound(isCorrect);
+              }} data-testid={`button-quiz-option-${index + 1}`} className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left text-sm transition-all ${selected ? (isCorrect ? 'border-[hsl(var(--secondary-foreground)/.45)] bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'border-[hsl(var(--destructive)/.45)] bg-[hsl(var(--destructive)/.08)]') : 'border-[hsl(var(--border))] hover:border-[hsl(var(--accent)/.55)] hover:bg-[hsl(var(--muted)/.55)]'}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-[10px] ${selected ? 'bg-[hsl(var(--card))]' : 'bg-[hsl(var(--muted))]'}`}>{String.fromCharCode(65 + index)}</span><span className="font-semibold">{option}</span>{selected && <span className="ml-auto">{isCorrect ? <Check size={16} /> : <X size={16} />}</span>}
               </button>;
             })}
           </div>
-           {quizAnswer && <div className={`soft-pop mt-5 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">{correct ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요.` : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</div>}
+           {quizAnswer && <div role="status" aria-live="polite" className={`soft-pop mt-5 flex items-center gap-3 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">
+             <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 font-mono text-lg font-bold ${correct ? 'border-[hsl(var(--secondary-foreground)/.35)]' : 'border-[hsl(var(--destructive)/.35)]'}`}>{correct ? 'O' : 'X'}</span>
+             <span>{correct ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요.` : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</span>
+           </div>}
           <button type="button" onClick={onMarkLearned} disabled={learned} data-testid="button-mark-learned" className={`button-pop mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold ${learned ? 'cursor-default bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'}`}>
             {learned ? <><CheckCircle2 size={17} /> 단어장에 저장했어요</> : <><BookOpen size={17} /> 배운 단어로 표시하기</>}
           </button>
