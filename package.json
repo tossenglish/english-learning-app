@@ -13,6 +13,8 @@
     "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "catalog:",
     "prettier": "^3.9.6",
     "typescript": "~5.9.3"
   }
