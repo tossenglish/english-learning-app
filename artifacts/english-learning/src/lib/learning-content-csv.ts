@@ -56,9 +56,9 @@ function normalizeHeader(value: string) {
 export function parseLearningContentCsv(
   text: string,
   level: LearningContentLevel,
-): ParsedLearningContentCsvItem {
+): ParsedLearningContentCsvItem[] {
   const rows = parseRows(text);
-  if (rows.length < 2) throw new Error('단어, 뜻 헤더와 단어 한 행을 입력해 주세요.');
+  if (rows.length < 2) throw new Error('단어, 뜻 헤더와 단어 행을 한 개 이상 입력해 주세요.');
 
   const headers = rows[0].map(normalizeHeader);
   const wordIndex = headers.findIndex((header) =>
@@ -72,13 +72,15 @@ export function parseLearningContentCsv(
   }
 
   const values = rows.slice(1).filter((dataRow) => dataRow.some(Boolean));
-  if (values.length !== 1) throw new Error('각 과정에는 한 번에 단어 한 개만 등록할 수 있어요.');
-  const word = values[0][wordIndex]?.trim() ?? '';
-  const shortMeaning = values[0][meaningIndex]?.trim() ?? '';
-  if (!word || !shortMeaning) throw new Error('단어와 뜻을 모두 입력해 주세요.');
-  if (word.length > 120) throw new Error('단어는 120자 이내로 입력해 주세요.');
-  if (shortMeaning.length > 200) throw new Error('뜻은 200자 이내로 입력해 주세요.');
-  return { level, word, shortMeaning };
+  if (values.length > 200) throw new Error('한 과정에 최대 200개까지 업로드할 수 있어요.');
+  return values.map((row, index) => {
+    const word = row[wordIndex]?.trim() ?? '';
+    const shortMeaning = row[meaningIndex]?.trim() ?? '';
+    if (!word || !shortMeaning) throw new Error(`${index + 2}행에 단어와 뜻을 모두 입력해 주세요.`);
+    if (word.length > 120) throw new Error(`${index + 2}행의 단어는 120자 이내로 입력해 주세요.`);
+    if (shortMeaning.length > 200) throw new Error(`${index + 2}행의 뜻은 200자 이내로 입력해 주세요.`);
+    return { level, word, shortMeaning };
+  });
 }
 
 export function createLearningContentCsv(word = '', meaning = '') {

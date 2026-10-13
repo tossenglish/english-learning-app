@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
+  AssignmentFolder,
   LearningContent,
   LearningContentInput,
   LearningContentLevel,
 } from '@workspace/api-client-react';
-import { CheckCircle2, Download, FileSpreadsheet, LoaderCircle, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Download, FileSpreadsheet, Languages, LoaderCircle, UploadCloud } from 'lucide-react';
 import {
   createLearningContentCsv,
   parseLearningContentCsv,
@@ -22,9 +23,26 @@ const levelLabels: Record<LearningContentLevel, string> = {
 
 type UploadState = {
   fileName: string;
-  preview: ParsedLearningContentCsvItem | null;
+  preview: ParsedLearningContentCsvItem[] | null;
   error: string;
 };
+
+type SentenceDraft = { english: string; korean: string };
+
+const defaultSentenceDrafts = (): Record<LearningContentLevel, SentenceDraft> => ({
+  Beginner: {
+    english: getDefaultLearningContent('Beginner').exampleSentence,
+    korean: getDefaultLearningContent('Beginner').exampleKorean,
+  },
+  Intermediate: {
+    english: getDefaultLearningContent('Intermediate').exampleSentence,
+    korean: getDefaultLearningContent('Intermediate').exampleKorean,
+  },
+  Advanced: {
+    english: getDefaultLearningContent('Advanced').exampleSentence,
+    korean: getDefaultLearningContent('Advanced').exampleKorean,
+  },
+});
 
 const emptyUploads = (): Record<LearningContentLevel, UploadState> => ({
   Beginner: { fileName: '', preview: null, error: '' },
@@ -90,9 +108,18 @@ function makeQuizOptions(
 export default function AdminWordContentSettings() {
   const fileInputRefs = useRef<Partial<Record<LearningContentLevel, HTMLInputElement | null>>>({});
   const [currentContent, setCurrentContent] = useState<LearningContent[]>([]);
+  const [wordFolders, setWordFolders] = useState<AssignmentFolder[]>([]);
+  const [folderByLevel, setFolderByLevel] = useState<Record<LearningContentLevel, string>>({
+    Beginner: '',
+    Intermediate: '',
+    Advanced: '',
+  });
+  const [sentenceDrafts, setSentenceDrafts] = useState(defaultSentenceDrafts);
   const [uploads, setUploads] = useState<Record<LearningContentLevel, UploadState>>(emptyUploads);
   const [loading, setLoading] = useState(true);
+  const [foldersLoading, setFoldersLoading] = useState(true);
   const [savingLevel, setSavingLevel] = useState<LearningContentLevel | null>(null);
+  const [savingSentenceLevel, setSavingSentenceLevel] = useState<LearningContentLevel | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [statusIsError, setStatusIsError] = useState(false);
 
@@ -106,7 +133,23 @@ export default function AdminWordContentSettings() {
         if (!response.ok) throw new Error('현재 단어 콘텐츠를 불러오지 못했습니다.');
         return response.json() as Promise<LearningContent[]>;
       })
-      .then(setCurrentContent)
+      .then((content) => {
+        setCurrentContent(content);
+        setSentenceDrafts((current) => ({
+          Beginner: {
+            english: content.find((item) => item.level === 'Beginner')?.exampleSentence ?? current.Beginner.english,
+            korean: content.find((item) => item.level === 'Beginner')?.exampleKorean ?? current.Beginner.korean,
+          },
+          Intermediate: {
+            english: content.find((item) => item.level === 'Intermediate')?.exampleSentence ?? current.Intermediate.english,
+            korean: content.find((item) => item.level === 'Intermediate')?.exampleKorean ?? current.Intermediate.korean,
+          },
+          Advanced: {
+            english: content.find((item) => item.level === 'Advanced')?.exampleSentence ?? current.Advanced.english,
+            korean: content.find((item) => item.level === 'Advanced')?.exampleKorean ?? current.Advanced.korean,
+          },
+        }));
+      })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           setStatusMessage(error instanceof Error ? error.message : '콘텐츠를 불러오지 못했습니다.');
@@ -114,6 +157,22 @@ export default function AdminWordContentSettings() {
         }
       })
       .finally(() => setLoading(false));
+    apiFetch('/api/admin/assignment-folders', {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('단어 폴더 목록을 불러오지 못했습니다.');
+        return response.json() as Promise<AssignmentFolder[]>;
+      })
+      .then((folders) => setWordFolders(folders.filter((folder) => folder.materialType === 'word')))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setStatusMessage(error instanceof Error ? error.message : '단어 폴더를 불러오지 못했습니다.');
+          setStatusIsError(true);
+        }
+      })
+      .finally(() => setFoldersLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -163,18 +222,48 @@ export default function AdminWordContentSettings() {
 
   const saveLevel = async (level: LearningContentLevel) => {
     const preview = uploads[level].preview;
-    if (!preview || savingLevel) return;
+    if (!preview?.length || savingLevel || savingSentenceLevel) return;
+    const folderId = folderByLevel[level];
+    if (!folderId) {
+      setStatusMessage(`${levelLabels[level]} 과정에서 저장할 단어 폴더를 선택해 주세요.`);
+      setStatusIsError(true);
+      return;
+    }
     setSavingLevel(level);
     setStatusMessage('');
     setStatusIsError(false);
     try {
+      const todayWord = preview[0];
+      const assignmentResponse = await apiFetch('/api/admin/assignments', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${levelLabels[level]} 단어 자료 - ${todayWord.word}`.slice(0, 160),
+          description: '초기화면 단어 설정에서 저장한 단어 자료',
+          materialType: 'word',
+          folderId: Number(folderId),
+          materialContent: preview.map((item) => `${item.word}||${item.shortMeaning}`).join('\n'),
+          level,
+          assigneeUserId: null,
+          dueDate: null,
+          resourcePath: null,
+          resourceName: null,
+          isPublished: false,
+        }),
+      });
+      if (!assignmentResponse.ok) {
+        const body = await assignmentResponse.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '단어 폴더에 저장하지 못했습니다.');
+      }
+
       const saved = currentContent.find((item) => item.level === level);
       const content: LearningContentInput = {
         ...getContentInput(saved, level),
-        word: preview.word,
-        shortMeaning: preview.shortMeaning,
-        correctMeaning: preview.shortMeaning,
-        quizOptions: makeQuizOptions(level, preview.word, preview.shortMeaning, currentContent),
+        word: todayWord.word,
+        shortMeaning: todayWord.shortMeaning,
+        correctMeaning: todayWord.shortMeaning,
+        quizOptions: makeQuizOptions(level, todayWord.word, todayWord.shortMeaning, currentContent),
       };
       const response = await apiFetch(`/api/admin/learning-content/${level}`, {
         method: 'PUT',
@@ -194,12 +283,55 @@ export default function AdminWordContentSettings() {
       window.dispatchEvent(new CustomEvent(LEARNING_CONTENT_UPDATED_EVENT, { detail: [updated] }));
       setUploads((current) => ({ ...current, [level]: { fileName: '', preview: null, error: '' } }));
       if (fileInputRefs.current[level]) fileInputRefs.current[level]!.value = '';
-      setStatusMessage(`${levelLabels[level]} 과정 단어를 저장했습니다.`);
+      const selectedFolder = wordFolders.find((folder) => String(folder.id) === folderId);
+      setStatusMessage(`${preview.length}개 단어를 ${levelLabels[level]} 과정 "${selectedFolder?.name ?? '선택한 폴더'}" 폴더에 저장했습니다. 과제는 초안으로 보관됩니다.`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.');
       setStatusIsError(true);
     } finally {
       setSavingLevel(null);
+    }
+  };
+
+  const saveSentence = async (level: LearningContentLevel) => {
+    const draft = sentenceDrafts[level];
+    if (savingLevel || savingSentenceLevel) return;
+    if (!draft.english.trim() || !draft.korean.trim()) {
+      setStatusMessage(`${levelLabels[level]} 과정의 영어 문장과 해석을 모두 입력해 주세요.`);
+      setStatusIsError(true);
+      return;
+    }
+    setSavingSentenceLevel(level);
+    setStatusMessage('');
+    setStatusIsError(false);
+    try {
+      const saved = currentContent.find((item) => item.level === level);
+      const response = await apiFetch(`/api/admin/learning-content/${level}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...getContentInput(saved, level),
+          exampleSentence: draft.english.trim(),
+          exampleKorean: draft.korean.trim(),
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '문장 콘텐츠를 저장하지 못했습니다.');
+      }
+      const updated = await response.json() as LearningContent;
+      setCurrentContent((current) => [
+        ...current.filter((item) => item.level !== level),
+        updated,
+      ].sort((left, right) => levelOrder.indexOf(left.level) - levelOrder.indexOf(right.level)));
+      window.dispatchEvent(new CustomEvent(LEARNING_CONTENT_UPDATED_EVENT, { detail: [updated] }));
+      setStatusMessage(`${levelLabels[level]} 과정 문장과 해석을 저장했습니다.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : '문장 저장 중 오류가 발생했습니다.');
+      setStatusIsError(true);
+    } finally {
+      setSavingSentenceLevel(null);
     }
   };
 
@@ -211,7 +343,7 @@ export default function AdminWordContentSettings() {
         </p>
         <h2 className="text-2xl font-bold tracking-[-.04em]">초기화면 단어 콘텐츠 설정</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
-          초급·중급·고급 과정을 각각 따로 업로드하세요. 각 CSV에는 단어와 뜻 두 항목만 넣으면 됩니다.
+          초급·중급·고급 과정마다 저장할 단어 폴더를 선택하세요. 각 CSV에는 단어와 뜻 두 열만 넣고, 과정당 최대 200개까지 등록할 수 있습니다.
         </p>
       </div>
 
@@ -239,26 +371,52 @@ export default function AdminWordContentSettings() {
                   ref={(element) => { fileInputRefs.current[level] = element; }}
                   type="file"
                   accept=".csv,.txt"
-                  disabled={loading || Boolean(savingLevel)}
+                  disabled={loading || foldersLoading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
                   onChange={(event) => void selectFile(level, event.currentTarget.files?.[0] ?? null)}
                   className="block w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2.5 text-xs font-normal"
                   data-testid={`input-word-csv-${level.toLowerCase()}`}
                 />
               </label>
-              <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">CSV 열: 단어, 뜻 · 1MB 이하</p>
+                  <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">CSV 열: 단어, 뜻 · 과정당 최대 200개 · 1MB 이하</p>
+              <label className="mt-3 grid gap-2 text-xs font-bold">
+                저장할 단어 폴더
+                <select
+                  value={folderByLevel[level]}
+                  onChange={(event) => setFolderByLevel((current) => ({ ...current, [level]: event.target.value }))}
+                  disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
+                  className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-xs font-normal"
+                  data-testid={`select-word-folder-${level.toLowerCase()}`}
+                >
+                  <option value="">폴더 선택</option>
+                  {wordFolders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>{folder.name}</option>
+                  ))}
+                </select>
+              </label>
+              {!foldersLoading && wordFolders.length === 0 && (
+                <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                  과제 관리에서 단어 폴더를 먼저 만들어 주세요.
+                </p>
+              )}
               {upload.error && <p role="alert" className="mt-3 text-xs font-semibold text-[hsl(var(--destructive))]">{upload.error}</p>}
               {upload.preview && (
                 <div className="mt-3 rounded-xl border border-[hsl(var(--border))] p-3">
-                  <p className="text-[10px] font-bold text-[hsl(var(--accent))]">저장 미리보기</p>
-                  <p className="mt-1 truncate text-sm font-bold">{upload.preview.word}</p>
-                  <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{upload.preview.shortMeaning}</p>
+                  <p className="text-[10px] font-bold text-[hsl(var(--accent))]">저장 미리보기 · {upload.preview.length}개</p>
+                  <div className="mt-2 max-h-36 divide-y divide-[hsl(var(--border))] overflow-auto">
+                    {upload.preview.map((item, index) => (
+                      <div key={`${item.word}-${index}`} className="grid grid-cols-2 gap-2 py-2 text-xs">
+                        <span className="truncate font-bold">{item.word}</span>
+                        <span className="truncate text-[hsl(var(--muted-foreground))]">{item.shortMeaning}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => downloadTemplate(level)}
-                  disabled={loading || Boolean(savingLevel)}
+                  disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] px-3 py-2 text-xs font-bold hover:bg-[hsl(var(--muted))] disabled:opacity-50"
                 >
                   <Download size={14} /> 양식 받기
@@ -266,17 +424,82 @@ export default function AdminWordContentSettings() {
                 <button
                   type="button"
                   onClick={() => void saveLevel(level)}
-                  disabled={!upload.preview || Boolean(savingLevel)}
+                  disabled={!upload.preview?.length || !folderByLevel[level] || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-45"
                   data-testid={`button-save-word-${level.toLowerCase()}`}
                 >
                   {saving ? <LoaderCircle className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
-                  {saving ? '저장 중' : '이 과정에 저장'}
+                  {saving ? '저장 중' : `${upload.preview?.length ?? 0}개 저장`}
                 </button>
               </div>
             </article>
           );
         })}
+      </div>
+
+      <div className="mt-10 border-t border-[hsl(var(--border))] pt-8">
+        <div>
+          <p className="mb-2 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">
+            <Languages size={14} /> Course sentence settings
+          </p>
+          <h3 className="text-xl font-bold tracking-[-.03em]">과정별 영어 문장과 해석</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
+            초급·중급·고급 문장과 해석을 각각 저장합니다. 저장한 문장은 초기화면 단어 카드의 예문에도 반영됩니다.
+          </p>
+        </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {levelOrder.map((level) => {
+            const draft = sentenceDrafts[level];
+            const saving = savingSentenceLevel === level;
+            return (
+              <article key={`sentence-${level}`} className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.6)] p-4">
+                <h4 className="mb-4 text-sm font-bold">{levelLabels[level]} 과정</h4>
+                <label className="grid gap-2 text-xs font-bold">
+                  영어 문장
+                  <textarea
+                    value={draft.english}
+                    onChange={(event) => setSentenceDrafts((current) => ({
+                      ...current,
+                      [level]: { ...current[level], english: event.target.value },
+                    }))}
+                    maxLength={2000}
+                    rows={3}
+                    disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
+                    placeholder="예: I take a short walk every morning."
+                    className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
+                    data-testid={`textarea-sentence-${level.toLowerCase()}`}
+                  />
+                </label>
+                <label className="mt-3 grid gap-2 text-xs font-bold">
+                  한국어 해석
+                  <textarea
+                    value={draft.korean}
+                    onChange={(event) => setSentenceDrafts((current) => ({
+                      ...current,
+                      [level]: { ...current[level], korean: event.target.value },
+                    }))}
+                    maxLength={2000}
+                    rows={3}
+                    disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
+                    placeholder="예: 나는 매일 아침 짧게 산책해요."
+                    className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
+                    data-testid={`textarea-sentence-korean-${level.toLowerCase()}`}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void saveSentence(level)}
+                  disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-45"
+                  data-testid={`button-save-sentence-${level.toLowerCase()}`}
+                >
+                  {saving ? <LoaderCircle className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
+                  {saving ? '저장 중' : '문장 저장'}
+                </button>
+              </article>
+            );
+          })}
+        </div>
       </div>
 
       {statusMessage && (
