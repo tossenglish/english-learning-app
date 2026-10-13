@@ -364,6 +364,7 @@ export default function PassagePractice({
   const sentenceCompleted = isWordMaterial
     ? Object.values(currentCompletion).some(Boolean)
     : modes.every((item) => currentCompletion[item.id]);
+  const canAdvance = sentenceCompleted || (isWordMaterial && feedback === 'correct');
   const isDefaultPassage = !usingActiveMaterial && normalizePassage(passageText) === normalizePassage(DEFAULT_PASSAGE_TEXT);
   const isAnswerMode = mode === 'dictation' || mode === 'writing';
   const hidePassageText = isAnswerMode && !showPassageEditor;
@@ -642,7 +643,7 @@ export default function PassagePractice({
   };
 
   const nextSentence = () => {
-    if (!sentenceCompleted) {
+    if (!canAdvance) {
       setFeedback('hint');
       return;
     }
@@ -1098,7 +1099,7 @@ export default function PassagePractice({
             <button
               type="button"
               onClick={nextSentence}
-              disabled={safeCurrentIndex === passageSentences.length - 1 && !allCompleted}
+              disabled={safeCurrentIndex === passageSentences.length - 1 && (!canAdvance || allCompleted)}
               data-testid="button-next-passage-sentence"
               className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-45"
             >

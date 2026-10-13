@@ -766,6 +766,8 @@ function HomeRedirect() {
 function LearningPortal() {
   const [level, setLevel] = useState<Level>('Intermediate');
   const [learningContent, setLearningContent] = useState<LearnContent>(getDefaultLearningContent('Intermediate'));
+  const [wordAssignments, setWordAssignments] = useState<Assignment[]>([]);
+  const [quizIndex, setQuizIndex] = useState(0);
   const [learned, setLearned] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [quizAnswer, setQuizAnswer] = useState<string | null>(null);
@@ -777,10 +779,41 @@ function LearningPortal() {
   const handlePassageProgress = useCallback((evaluation: PassageEvaluation) => {
     setPassageEvaluation(evaluation);
   }, []);
+  const quizSequence = useMemo(
+    () => makeWordQuizSequence(wordAssignments, learningContent),
+    [learningContent, wordAssignments],
+  );
+  const quizContent = quizSequence[Math.min(quizIndex, quizSequence.length - 1)] ?? learningContent;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setWordAssignments([]);
+    setQuizIndex(0);
+    setQuizAnswer(null);
+    setQuizAttempts(0);
+    apiFetch(`/api/assignments?level=${encodeURIComponent(level)}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => response.ok ? response.json() as Promise<Assignment[]> : [])
+      .then((assignments) => {
+        if (!controller.signal.aborted) {
+          setWordAssignments(assignments.filter((assignment) =>
+            assignment.materialType === 'word' && (assignment.level === level || assignment.level === 'All')));
+        }
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setWordAssignments([]);
+        }
+      });
+    return () => controller.abort();
+  }, [level]);
 
   useEffect(() => {
     let controller: AbortController | null = null;
     setLearningContent(getDefaultLearningContent(level));
+    setQuizIndex(0);
 
     const loadContent = () => {
       controller?.abort();
@@ -810,6 +843,7 @@ function LearningPortal() {
       controller?.abort();
       setLearningContent(updated);
       setCardFlipped(false);
+      setQuizIndex(0);
       setQuizAnswer(null);
       setQuizAttempts(0);
     };
@@ -836,6 +870,16 @@ function LearningPortal() {
     setCardFlipped(false);
     setQuizAnswer(null);
     setQuizAttempts(0);
+  };
+
+  const nextQuizWord = () => {
+    if (quizIndex >= quizSequence.length - 1) return;
+    setQuizIndex((index) => index + 1);
+    setCardFlipped(false);
+    setQuizAnswer(null);
+    setQuizAttempts(0);
+    setLearned(false);
+    setHasListened(false);
   };
 
   const metrics: LearningMetrics = {
@@ -873,7 +917,7 @@ function LearningPortal() {
                 }
 
                 window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(learningContent.word);
+                const utterance = new SpeechSynthesisUtterance(quizContent.word);
                 utterance.lang = 'en-US';
                 utterance.rate = 0.82;
                 utterance.onend = () => setListening(false);
@@ -890,7 +934,12 @@ function LearningPortal() {
               onRemove={() => setLearned(false)}
               metrics={metrics}
               onPassageProgress={handlePassageProgress}
-               content={learningContent}
+              content={learningContent}
+              quizContent={quizContent}
+              quizPosition={quizIndex + 1}
+              quizTotal={quizSequence.length}
+              hasNextQuizWord={quizIndex < quizSequence.length - 1}
+              onNextQuizWord={nextQuizWord}
             />
           </Shell>
         </ErrorBoundary>
