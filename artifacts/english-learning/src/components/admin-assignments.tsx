@@ -226,6 +226,7 @@ export default function AdminAssignments() {
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
   const [folderListFilter, setFolderListFilter] = useState('all');
   const [courseFolderOpen, setCourseFolderOpen] = useState(false);
+  const [courseFolderName, setCourseFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
@@ -403,6 +404,44 @@ export default function AdminAssignments() {
       setListLevel(level);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : '하위 폴더 생성 오류');
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const createCourseFolder = async () => {
+    const name = courseFolderName.trim();
+    if (!name || creatingFolder) return;
+    if (listLevel === 'All') {
+      setError('초급·중급·고급 과정 중 하나를 선택해 폴더를 만들어 주세요.');
+      return;
+    }
+
+    setCreatingFolder(true);
+    setError('');
+    try {
+      const response = await apiFetch('/api/admin/assignment-folders', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          materialType: 'mixed',
+          level: listLevel,
+          parentFolderId: null,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '과정 폴더를 만들지 못했습니다.');
+      }
+
+      const created = await response.json() as AssignmentFolder;
+      setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
+      setCourseFolderName('');
+      setFolderListFilter('');
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : '과정 폴더 생성 오류');
     } finally {
       setCreatingFolder(false);
     }
@@ -1110,7 +1149,43 @@ export default function AdminAssignments() {
                   <ChevronDown className="text-[hsl(var(--accent))]" size={18} />
                 </div>
                 <div className="ml-5 mt-3 border-l-2 border-[hsl(var(--accent)/.3)] pl-4">
-                  <h3 className="mb-3 text-xs font-bold text-[hsl(var(--muted-foreground))]">하위 폴더</h3>
+                   <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                     <div>
+                       <h3 className="text-xs font-bold text-[hsl(var(--muted-foreground))]">하위 폴더</h3>
+                       <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+                         새 폴더는 {courseOptions.find((course) => course.value === listLevel)?.label} 바로 아래에 만들어집니다.
+                       </p>
+                     </div>
+                     {listLevel !== 'All' && (
+                       <div className="flex w-full gap-2 sm:w-auto">
+                         <input
+                           value={courseFolderName}
+                           onChange={(event) => setCourseFolderName(event.target.value)}
+                           onKeyDown={(event) => {
+                             if (event.key === 'Enter') {
+                               event.preventDefault();
+                               void createCourseFolder();
+                             }
+                           }}
+                           maxLength={80}
+                           placeholder="새 과정 폴더 이름"
+                           aria-label="새 과정 폴더 이름"
+                           className="min-w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-xs outline-none focus:border-[hsl(var(--accent))] sm:w-56"
+                           data-testid="input-course-folder-name"
+                         />
+                         <button
+                           type="button"
+                           onClick={() => void createCourseFolder()}
+                           disabled={!courseFolderName.trim() || creatingFolder}
+                           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-50"
+                           data-testid="button-create-course-folder"
+                         >
+                           {creatingFolder ? <LoaderCircle className="animate-spin" size={14} /> : <Plus size={14} />}
+                           과정 폴더 만들기
+                         </button>
+                       </div>
+                     )}
+                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   { value: 'all', label: '전체 자료', count: courseAssignments.length },
