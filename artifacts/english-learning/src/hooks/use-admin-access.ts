@@ -19,6 +19,7 @@ export function useAdminAccess() {
     setIsChecking(true);
     apiFetch('/api/admin/status', {
       credentials: 'include',
+      cache: 'no-store',
       signal: controller.signal,
     })
       .then(async (response) => {

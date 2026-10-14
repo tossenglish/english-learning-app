@@ -321,9 +321,10 @@ function SignUpPage() {
   );
 }
 
-function AccountControl({ isAdmin }: { isAdmin: boolean }) {
+function AccountControl() {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { isAdmin } = useAdminAccess();
   const name = user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0] || '학습자';
 
   return (
@@ -426,7 +427,7 @@ function MobileNav({ location }: { location: string }) {
   );
 }
 
-function Shell({ children, level, onLevelChange, isAdmin }: { children: ReactNode; level: Level; onLevelChange: (level: Level) => void; isAdmin: boolean }) {
+function Shell({ children, level, onLevelChange }: { children: ReactNode; level: Level; onLevelChange: (level: Level) => void }) {
   const [location] = useLocation();
   const [levelOpen, setLevelOpen] = useState(false);
   return (
@@ -470,7 +471,7 @@ function Shell({ children, level, onLevelChange, isAdmin }: { children: ReactNod
                 </div>
               )}
             </div>
-            <AccountControl isAdmin={isAdmin} />
+            <AccountControl />
           </div>
         </header>
         <main className="mx-auto max-w-[1320px] px-5 pb-28 pt-8 sm:px-8 lg:px-12 lg:pb-12">{children}</main>
@@ -822,7 +823,7 @@ function LearningPortal() {
     <>
       <Show when="signed-in">
         <ErrorBoundary>
-          <Shell level={level} onLevelChange={setLevel} isAdmin={isAdmin}>
+          <Shell level={level} onLevelChange={setLevel}>
             <RouterContent
               level={level}
               onLevelChange={setLevel}
