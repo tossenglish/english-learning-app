@@ -80,6 +80,40 @@ const emptyUploads = (): Record<LearningContentLevel, UploadState> => ({
   Advanced: { fileName: '', preview: null, error: '' },
 });
 
+function parseManualWordDraft(
+  draft: WordDraft,
+  level: LearningContentLevel,
+): ParsedLearningContentCsvItem[] | null {
+  if (!draft.word.trim() && !draft.meaning.trim()) return null;
+
+  const words = draft.word.replace(/\r/g, '').trimEnd().split('\n').map((word) => word.trim());
+  const meanings = draft.meaning.replace(/\r/g, '').trimEnd().split('\n').map((meaning) => meaning.trim());
+  if (words.length !== meanings.length) {
+    throw new Error('영어 단어와 한글 뜻의 줄 수를 맞춰 주세요.');
+  }
+  if (words.length > 200) {
+    throw new Error('한 번에 최대 200개까지 저장할 수 있어요.');
+  }
+
+  return words.map((word, index) => {
+    const meaning = meanings[index];
+    if (!word || !meaning) {
+      throw new Error(`${index + 1}번째 줄의 단어와 뜻을 모두 입력해 주세요.`);
+    }
+    if (word.length > 200 || meaning.length > 200) {
+      throw new Error(`${index + 1}번째 줄의 단어와 뜻은 각각 200자 이내로 입력해 주세요.`);
+    }
+    return { level, word, shortMeaning: meaning };
+  });
+}
+
+function getManualWordDraftCount(draft: WordDraft): number {
+  return Math.max(
+    draft.word.split(/\r?\n/).filter((word) => word.trim()).length,
+    draft.meaning.split(/\r?\n/).filter((meaning) => meaning.trim()).length,
+  );
+}
+
 function getContentInput(
   saved: LearningContent | undefined,
   level: LearningContentLevel,
@@ -267,14 +301,32 @@ export default function AdminWordContentSettings() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const updateWordDraft = (level: LearningContentLevel, field: keyof WordDraft, value: string) => {
+    setWordDrafts((current) => ({
+      ...current,
+      [level]: { ...current[level], [field]: value },
+    }));
+    setUploads((current) => ({
+      ...current,
+      [level]: { fileName: '', preview: null, error: '' },
+    }));
+    if (fileInputRefs.current[level]) fileInputRefs.current[level]!.value = '';
+    setStatusMessage('');
+  };
+
   const saveLevel = async (level: LearningContentLevel) => {
     if (savingLevel || savingSentenceLevel) return;
     const draft = wordDrafts[level];
-    const preview = uploads[level].preview?.length
-      ? uploads[level].preview
-      : draft.word.trim() && draft.meaning.trim()
-        ? [{ level, word: draft.word.trim(), shortMeaning: draft.meaning.trim() }]
-        : null;
+    let preview = uploads[level].preview;
+    if (!preview?.length) {
+      try {
+        preview = parseManualWordDraft(draft, level);
+      } catch (error) {
+        setStatusMessage(error instanceof Error ? error.message : '단어 입력 내용을 확인해 주세요.');
+        setStatusIsError(true);
+        return;
+      }
+    }
     if (!preview?.length) {
       setStatusMessage(`${levelLabels[level]} 과정의 단어와 뜻을 모두 입력하거나 CSV를 업로드해 주세요.`);
       setStatusIsError(true);
@@ -339,13 +391,16 @@ export default function AdminWordContentSettings() {
       ].sort((left, right) => levelOrder.indexOf(left.level) - levelOrder.indexOf(right.level)));
       setWordDrafts((current) => ({
         ...current,
-        [level]: { word: todayWord.word, meaning: todayWord.shortMeaning },
+        [level]: {
+          word: preview.map((item) => item.word).join('\n'),
+          meaning: preview.map((item) => item.shortMeaning).join('\n'),
+        },
       }));
       window.dispatchEvent(new CustomEvent(LEARNING_CONTENT_UPDATED_EVENT, { detail: [updated] }));
       setUploads((current) => ({ ...current, [level]: { fileName: '', preview: null, error: '' } }));
       if (fileInputRefs.current[level]) fileInputRefs.current[level]!.value = '';
       const selectedFolder = wordFolders.find((folder) => String(folder.id) === folderId);
-      setStatusMessage(`${preview.length}개 단어를 ${levelLabels[level]} 과정 "${selectedFolder?.name ?? '선택한 폴더'}" 폴더에 저장했습니다. 과제는 초안으로 보관됩니다.`);
+      setStatusMessage(`${preview.length}개 단어를 ${levelLabels[level]} 과정 "${selectedFolder?.name ?? '선택한 폴더'}" 폴더에 저장했습니다. 초기화면 카드에는 첫 단어가 표시되고, 폴더 자료는 초안으로 보관됩니다.`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.');
       setStatusIsError(true);
@@ -404,7 +459,7 @@ export default function AdminWordContentSettings() {
         </p>
         <h2 className="text-2xl font-bold tracking-[-.04em]">초기화면 단어 콘텐츠 설정</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
-          초급·중급·고급 과정별 단어와 뜻을 직접 입력하거나 CSV로 불러오세요. 단어 폴더를 선택해 저장하면 해당 과정 자료로 보관됩니다.
+          과정별 단어와 뜻을 여러 줄로 입력하거나 CSV로 불러오세요. 최대 200개까지 선택한 폴더에 저장되며, 초기화면 카드에는 첫 단어가 표시됩니다.
         </p>
       </div>
 
@@ -427,35 +482,34 @@ export default function AdminWordContentSettings() {
                 </div>
               )}
               <label className="mt-4 grid gap-2 text-xs font-bold">
-                영어 단어
-                <input
+                영어 단어 · 한 줄에 하나씩
+                <textarea
                   value={wordDrafts[level].word}
-                  onChange={(event) => setWordDrafts((current) => ({
-                    ...current,
-                    [level]: { ...current[level], word: event.target.value },
-                  }))}
-                  maxLength={200}
+                  onChange={(event) => updateWordDraft(level, 'word', event.target.value)}
+                  maxLength={20000}
+                  rows={4}
                   disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
-                  placeholder="예: serendipity"
-                  className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-xs font-normal"
+                  placeholder={'serendipity\ncurious'}
+                  className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-xs font-normal leading-relaxed"
                   data-testid={`input-word-${level.toLowerCase()}`}
                 />
               </label>
               <label className="mt-3 grid gap-2 text-xs font-bold">
-                한글 뜻
-                <input
+                한글 뜻 · 단어와 같은 줄 순서로 입력
+                <textarea
                   value={wordDrafts[level].meaning}
-                  onChange={(event) => setWordDrafts((current) => ({
-                    ...current,
-                    [level]: { ...current[level], meaning: event.target.value },
-                  }))}
-                  maxLength={200}
+                  onChange={(event) => updateWordDraft(level, 'meaning', event.target.value)}
+                  maxLength={20000}
+                  rows={4}
                   disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
-                  placeholder="예: 뜻밖의 행운"
-                  className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-xs font-normal"
+                  placeholder={'뜻밖의 행운\n호기심 많은'}
+                  className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-xs font-normal leading-relaxed"
                   data-testid={`input-meaning-${level.toLowerCase()}`}
                 />
               </label>
+              <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                예: 첫 줄 단어 ↔ 첫 줄 뜻 · 영어와 뜻의 줄 수를 같게 맞춰 주세요.
+              </p>
               <label className="mt-4 grid gap-2 text-xs font-bold">
                 {upload.fileName || '단어 CSV 업로드'}
                 <input
@@ -522,7 +576,7 @@ export default function AdminWordContentSettings() {
                   data-testid={`button-save-word-${level.toLowerCase()}`}
                 >
                   {saving ? <LoaderCircle className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
-                  {saving ? '저장 중' : `${upload.preview?.length ?? (wordDrafts[level].word.trim() && wordDrafts[level].meaning.trim() ? 1 : 0)}개 저장`}
+                  {saving ? '저장 중' : `${upload.preview?.length ?? getManualWordDraftCount(wordDrafts[level])}개 저장`}
                 </button>
               </div>
             </article>
