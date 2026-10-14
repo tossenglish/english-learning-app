@@ -868,7 +868,7 @@ components:
           type: [integer, "null"]
         materialContent:
           type: string
-          maxLength: 20000
+          maxLength: 45000
         level:
           $ref: "#/components/schemas/LearningLevel"
         assigneeUserId:

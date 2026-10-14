@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type {
+  Assignment,
   AssignmentFolder,
   LearningContent,
   LearningContentInput,
@@ -43,6 +44,24 @@ type UploadState = {
 
 type SentenceDraft = { english: string; korean: string };
 type WordDraft = { word: string; meaning: string };
+const INITIAL_WORD_ASSIGNMENT_DESCRIPTION = '초기화면 단어 설정에서 저장한 단어 자료';
+
+function parseSavedWordDraft(assignment: Assignment | undefined): WordDraft | null {
+  if (!assignment) return null;
+  const rows = assignment.materialContent.split(/\r?\n/).filter(Boolean);
+  const pairs = rows.map((row) => {
+    const separator = row.indexOf('||');
+    if (separator < 1) return null;
+    const word = row.slice(0, separator).trim();
+    const meaning = row.slice(separator + 2).trim();
+    return word && meaning ? { word, meaning } : null;
+  });
+  if (!pairs.length || pairs.some((pair) => !pair)) return null;
+  return {
+    word: pairs.map((pair) => pair!.word).join('\n'),
+    meaning: pairs.map((pair) => pair!.meaning).join('\n'),
+  };
+}
 
 const defaultSentenceDrafts = (): Record<LearningContentLevel, SentenceDraft> => ({
   Beginner: {
@@ -209,30 +228,53 @@ export default function AdminWordContentSettings() {
 
   useEffect(() => {
     const controller = new AbortController();
-    apiFetch('/api/admin/learning-content', {
-      credentials: 'include',
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('현재 단어 콘텐츠를 불러오지 못했습니다.');
-        return response.json() as Promise<LearningContent[]>;
-      })
-      .then((content) => {
+    Promise.all([
+      apiFetch('/api/admin/learning-content', {
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal,
+      }),
+      apiFetch('/api/admin/assignments', {
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal,
+      }),
+    ])
+      .then(async ([contentResponse, assignmentResponse]) => {
+        if (!contentResponse.ok) throw new Error('현재 단어 콘텐츠를 불러오지 못했습니다.');
+        if (!assignmentResponse.ok) throw new Error('저장된 단어 자료를 불러오지 못했습니다.');
+        const [content, assignments] = await Promise.all([
+          contentResponse.json() as Promise<LearningContent[]>,
+          assignmentResponse.json() as Promise<Assignment[]>,
+        ]);
         setCurrentContent(content);
+        const savedWordAssignments = assignments.filter((assignment) =>
+          assignment.materialType === 'word'
+          && assignment.description === INITIAL_WORD_ASSIGNMENT_DESCRIPTION
+          && assignment.level !== 'All',
+        );
         setWordDrafts((current) => ({
-          Beginner: {
+          Beginner: parseSavedWordDraft(savedWordAssignments.find((item) => item.level === 'Beginner')) ?? {
             word: content.find((item) => item.level === 'Beginner')?.word ?? current.Beginner.word,
             meaning: content.find((item) => item.level === 'Beginner')?.shortMeaning ?? current.Beginner.meaning,
           },
-          Intermediate: {
+          Intermediate: parseSavedWordDraft(savedWordAssignments.find((item) => item.level === 'Intermediate')) ?? {
             word: content.find((item) => item.level === 'Intermediate')?.word ?? current.Intermediate.word,
             meaning: content.find((item) => item.level === 'Intermediate')?.shortMeaning ?? current.Intermediate.meaning,
           },
-          Advanced: {
+          Advanced: parseSavedWordDraft(savedWordAssignments.find((item) => item.level === 'Advanced')) ?? {
             word: content.find((item) => item.level === 'Advanced')?.word ?? current.Advanced.word,
             meaning: content.find((item) => item.level === 'Advanced')?.shortMeaning ?? current.Advanced.meaning,
           },
         }));
+        setFolderByLevel((current) => {
+          const next = { ...current };
+          for (const level of levelOrder) {
+            const saved = savedWordAssignments.find((item) => item.level === level);
+            if (saved?.folderId != null) next[level] = String(saved.folderId);
+          }
+          return next;
+        });
         setSentenceDrafts((current) => ({
           Beginner: {
             english: content.find((item) => item.level === 'Beginner')?.exampleSentence ?? current.Beginner.english,
@@ -388,7 +430,7 @@ export default function AdminWordContentSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: `${levelLabels[level]} 단어 자료 - ${todayWord.word}`.slice(0, 160),
-          description: '초기화면 단어 설정에서 저장한 단어 자료',
+          description: INITIAL_WORD_ASSIGNMENT_DESCRIPTION,
           materialType: 'word',
           folderId: Number(folderId),
           materialContent: preview.map((item) => `${item.word}||${item.shortMeaning}`).join('\n'),
