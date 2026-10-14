@@ -53,6 +53,26 @@ import {
 
 type Level = 'Beginner' | 'Intermediate' | 'Advanced';
 
+function normalizeFallbackWordQuiz(fallback: LearnContent): LearnContent {
+  const correctMeaning = fallback.shortMeaning.trim() || fallback.correctMeaning;
+  const options = [
+    correctMeaning,
+    ...fallback.quizOptions.filter((option) =>
+      option.trim()
+      && option.trim() !== correctMeaning
+      && option.trim() !== fallback.correctMeaning,
+    ),
+    '다른 뜻',
+    '다른 의미',
+    '추가 선택지',
+  ].filter((option, index, all) => all.indexOf(option) === index).slice(0, 4);
+  const correctIndex = [...fallback.word]
+    .reduce((sum, character) => sum + character.charCodeAt(0), 0) % options.length;
+  options.splice(correctIndex, 0, options.shift()!);
+
+  return { ...fallback, correctMeaning, quizOptions: options };
+}
+
 function makeWordQuizSequence(assignments: Assignment[], fallback: LearnContent): LearnContent[] {
   const entries = assignments
     .filter((assignment) => assignment.materialType === 'word' && assignment.materialContent?.trim())
@@ -60,7 +80,7 @@ function makeWordQuizSequence(assignments: Assignment[], fallback: LearnContent)
     .filter((entry) => entry.korean !== '한글 뜻을 직접 입력해 주세요.')
     .filter((entry, index, all) => all.findIndex((candidate) => candidate.english.toLowerCase() === entry.english.toLowerCase()) === index);
 
-  if (entries.length === 0) return [fallback];
+  if (entries.length === 0) return [normalizeFallbackWordQuiz(fallback)];
 
   const meanings = [...new Set(entries.map((entry) => entry.korean))];
   return entries.map((entry, index) => {
@@ -675,9 +695,15 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
               </button>;
             })}
           </div>
-           {quizAnswer && <div role="status" aria-live="polite" className={`soft-pop mt-5 flex items-center gap-3 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">
+            {quizAnswer && <div role="status" aria-live="polite" className={`soft-pop mt-5 flex items-center gap-3 rounded-xl p-3.5 text-xs font-semibold ${correct ? 'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'bg-[hsl(var(--destructive)/.1)] text-[hsl(var(--destructive))]'}`} data-testid="status-quiz-feedback">
              <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 font-mono text-lg font-bold ${correct ? 'border-[hsl(var(--secondary-foreground)/.35)]' : 'border-[hsl(var(--destructive)/.35)]'}`}>{correct ? 'O' : 'X'}</span>
-             <span>{correct ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요.` : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}</span>
+              <span>
+                {correct
+                  ? hasNextWord
+                    ? `정확해요. ${content.shortMeaning}을 뜻하는 단어예요. 다음 단어를 눌러 계속하세요.`
+                    : '정확해요. 오늘의 단어 퀴즈를 모두 풀었어요.'
+                  : '거의 다 왔어요. 다시 한 번 뜻을 살펴볼까요?'}
+              </span>
            </div>}
           {quizAnswer && correct && hasNextWord && (
             <button type="button" onClick={onNextWord} data-testid="button-next-quiz-word" className="button-pop mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))]">
