@@ -130,7 +130,7 @@ export const createAssignmentBodyTitleMax = 160;
 
 export const createAssignmentBodyDescriptionMax = 4000;
 
-export const createAssignmentBodyMaterialContentMax = 20000;
+export const createAssignmentBodyMaterialContentMax = 45000;
 
 
 
