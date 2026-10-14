@@ -308,7 +308,7 @@ function LetterBoxAnswer({
     /[a-z]/i.test(character) ? [index] : []
   ));
   const readLetters = () => letterIndexes.map((index) => (
-    valueChars[index] && valueChars[index] !== '_' ? valueChars[index] : ''
+    valueChars[index] && valueChars[index] !== '_' ? valueChars[index].toLowerCase() : ''
   ));
   const serializeLetters = (letters: string[]) => templateChars.map((character, index) => {
     if (!/[a-z]/i.test(character)) return character;
@@ -317,7 +317,7 @@ function LetterBoxAnswer({
   }).join('');
 
   const setLetter = (letterIndex: number, rawValue: string) => {
-    const letter = rawValue.match(/[a-z]/i)?.[0] ?? '';
+    const letter = rawValue.match(/[a-z]/i)?.[0]?.toLowerCase() ?? '';
     const letters = readLetters();
     letters[letterIndex] = letter;
     onChange(serializeLetters(letters));
@@ -327,7 +327,7 @@ function LetterBoxAnswer({
   };
 
   const pasteLetters = (letterIndex: number, pastedText: string) => {
-    const pastedLetters = pastedText.match(/[a-z]/gi) ?? [];
+    const pastedLetters = (pastedText.match(/[a-z]/gi) ?? []).map((letter) => letter.toLowerCase());
     if (!pastedLetters.length) return;
     const letters = readLetters();
     pastedLetters.forEach((letter, offset) => {
@@ -389,7 +389,7 @@ function LetterBoxAnswer({
             spellCheck={false}
             aria-label={`철자 ${letterIndex + 1}`}
             data-testid={letterIndex === 0 ? 'input-passage-dictation' : `input-dictation-letter-${letterIndex + 1}`}
-            className="h-11 w-9 rounded-lg border border-[hsl(var(--sidebar-foreground)/.22)] bg-[hsl(var(--sidebar))] text-center font-mono text-lg font-bold uppercase text-[hsl(var(--sidebar-foreground))] outline-none transition-colors focus:border-[hsl(var(--sidebar-primary))] focus:ring-2 focus:ring-[hsl(var(--sidebar-primary)/.25)] disabled:opacity-50 sm:h-12 sm:w-10"
+            className="h-11 w-9 rounded-lg border border-[hsl(var(--sidebar-foreground)/.22)] bg-[hsl(var(--sidebar))] text-center font-mono text-lg font-bold text-[hsl(var(--sidebar-foreground))] outline-none transition-colors focus:border-[hsl(var(--sidebar-primary))] focus:ring-2 focus:ring-[hsl(var(--sidebar-primary)/.25)] disabled:opacity-50 sm:h-12 sm:w-10"
           />
         );
       })}
@@ -467,6 +467,7 @@ export default function PassagePractice({
   const speechGenerationRef = useRef(0);
   const speechTimerRef = useRef<number | null>(null);
   const wordAdvanceTimerRef = useRef<number | null>(null);
+  const modeAdvanceTimerRef = useRef<number | null>(null);
   const parsedPassageSentences = useMemo(() => buildPassageSentences(passageText), [passageText]);
   const passageSentences = usingActiveMaterial && activeMaterial
     ? activeMaterial.sentences
@@ -579,6 +580,7 @@ export default function PassagePractice({
     speechGenerationRef.current += 1;
     if (speechTimerRef.current !== null) window.clearTimeout(speechTimerRef.current);
     if (wordAdvanceTimerRef.current !== null) window.clearTimeout(wordAdvanceTimerRef.current);
+    if (modeAdvanceTimerRef.current !== null) window.clearTimeout(modeAdvanceTimerRef.current);
     window.speechSynthesis?.cancel();
   }, []);
 
@@ -662,6 +664,10 @@ export default function PassagePractice({
 
     const passageChanged = normalizePassage(nextText) !== normalizePassage(passageText)
       || usingActiveMaterial;
+    if (modeAdvanceTimerRef.current !== null) {
+      window.clearTimeout(modeAdvanceTimerRef.current);
+      modeAdvanceTimerRef.current = null;
+    }
     stopSpeech();
     setUsingActiveMaterial(false);
     setDraftText(nextText);
@@ -712,6 +718,18 @@ export default function PassagePractice({
       },
     }));
     setFeedback('correct');
+  };
+
+  const advanceToNextSentenceMode = () => {
+    if (isWordMaterial || (mode !== 'dictation' && mode !== 'writing')) return;
+    const nextMode: ExerciseMode = mode === 'dictation' ? 'writing' : 'shadowing';
+    if (modeAdvanceTimerRef.current !== null) window.clearTimeout(modeAdvanceTimerRef.current);
+    modeAdvanceTimerRef.current = window.setTimeout(() => {
+      modeAdvanceTimerRef.current = null;
+      setMode(nextMode);
+      setFeedback(null);
+      setShowAnswer(false);
+    }, 750);
   };
 
   const advanceToNextWordAutomatically = () => {
@@ -777,6 +795,7 @@ export default function PassagePractice({
         void playAnswerFeedbackSound(true).then(advanceToNextWordAutomatically);
       } else {
         void playAnswerFeedbackSound(true);
+        advanceToNextSentenceMode();
       }
     } else {
       void playAnswerFeedbackSound(false);
@@ -849,6 +868,10 @@ export default function PassagePractice({
   };
 
   const selectMode = (nextMode: ExerciseMode) => {
+    if (modeAdvanceTimerRef.current !== null) {
+      window.clearTimeout(modeAdvanceTimerRef.current);
+      modeAdvanceTimerRef.current = null;
+    }
     focusWordAnswerAfterAdvanceRef.current = false;
     if (wordAdvanceTimerRef.current !== null) {
       window.clearTimeout(wordAdvanceTimerRef.current);
@@ -863,6 +886,10 @@ export default function PassagePractice({
   };
 
   const selectSentence = (index: number) => {
+    if (modeAdvanceTimerRef.current !== null) {
+      window.clearTimeout(modeAdvanceTimerRef.current);
+      modeAdvanceTimerRef.current = null;
+    }
     focusWordAnswerAfterAdvanceRef.current = false;
     if (wordAdvanceTimerRef.current !== null) {
       window.clearTimeout(wordAdvanceTimerRef.current);
