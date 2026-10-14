@@ -207,8 +207,6 @@ export default function AdminAssignments() {
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
   const [materialType, setMaterialType] = useState<MaterialType>('sentence');
   const [assignmentFolderId, setAssignmentFolderId] = useState('');
-  const [newFolderParentId, setNewFolderParentId] = useState('');
-  const [newFolderName, setNewFolderName] = useState('');
   const [materialEnglish, setMaterialEnglish] = useState('');
   const [materialKorean, setMaterialKorean] = useState('');
   const [selectedSourceKeys, setSelectedSourceKeys] = useState<string[]>([]);
@@ -227,32 +225,13 @@ export default function AdminAssignments() {
   const [folderListFilter, setFolderListFilter] = useState('all');
   const [courseFolderOpen, setCourseFolderOpen] = useState(false);
   const [courseFolderName, setCourseFolderName] = useState('');
+  const [subfolderName, setSubfolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
-  const foldersForCourse = folders.filter((folder) =>
-    folder.level === level || folder.level == null,
-  );
   const selectedLearningContent = level === 'All'
     ? undefined
     : learningContents.find((content) => content.level === level);
-  const sourceFolderIds = new Set<number>();
-  if (level !== 'All') {
-    assignments
-      .filter((assignment) => assignment.level === level && assignment.materialType === materialType)
-      .forEach((assignment) => {
-        let folder = folders.find((item) => item.id === assignment.folderId);
-        while (folder && !sourceFolderIds.has(folder.id)) {
-          sourceFolderIds.add(folder.id);
-          folder = folder.parentFolderId == null
-            ? undefined
-            : folders.find((item) => item.id === folder!.parentFolderId);
-        }
-      });
-  }
-  const sourceFolders = level === 'All'
-    ? []
-    : foldersForCourse.filter((folder) => sourceFolderIds.has(folder.id));
 
   const loadLearningContents = () => {
     apiFetch('/api/admin/learning-content', { credentials: 'include' })
@@ -284,7 +263,8 @@ export default function AdminAssignments() {
     assignment.level === listLevel && assignment.materialType === materialFolder,
   );
   const courseSubfolders = folders.filter((folder) =>
-    folder.level === listLevel || folder.level == null,
+    (folder.level === listLevel || folder.level == null)
+    && (folder.materialType === 'mixed' || folder.materialType === materialFolder),
   );
   const assignmentsForFolderCounter = courseFolderOpen
     ? folderListFilter === '' ? courseAssignments : visibleAssignments
@@ -332,81 +312,46 @@ export default function AdminAssignments() {
     return () => window.removeEventListener(LEARNING_CONTENT_UPDATED_EVENT, refreshSavedContent);
   }, []);
 
-  const toggleSavedSource = (sourceKey: string) => {
-    const nextKeys = selectedSourceKeys.includes(sourceKey)
-      ? selectedSourceKeys.filter((key) => key !== sourceKey)
-      : [...selectedSourceKeys, sourceKey];
-    setSelectedSourceKeys(nextKeys);
-    const contentLines: string[] = [];
-
-    if (nextKeys.includes('learning-content') && selectedLearningContent) {
-      const english = materialType === 'word' ? selectedLearningContent.word : selectedLearningContent.exampleSentence;
-      const korean = materialType === 'word' ? selectedLearningContent.shortMeaning : selectedLearningContent.exampleKorean;
-      contentLines.push(`${english}||${korean}`);
+  const toggleLearningContentSource = () => {
+    const shouldLoad = !selectedSourceKeys.includes('learning-content');
+    setSelectedSourceKeys(shouldLoad ? ['learning-content'] : []);
+    if (!shouldLoad || !selectedLearningContent) {
+      setMaterialEnglish('');
+      setMaterialKorean('');
+      setMaterialImportMessage('');
+      return;
     }
-
-    for (const key of nextKeys.filter((candidate) => candidate.startsWith('folder:'))) {
-      const folderId = Number(key.slice('folder:'.length));
-      const folderIds = getFolderAndDescendantIds(folderId, folders);
-      contentLines.push(...assignments
-        .filter((assignment) =>
-          assignment.folderId != null
-          && folderIds.includes(assignment.folderId)
-          && assignment.level === level
-          && assignment.materialType === materialType,
-        )
-        .flatMap((assignment) => assignment.materialContent.split(/\r?\n/).filter(Boolean)));
-    }
-
-    const columns = splitMaterialColumns(contentLines.join('\n'));
-    setMaterialEnglish(columns.english);
-    setMaterialKorean(columns.korean);
-    setMaterialImportMessage(contentLines.length
-      ? `${nextKeys.length}개 저장 항목에서 ${contentLines.length}개 자료를 불러왔어요.`
-      : '');
+    const english = materialType === 'word' ? selectedLearningContent.word : selectedLearningContent.exampleSentence;
+    const korean = materialType === 'word' ? selectedLearningContent.shortMeaning : selectedLearningContent.exampleKorean;
+    setMaterialEnglish(english);
+    setMaterialKorean(korean);
+    setMaterialImportMessage('초기화면 콘텐츠를 과제 자료로 불러왔어요.');
     setError('');
   };
 
-  const createAssignmentFolder = async () => {
-    const name = newFolderName.trim();
-    if (!name || creatingFolder) return;
-    if (level === 'All') {
-      setError('초급·중급·고급 과정 중 하나를 선택해 폴더를 만들어 주세요.');
-      return;
-    }
-
-    setCreatingFolder(true);
+  const loadSelectedFolderMaterials = () => {
+    if (selectedFolderId == null || listLevel === 'All') return;
+    const folderIds = getFolderAndDescendantIds(selectedFolderId, folders);
+    const contentLines = assignments
+      .filter((assignment) =>
+        assignment.folderId != null
+        && folderIds.includes(assignment.folderId)
+        && assignment.level === listLevel
+        && assignment.materialType === materialFolder,
+      )
+      .flatMap((assignment) => assignment.materialContent.split(/\r?\n/).filter(Boolean));
+    const columns = splitMaterialColumns(contentLines.join('\n'));
+    setLevel(listLevel);
+    setMaterialType(materialFolder);
+    setAssignmentFolderId(String(selectedFolderId));
+    setMaterialEnglish(columns.english);
+    setMaterialKorean(columns.korean);
+    setSelectedSourceKeys([]);
+    setMaterialImportMessage(contentLines.length
+      ? `${contentLines.length}개 자료를 과제 등록에 불러왔어요.`
+      : '선택한 위치에 가져올 자료가 없어요. 새 자료를 직접 입력해 주세요.');
     setError('');
-    try {
-      const response = await apiFetch('/api/admin/assignment-folders', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          materialType: 'mixed',
-          level,
-          parentFolderId: newFolderParentId ? Number(newFolderParentId) : null,
-        }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error || '하위 폴더를 만들지 못했습니다.');
-      }
-
-      const created = await response.json() as AssignmentFolder;
-      setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
-      setAssignmentFolderId(String(created.id));
-      setNewFolderParentId(String(created.id));
-      setNewFolderName('');
-      setMaterialFolder(materialType);
-      setFolderListFilter(String(created.id));
-      setListLevel(level);
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : '하위 폴더 생성 오류');
-    } finally {
-      setCreatingFolder(false);
-    }
+    document.getElementById('course-assignment-registration')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const createCourseFolder = async () => {
@@ -439,9 +384,50 @@ export default function AdminAssignments() {
       const created = await response.json() as AssignmentFolder;
       setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
       setCourseFolderName('');
-      setFolderListFilter('');
+      setLevel(listLevel);
+      setMaterialType(materialFolder);
+      setAssignmentFolderId(String(created.id));
+      setFolderListFilter(String(created.id));
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : '과정 폴더 생성 오류');
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const createSubfolder = async () => {
+    const name = subfolderName.trim();
+    const parentFolder = folders.find((folder) => folder.id === selectedFolderId);
+    if (!name || creatingFolder || !parentFolder || parentFolder.level !== listLevel) return;
+
+    setCreatingFolder(true);
+    setError('');
+    try {
+      const response = await apiFetch('/api/admin/assignment-folders', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          materialType: 'mixed',
+          level: listLevel,
+          parentFolderId: selectedFolderId,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '하위 자료 위치를 만들지 못했습니다.');
+      }
+
+      const created = await response.json() as AssignmentFolder;
+      setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
+      setSubfolderName('');
+      setLevel(listLevel);
+      setMaterialType(materialFolder);
+      setAssignmentFolderId(String(created.id));
+      setFolderListFilter(String(created.id));
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : '하위 자료 위치 생성 오류');
     } finally {
       setCreatingFolder(false);
     }
@@ -548,9 +534,6 @@ export default function AdminAssignments() {
       setMaterialEnglish('');
       setMaterialKorean('');
       setSelectedSourceKeys([]);
-      setMaterialType('sentence');
-      setAssignmentFolderId('');
-      setNewFolderParentId('');
       setMaterialImportMessage('');
       setDueDate('');
       setAssigneeUserId('');
@@ -640,7 +623,7 @@ export default function AdminAssignments() {
         </div>
       </div>
 
-       <form onSubmit={saveAssignment} className="mt-7 grid gap-5">
+       <form id="course-assignment-registration" onSubmit={saveAssignment} className="mt-7 grid gap-5">
         <div className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
           <div>
             <span className="text-xs font-bold">학습자료 유형</span>
@@ -657,7 +640,10 @@ export default function AdminAssignments() {
                 checked={materialType === 'sentence'}
                 onChange={() => {
                   setMaterialType('sentence');
-                  setAssignmentFolderId('');
+                  const selected = folders.find((folder) => String(folder.id) === assignmentFolderId);
+                  if (selected && selected.materialType !== 'mixed' && selected.materialType !== 'sentence') {
+                    setAssignmentFolderId('');
+                  }
                   if (selectedSourceKeys.length) {
                     setMaterialEnglish('');
                     setMaterialKorean('');
@@ -679,7 +665,10 @@ export default function AdminAssignments() {
                 checked={materialType === 'word'}
                 onChange={() => {
                   setMaterialType('word');
-                  setAssignmentFolderId('');
+                  const selected = folders.find((folder) => String(folder.id) === assignmentFolderId);
+                  if (selected && selected.materialType !== 'mixed' && selected.materialType !== 'word') {
+                    setAssignmentFolderId('');
+                  }
                   if (selectedSourceKeys.length) {
                     setMaterialEnglish('');
                     setMaterialKorean('');
@@ -694,121 +683,24 @@ export default function AdminAssignments() {
               <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
             </label>
           </div>
-          <div className="grid gap-2">
-            <span className="text-xs font-bold">저장된 콘텐츠 선택</span>
-            <div className="grid gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-3">
-              {level !== 'All' && selectedLearningContent && (materialType === 'sentence' || sourceFolders.length === 0) && (
-                <label className="flex items-start gap-2 rounded-lg p-2 text-xs hover:bg-[hsl(var(--muted)/.5)]">
-                  <input
-                    type="checkbox"
-                    checked={selectedSourceKeys.includes('learning-content')}
-                    onChange={() => toggleSavedSource('learning-content')}
-                    className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
-                  />
-                  <span>
-                    <strong>{levelLabels[level]} 초기화면 {materialType === 'word' ? '단어 콘텐츠' : '문장 콘텐츠'}</strong>
-                    <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
-                      {materialType === 'word'
-                        ? `${selectedLearningContent.word} · ${selectedLearningContent.shortMeaning}`
-                        : `${selectedLearningContent.exampleSentence} · ${selectedLearningContent.exampleKorean}`}
-                    </span>
-                  </span>
-                </label>
-              )}
-              {sourceFolders.map((folder) => {
-                const descendantFolderIds = getFolderAndDescendantIds(folder.id, folders);
-                const folderItems = assignments.filter((assignment) =>
-                  assignment.folderId != null
-                  && descendantFolderIds.includes(assignment.folderId)
-                  && assignment.level === level
-                  && assignment.materialType === materialType,
-                );
-                const folderWordCount = folderItems.reduce(
-                  (total, assignment) => total + getMaterialEntryCount(assignment),
-                  0,
-                );
-                const sourceKey = `folder:${folder.id}`;
-                return (
-                  <label key={folder.id} className="flex items-start gap-2 rounded-lg p-2 text-xs hover:bg-[hsl(var(--muted)/.5)]">
-                    <input
-                      type="checkbox"
-                      checked={selectedSourceKeys.includes(sourceKey)}
-                      onChange={() => toggleSavedSource(sourceKey)}
-                      className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
-                      data-testid={`checkbox-source-folder-${folder.id}`}
-                    />
-                    <span>
-                      <strong>{getFolderPath(folder.id, folders)}</strong>
-                      <span className="ml-1 text-[hsl(var(--muted-foreground))]">
-                        {folderItems.length}개 자료{materialType === 'word' ? ` · ${folderWordCount}개 단어` : ''}
-                      </span>
-                      <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
-                        {folderItems.slice(0, 3).map((item) => item.title).join(' · ')}
-                        {folderItems.length > 3 ? ' …' : ''}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-              {level === 'All' && (
-                <p className="p-2 text-xs text-[hsl(var(--muted-foreground))]">과정을 지정하면 해당 과정의 저장 콘텐츠와 폴더가 표시됩니다.</p>
-              )}
-              {level !== 'All' && !selectedLearningContent && sourceFolders.length === 0 && (
-                <p className="p-2 text-xs text-[hsl(var(--muted-foreground))]">이 과정에 저장된 콘텐츠나 폴더 자료가 없습니다.</p>
-              )}
-            </div>
-            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              폴더를 체크하면 그 안의 해당 과정 자료를 모두 가져옵니다. 여러 폴더를 함께 선택할 수 있어요.
-            </span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">저장할 과정 폴더</span>
-              <select
-                value={assignmentFolderId}
-                onChange={(event) => setAssignmentFolderId(event.target.value)}
-                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
-              >
-                <option value="">폴더 없이 저장</option>
-                {foldersForCourse.map((folder) => (
-                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">새 폴더 이름</span>
+          {level !== 'All' && selectedLearningContent && (
+            <label className="flex items-start gap-2 rounded-xl border border-[hsl(var(--border))] p-3 text-xs hover:bg-[hsl(var(--muted)/.5)]">
               <input
-                value={newFolderName}
-                onChange={(event) => setNewFolderName(event.target.value)}
-                maxLength={80}
-                placeholder={materialType === 'word' ? '예: 여행 단어' : '예: 일상 회화'}
-                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+                type="checkbox"
+                checked={selectedSourceKeys.includes('learning-content')}
+                onChange={toggleLearningContentSource}
+                className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
               />
+              <span>
+                <strong>{levelLabels[level]} 초기화면 {materialType === 'word' ? '단어 콘텐츠' : '문장 콘텐츠'} 가져오기</strong>
+                <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
+                  {materialType === 'word'
+                    ? `${selectedLearningContent.word} · ${selectedLearningContent.shortMeaning}`
+                    : `${selectedLearningContent.exampleSentence} · ${selectedLearningContent.exampleKorean}`}
+                </span>
+              </span>
             </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">상위 폴더</span>
-              <select
-                value={newFolderParentId}
-                onChange={(event) => setNewFolderParentId(event.target.value)}
-                disabled={level === 'All'}
-                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
-              >
-                <option value="">과정 바로 아래에 만들기</option>
-                {foldersForCourse.filter((folder) => folder.level === level).map((folder) => (
-                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => void createAssignmentFolder()}
-              disabled={!newFolderName.trim() || creatingFolder}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-sm font-bold transition-colors hover:border-[hsl(var(--accent)/.6)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {creatingFolder ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}
-              하위 폴더 만들기
-            </button>
-          </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2">
               <span className="text-xs font-bold">
@@ -904,7 +796,6 @@ export default function AdminAssignments() {
                 const nextLevel = event.target.value as LearningLevel;
                 setLevel(nextLevel);
                 setAssignmentFolderId('');
-                setNewFolderParentId('');
                 if (selectedSourceKeys.length) {
                   setMaterialEnglish('');
                   setMaterialKorean('');
@@ -1051,8 +942,10 @@ export default function AdminAssignments() {
                data-testid={`button-material-folder-${value}`}
                 onClick={() => {
                   setMaterialFolder(value);
+                  setMaterialType(value);
                    setFolderListFilter('');
                    setCourseFolderOpen(false);
+                  setAssignmentFolderId('');
                 }}
                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                  materialFolder === value
@@ -1098,6 +991,9 @@ export default function AdminAssignments() {
                       data-testid={`button-assignment-course-${value.toLowerCase()}`}
                       onClick={() => {
                         setListLevel(value);
+                        setLevel(value);
+                        setMaterialType(materialFolder);
+                        setAssignmentFolderId('');
                         setFolderListFilter('');
                         setCourseFolderOpen(true);
                       }}
@@ -1124,6 +1020,7 @@ export default function AdminAssignments() {
                   onClick={() => {
                     setCourseFolderOpen(false);
                     setFolderListFilter('');
+                    setAssignmentFolderId('');
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 >
@@ -1210,7 +1107,12 @@ export default function AdminAssignments() {
                     type="button"
                     data-testid={`button-assignment-subfolder-${value}`}
                     aria-pressed={folderListFilter === value}
-                    onClick={() => setFolderListFilter(value)}
+                    onClick={() => {
+                      setFolderListFilter(value);
+                      setLevel(listLevel);
+                      setMaterialType(materialFolder);
+                      setAssignmentFolderId(/^\d+$/.test(value) ? value : '');
+                    }}
                     className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                       folderListFilter === value
                         ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]'
@@ -1226,6 +1128,52 @@ export default function AdminAssignments() {
                   </button>
                 ))}
                   </div>
+                  {selectedFolderId != null && listLevel !== 'All' && (
+                    <>
+                      {folders.find((folder) => folder.id === selectedFolderId)?.level === listLevel && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                        <input
+                          value={subfolderName}
+                          onChange={(event) => setSubfolderName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void createSubfolder();
+                            }
+                          }}
+                          maxLength={80}
+                          placeholder="선택한 위치 아래에 새 폴더 이름"
+                          aria-label="하위 자료 폴더 이름"
+                          className="min-w-0 flex-1 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-xs outline-none focus:border-[hsl(var(--accent))] sm:max-w-80"
+                          data-testid="input-subfolder-name"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void createSubfolder()}
+                          disabled={!subfolderName.trim() || creatingFolder}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                          data-testid="button-create-subfolder"
+                        >
+                          {creatingFolder ? <LoaderCircle className="animate-spin" size={14} /> : <Plus size={14} />}
+                          하위 폴더 만들기
+                        </button>
+                        </div>
+                      )}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[hsl(var(--secondary)/.55)] px-3 py-3">
+                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                          선택한 위치는 새 과제의 저장 위치가 되고, 안의 자료도 가져올 수 있어요.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={loadSelectedFolderMaterials}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))]"
+                          data-testid="button-import-selected-folder"
+                        >
+                          이 위치 자료 가져오기
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               {courseAssignments.length === 0 && (
