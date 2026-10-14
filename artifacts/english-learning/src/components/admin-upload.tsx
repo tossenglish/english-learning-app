@@ -2,7 +2,6 @@ import { LoaderCircle, ShieldCheck } from 'lucide-react';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import AdminAssignments from '@/components/admin-assignments';
 import AdminHomeVideoSettings from '@/components/admin-home-video-settings';
-import AdminWordContentSettings from '@/components/admin-word-content-settings';
 
 export default function AdminUpload() {
   const { isAdmin, isChecking } = useAdminAccess();
@@ -35,12 +34,11 @@ export default function AdminUpload() {
         </p>
         <h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">관리자 작업공간</h1>
         <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-          회원 과정과 과제를 관리하고 홈 영상 및 단어 콘텐츠를 설정할 수 있어요.
+          회원 과정과 과제를 관리하고 홈 영상을 설정할 수 있어요.
         </p>
       </section>
 
       <AdminHomeVideoSettings />
-      <AdminWordContentSettings />
       <AdminAssignments />
     </div>
   );
