@@ -165,8 +165,6 @@ export default function AdminAssignments() {
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [materialType, setMaterialType] = useState<MaterialType>('sentence');
   const [assignmentFolderId, setAssignmentFolderId] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
@@ -370,7 +368,7 @@ export default function AdminAssignments() {
 
   const saveAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || saving) return;
+    if (saving) return;
 
     if (materialContent.trim()) {
       if (materialContent.length > 20000) {
@@ -396,6 +394,16 @@ export default function AdminAssignments() {
       }
     }
 
+    const materialLabel = materialType === 'word' ? '단어' : '문장';
+    const firstMaterialLine = materialContent.trim().split(/\r?\n/, 1)[0] ?? '';
+    const firstMaterialName = firstMaterialLine.split(/\s*\|\|\s*/, 1)[0].trim();
+    const selectedFolder = folders.find((folder) => String(folder.id) === assignmentFolderId);
+    const generatedTitle = (
+      firstMaterialName
+        ? `${materialLabel} · ${firstMaterialName}`
+        : selectedFolder?.name || resourceName || `${materialLabel} 자료`
+    ).slice(0, 160);
+
     setSaving(true);
     setError('');
     try {
@@ -404,8 +412,8 @@ export default function AdminAssignments() {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
+          title: generatedTitle,
+          description: '',
           materialType,
           folderId: assignmentFolderId ? Number(assignmentFolderId) : null,
           materialContent: materialContent.trim(),
@@ -428,8 +436,6 @@ export default function AdminAssignments() {
       setMaterialFolder(materialType);
       setCourseFolderOpen(true);
       setFolderListFilter(created.folderId == null ? 'all' : String(created.folderId));
-      setTitle('');
-      setDescription('');
       setMaterialEnglish('');
       setMaterialKorean('');
       setSelectedSourceKeys([]);
@@ -524,18 +530,7 @@ export default function AdminAssignments() {
         </div>
       </div>
 
-      <form onSubmit={saveAssignment} className="mt-7 grid gap-5">
-        <label className="grid gap-2">
-          <span className="text-xs font-bold">과제 제목</span>
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={160}
-            required
-            placeholder="예: 오늘의 표현 3문장 받아쓰기"
-            className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
-          />
-        </label>
+       <form onSubmit={saveAssignment} className="mt-7 grid gap-5">
         <div className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
           <div>
             <span className="text-xs font-bold">학습자료 유형</span>
@@ -753,17 +748,6 @@ export default function AdminAssignments() {
             </span>
           </div>
         </div>
-        <label className="grid gap-2">
-          <span className="text-xs font-bold">학습 안내</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            maxLength={4000}
-            rows={4}
-            placeholder="회원이 수행할 내용을 적어주세요."
-            className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
-          />
-        </label>
         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
           <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">배정 대상</span>
@@ -848,7 +832,7 @@ export default function AdminAssignments() {
           </label>
           <button
             type="submit"
-            disabled={!title.trim() || saving}
+            disabled={saving}
             className="button-pop inline-flex items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-45"
           >
             {saving ? <LoaderCircle className="animate-spin" size={17} /> : <Plus size={17} />}
