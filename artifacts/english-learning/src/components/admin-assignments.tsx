@@ -641,20 +641,78 @@ export default function AdminAssignments() {
   };
 
   return (
-    <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-9">
-       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
-          <ClipboardList size={20} />
-        </span>
-        <div>
-           <h2 className="text-xl font-bold">과정별 과제 등록</h2>
-          <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-             과정을 선택해 저장하면 해당 과정 회원에게만 과제가 보여요.
-          </p>
+    <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 sm:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
+            <ClipboardList size={19} />
+          </span>
+          <div>
+            <h2 className="text-xl font-bold">과제 관리</h2>
+            <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+              자료를 입력하고 과정·폴더를 선택한 뒤 바로 배정하세요.
+            </p>
+          </div>
         </div>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+          과제 {assignments.length}개 · 단어 {getWordCount(assignments)}개
+        </p>
       </div>
 
-       <form id="course-assignment-registration" onSubmit={saveAssignment} className="mt-7 grid gap-5">
+      <form id="course-assignment-registration" onSubmit={saveAssignment} className="mt-5 grid gap-4">
+        <div className="grid gap-3 rounded-2xl bg-[hsl(var(--background)/.55)] p-4 sm:grid-cols-2">
+          <label className="grid min-w-0 content-start gap-2">
+            <span className="text-xs font-bold">배정 과정</span>
+            <select
+              value={level}
+              onChange={(event) => {
+                const nextLevel = event.target.value as LearningLevel;
+                setLevel(nextLevel);
+                setListLevel(nextLevel);
+                setAssignmentFolderId('');
+                if (selectedSourceKeys.length) {
+                  setMaterialEnglish('');
+                  setMaterialKorean('');
+                  setMaterialImportMessage('');
+                }
+                setSelectedSourceKeys([]);
+              }}
+              disabled={Boolean(assigneeUserId)}
+              className="h-11 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {courseOptions.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid min-w-0 content-start gap-2">
+            <span className="text-xs font-bold">저장할 자료 폴더 <span className="font-normal text-[hsl(var(--muted-foreground))]">선택</span></span>
+            <select
+              value={assignmentFolderId}
+              onChange={(event) => setAssignmentFolderId(event.target.value)}
+              className="h-11 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+            >
+              <option value="">폴더 없이 저장</option>
+              {folders
+                .filter((folder) => (folder.level === level || folder.level == null)
+                  && (folder.materialType === 'mixed' || folder.materialType === materialType))
+                .map((folder) => (
+                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
+                ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              const management = document.getElementById('assignment-management-details') as HTMLDetailsElement | null;
+              if (management) management.open = true;
+              document.getElementById('assignment-folder-management')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            className="justify-self-start text-xs font-bold text-[hsl(var(--accent))] underline-offset-4 hover:underline sm:col-span-2"
+          >
+            새 폴더 만들기 또는 자료 가져오기
+          </button>
+        </div>
         <div className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
           <div>
             <span className="text-xs font-bold">학습자료 유형</span>
@@ -805,7 +863,12 @@ export default function AdminAssignments() {
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+        <details className="rounded-2xl border border-[hsl(var(--border))] px-4 py-3">
+          <summary className="cursor-pointer text-xs font-bold">
+            개별 회원 배정 또는 마감일 설정
+            <span className="ml-2 font-normal text-[hsl(var(--muted-foreground))]">선택 사항</span>
+          </summary>
+          <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
           <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">배정 대상</span>
             <select
@@ -822,29 +885,6 @@ export default function AdminAssignments() {
             </select>
           </label>
           <label className="grid min-w-0 content-start gap-2">
-            <span className="text-xs font-bold">배정 과정</span>
-            <select
-              value={level}
-              onChange={(event) => {
-                const nextLevel = event.target.value as LearningLevel;
-                setLevel(nextLevel);
-                setAssignmentFolderId('');
-                if (selectedSourceKeys.length) {
-                  setMaterialEnglish('');
-                  setMaterialKorean('');
-                  setMaterialImportMessage('');
-                }
-                setSelectedSourceKeys([]);
-              }}
-              disabled={Boolean(assigneeUserId)}
-              className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-               {courseOptions.map(({ value, label }) => (
-                 <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">마감일</span>
             <input
               type="date"
@@ -853,12 +893,13 @@ export default function AdminAssignments() {
               className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm outline-none focus:border-[hsl(var(--accent))]"
             />
           </label>
-        </div>
+          </div>
         <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
           {level === 'All'
             ? `모든 회원에게 표시 · 과정 배정 회원 ${members.filter((member) => member.course !== null).length}명`
             : `${members.filter((member) => member.course === level).length}명의 배정 회원에게 표시`}
         </p>
+        </details>
 
         {resourcePath && (
           <div className="flex items-center justify-between gap-3 rounded-xl bg-[hsl(var(--secondary)/.7)] px-4 py-3">
@@ -906,6 +947,14 @@ export default function AdminAssignments() {
         </p>
       )}
 
+      <details id="assignment-management-details" className="mt-7 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.35)]">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-bold marker:hidden">
+          회원·폴더·기존 과제 관리
+          <span className="ml-2 text-xs font-normal text-[hsl(var(--muted-foreground))]">
+            회원 {members.length}명 · 자료 폴더 {folders.length}개 · 과제 {assignments.length}개
+          </span>
+        </summary>
+        <div className="border-t border-[hsl(var(--border))] px-5 pb-5">
       <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -953,7 +1002,7 @@ export default function AdminAssignments() {
         )}
       </div>
 
-       <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
+        <div id="assignment-folder-management" className="mt-9 border-t border-[hsl(var(--border))] pt-7">
         <div className="flex items-center justify-between">
            <div>
              <h3 className="font-bold">자료 폴더</h3>
@@ -1283,7 +1332,9 @@ export default function AdminAssignments() {
             ))}
           </div>
         )}
-      </div>
+        </div>
+        </div>
+      </details>
     </section>
   );
 }

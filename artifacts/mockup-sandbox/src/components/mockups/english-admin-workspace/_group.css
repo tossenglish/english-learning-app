@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --background: 39 55% 95%;
+  --foreground: 222 30% 18%;
+  --border: 38 30% 86%;
+  --input: 38 30% 86%;
+  --ring: 15 76% 57%;
+  --card: 42 67% 98%;
+  --card-foreground: 222 30% 18%;
+  --card-border: 39 36% 87%;
+  --popover: 42 67% 98%;
+  --popover-foreground: 222 30% 18%;
+  --popover-border: 38 30% 86%;
+  --primary: 222 36% 22%;
+  --primary-foreground: 42 67% 98%;
+  --secondary: 167 31% 87%;
+  --secondary-foreground: 177 33% 22%;
+  --muted: 38 34% 91%;
+  --muted-foreground: 218 14% 45%;
+  --accent: 15 76% 57%;
+  --accent-foreground: 42 67% 98%;
+  --destructive: 3 65% 48%;
+  --destructive-foreground: 42 67% 98%;
+  --sidebar: 222 36% 22%;
+  --sidebar-foreground: 39 55% 95%;
+  --sidebar-border: 220 28% 30%;
+  --sidebar-primary: 34 88% 67%;
+  --sidebar-primary-foreground: 222 36% 22%;
+  --sidebar-accent: 220 28% 30%;
+  --sidebar-accent-foreground: 39 55% 95%;
+  --sidebar-ring: 34 88% 67%;
+  --chart-1: 15 76% 57%;
+  --chart-2: 167 42% 48%;
+  --chart-3: 34 88% 67%;
+  --chart-4: 222 36% 40%;
+  --chart-5: 42 59% 56%;
+  --app-font-sans: 'DM Sans', 'Noto Sans KR', sans-serif;
+  --app-font-mono: 'Space Mono', monospace;
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius: 1rem;
+  --elevate-1: rgba(48, 42, 32, .06);
+  --elevate-2: rgba(48, 42, 32, .1);
+  --shadow-sm: 0 5px 16px rgba(49, 42, 29, .06);
+  --shadow-md: 0 14px 36px rgba(49, 42, 29, .1);
+}
+
+.dark {
+  --background: 222 36% 12%;
+  --foreground: 39 55% 95%;
+  --border: 220 25% 26%;
+  --input: 220 25% 26%;
+  --ring: 34 88% 67%;
+  --card: 222 31% 17%;
+  --card-foreground: 39 55% 95%;
+  --card-border: 220 25% 26%;
+  --popover: 222 31% 17%;
+  --popover-foreground: 39 55% 95%;
+  --popover-border: 220 25% 26%;
+  --primary: 34 88% 67%;
+  --primary-foreground: 222 36% 12%;
+  --secondary: 167 26% 24%;
+  --secondary-foreground: 167 44% 83%;
+  --muted: 220 25% 20%;
+  --muted-foreground: 218 13% 68%;
+  --accent: 15 76% 57%;
+  --accent-foreground: 42 67% 98%;
+  --destructive: 3 65% 58%;
+  --destructive-foreground: 222 36% 12%;
+  --sidebar: 222 42% 9%;
+  --sidebar-foreground: 39 55% 95%;
+  --sidebar-border: 220 25% 20%;
+  --sidebar-primary: 34 88% 67%;
+  --sidebar-primary-foreground: 222 36% 12%;
+  --sidebar-accent: 220 25% 20%;
+  --sidebar-accent-foreground: 39 55% 95%;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise-in { animation: rise-in .55s cubic-bezier(.2, .8, .2, 1) both; }
+.stagger-2 { animation-delay: .12s; }
