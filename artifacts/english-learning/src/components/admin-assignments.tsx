@@ -714,7 +714,9 @@ export default function AdminAssignments() {
               <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
             </label>
           </div>
-          {level !== 'All' && selectedLearningContent && (
+          {level !== 'All'
+            && selectedLearningContent
+            && !(level === 'Intermediate' && materialType === 'sentence') && (
             <label className="flex items-start gap-2 rounded-xl border border-[hsl(var(--border))] p-3 text-xs hover:bg-[hsl(var(--muted)/.5)]">
               <input
                 type="checkbox"
