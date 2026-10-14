@@ -18,6 +18,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
 
 type ExerciseMode = 'dictation' | 'writing' | 'shadowing';
@@ -654,13 +655,20 @@ export default function PassagePractice({
 
     if (mode === 'shadowing') {
       markComplete();
+      void playAnswerFeedbackSound(true);
       return;
     }
 
     if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(expectedAnswer)) {
       markComplete();
-      advanceToNextWordAutomatically();
+      if (isWordMaterial) {
+        setIsWordAutoAdvancing(true);
+        void playAnswerFeedbackSound(true).then(advanceToNextWordAutomatically);
+      } else {
+        void playAnswerFeedbackSound(true);
+      }
     } else {
+      void playAnswerFeedbackSound(false);
       setFeedback('wrong');
       setShowAnswer(true);
     }

@@ -45,6 +45,7 @@ import LevelAssignments from '@/components/level-assignments';
 import type { Assignment, LearningContent } from '@workspace/api-client-react';
 import { parseDirectMaterial, prepareAssignmentPractice } from '@/lib/practice-material';
 import { apiFetch, setApiAuthTokenGetter } from '@/lib/api-fetch';
+import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import {
   getDefaultLearningContent,
   LEARNING_CONTENT_UPDATED_EVENT,
@@ -108,36 +109,6 @@ function makeWordQuizSequence(assignments: Assignment[], fallback: LearnContent)
       quizOptions: options,
     };
   });
-}
-
-function playQuizFeedbackSound(correct: boolean) {
-  if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') return;
-
-  try {
-    const context = new window.AudioContext();
-    const notes = correct ? [660, 880] : [240, 180];
-    const noteDuration = 0.12;
-
-    void context.resume().catch(() => undefined);
-    notes.forEach((frequency, index) => {
-      const startAt = context.currentTime + index * noteDuration;
-      const oscillator = context.createOscillator();
-      const volume = context.createGain();
-      oscillator.type = correct ? 'sine' : 'triangle';
-      oscillator.frequency.setValueAtTime(frequency, startAt);
-      volume.gain.setValueAtTime(0.0001, startAt);
-      volume.gain.exponentialRampToValueAtTime(0.12, startAt + 0.015);
-      volume.gain.exponentialRampToValueAtTime(0.0001, startAt + noteDuration);
-      oscillator.connect(volume);
-      volume.connect(context.destination);
-      oscillator.start(startAt);
-      oscillator.stop(startAt + noteDuration);
-    });
-
-    window.setTimeout(() => void context.close().catch(() => undefined), 500);
-  } catch {
-    // Keep answer feedback usable when browser audio is unavailable.
-  }
 }
 
 const levelCopy: Record<Level, { korean: string; detail: string; next: string }> = {
@@ -618,7 +589,7 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
               const isCorrect = option === content.correctMeaning;
               return <button key={option} type="button" onClick={() => {
                 setQuizAnswer(option);
-                playQuizFeedbackSound(isCorrect);
+                void playAnswerFeedbackSound(isCorrect);
               }} data-testid={`button-quiz-option-${index + 1}`} className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left text-sm transition-all ${selected ? (isCorrect ? 'border-[hsl(var(--secondary-foreground)/.45)] bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]' : 'border-[hsl(var(--destructive)/.45)] bg-[hsl(var(--destructive)/.08)]') : 'border-[hsl(var(--border))] hover:border-[hsl(var(--accent)/.55)] hover:bg-[hsl(var(--muted)/.55)]'}`}>
                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md font-mono text-[10px] ${selected ? 'bg-[hsl(var(--card))]' : 'bg-[hsl(var(--muted))]'}`}>{String.fromCharCode(65 + index)}</span><span className="font-semibold">{option}</span>{selected && <span className="ml-auto">{isCorrect ? <Check size={16} /> : <X size={16} />}</span>}
               </button>;
