@@ -349,6 +349,8 @@ export default function PassagePractice({
   const [passageListening, setPassageListening] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const passageFileInputRef = useRef<HTMLInputElement>(null);
+  const wordAnswerInputRef = useRef<HTMLInputElement>(null);
+  const focusWordAnswerAfterAdvanceRef = useRef(false);
   const speechLoopRef = useRef(false);
   const speechGenerationRef = useRef(0);
   const speechTimerRef = useRef<number | null>(null);
@@ -408,6 +410,17 @@ export default function PassagePractice({
     ? mode === 'writing' && !showAnswer
     : isAnswerMode && !showPassageEditor;
   const shouldShowMeaning = !isWordMaterial || mode === 'writing' || feedback === 'correct' || showAnswer;
+
+  useEffect(() => {
+    if (
+      isWordAutoAdvancing
+      || !focusWordAnswerAfterAdvanceRef.current
+      || !isWordMaterial
+      || mode !== 'writing'
+    ) return;
+    focusWordAnswerAfterAdvanceRef.current = false;
+    wordAnswerInputRef.current?.focus({ preventScroll: true });
+  }, [currentIndex, isWordAutoAdvancing, isWordMaterial, mode]);
 
   const stopSpeech = () => {
     speechLoopRef.current = false;
@@ -589,6 +602,7 @@ export default function PassagePractice({
 
   const advanceToNextWordAutomatically = () => {
     if (!isWordMaterial || safeCurrentIndex >= passageSentences.length - 1) return;
+    focusWordAnswerAfterAdvanceRef.current = mode === 'writing';
     setIsWordAutoAdvancing(true);
     wordAdvanceTimerRef.current = window.setTimeout(() => {
       wordAdvanceTimerRef.current = null;
@@ -687,6 +701,7 @@ export default function PassagePractice({
   };
 
   const selectMode = (nextMode: ExerciseMode) => {
+    focusWordAnswerAfterAdvanceRef.current = false;
     if (wordAdvanceTimerRef.current !== null) {
       window.clearTimeout(wordAdvanceTimerRef.current);
       wordAdvanceTimerRef.current = null;
@@ -700,6 +715,7 @@ export default function PassagePractice({
   };
 
   const selectSentence = (index: number) => {
+    focusWordAnswerAfterAdvanceRef.current = false;
     if (wordAdvanceTimerRef.current !== null) {
       window.clearTimeout(wordAdvanceTimerRef.current);
       wordAdvanceTimerRef.current = null;
@@ -1129,6 +1145,7 @@ export default function PassagePractice({
                 <label htmlFor={`passage-answer-${current.id}`} className="sr-only">{currentMode.label} 답안</label>
                 {isWordMaterial ? (
                   <input
+                    ref={wordAnswerInputRef}
                     id={`passage-answer-${current.id}`}
                     type="text"
                     value={currentAnswers[mode]}
