@@ -350,10 +350,9 @@ function SignUpPage() {
   );
 }
 
-function AccountControl() {
+function AccountControl({ isAdmin }: { isAdmin: boolean }) {
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { isAdmin } = useAdminAccess();
   const name = user?.firstName || user?.emailAddresses[0]?.emailAddress?.split('@')[0] || '학습자';
 
   return (
@@ -456,7 +455,7 @@ function MobileNav({ location }: { location: string }) {
   );
 }
 
-function Shell({ children, level, onLevelChange }: { children: ReactNode; level: Level; onLevelChange: (level: Level) => void }) {
+function Shell({ children, level, onLevelChange, isAdmin }: { children: ReactNode; level: Level; onLevelChange: (level: Level) => void; isAdmin: boolean }) {
   const [location] = useLocation();
   const [levelOpen, setLevelOpen] = useState(false);
   return (
@@ -500,7 +499,7 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
                 </div>
               )}
             </div>
-            <AccountControl />
+            <AccountControl isAdmin={isAdmin} />
           </div>
         </header>
         <main className="mx-auto max-w-[1320px] px-5 pb-28 pt-8 sm:px-8 lg:px-12 lg:pb-12">{children}</main>
@@ -528,7 +527,7 @@ function LevelPills({ level, onChange }: { level: Level; onChange: (level: Level
   );
 }
 
-function Home({ level, onLevelChange, onStart }: { level: Level; onLevelChange: (level: Level) => void; onStart: (assignment?: Assignment) => Promise<void> }) {
+function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLevelChange: (level: Level) => void; onStart: (assignment?: Assignment) => Promise<void>; isAdmin: boolean }) {
   return (
     <div className="space-y-8">
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -547,6 +546,7 @@ function Home({ level, onLevelChange, onStart }: { level: Level; onLevelChange: 
 
       <LevelAssignments
         level={level}
+        isAdmin={isAdmin}
         onStartPractice={onStart}
       />
 
@@ -690,11 +690,11 @@ function NotFound() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] p-6 text-center"><div><p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-[hsl(var(--accent))]">404 / loop lost</p><h1 className="mt-4 text-4xl font-bold">이 페이지는 아직 없어요.</h1><Link href="/" data-testid="link-not-found-home" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[hsl(var(--accent))]">오늘로 돌아가기 <ArrowRight size={16} /></Link></div></div>;
 }
 
-function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress, content, quizContent, quizPosition, quizTotal, hasNextQuizWord, onNextQuizWord }: {
-  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void; content: LearnContent; quizContent: LearnContent; quizPosition: number; quizTotal: number; hasNextQuizWord: boolean; onNextQuizWord: () => void;
+function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress, content, quizContent, quizPosition, quizTotal, hasNextQuizWord, onNextQuizWord }: {
+  level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; isAdmin: boolean; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void; content: LearnContent; quizContent: LearnContent; quizPosition: number; quizTotal: number; hasNextQuizWord: boolean; onNextQuizWord: () => void;
 }) {
   return <Switch>
-    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} onStart={onStart} /></Route>
+    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} onStart={onStart} isAdmin={isAdmin} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={quizContent} quizPosition={quizPosition} quizTotal={quizTotal} hasNextWord={hasNextQuizWord} onNextWord={onNextQuizWord} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
@@ -719,6 +719,7 @@ function HomeRedirect() {
 }
 
 function LearningPortal() {
+  const { isAdmin } = useAdminAccess();
   const [level, setLevel] = useState<Level>('Intermediate');
   const [learningContent, setLearningContent] = useState<LearnContent>(getDefaultLearningContent('Intermediate'));
   const [wordAssignments, setWordAssignments] = useState<Assignment[]>([]);
@@ -850,10 +851,11 @@ function LearningPortal() {
     <>
       <Show when="signed-in">
         <ErrorBoundary>
-          <Shell level={level} onLevelChange={setLevel}>
+          <Shell level={level} onLevelChange={setLevel} isAdmin={isAdmin}>
             <RouterContent
               level={level}
               onLevelChange={setLevel}
+              isAdmin={isAdmin}
               learned={learned}
               onStart={startSession}
               cardFlipped={cardFlipped}

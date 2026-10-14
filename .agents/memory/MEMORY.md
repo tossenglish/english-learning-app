@@ -4,3 +4,4 @@
 - [Separate word quiz flows](word-quiz-flows.md) — the home quick check and course assignment practice are distinct paths; validate both when word progression is reported broken.
 - [Course folder organization](course-folder-organization.md) — keep the three learning courses separate, while allowing words and sentences together in nested folders.
 - [Word settings save behavior](word-settings-save.md) — saving home word content should not depend on a manual folder selection.
+- [Admin home practice](admin-home-practice.md) — administrators should be able to practice assignments they issued from the learner home screen.

@@ -21,9 +21,11 @@ const levelLabels: Record<LearningLevel, string> = {
 
 export default function LevelAssignments({
   level,
+  isAdmin,
   onStartPractice,
 }: {
   level: Exclude<LearningLevel, 'All'>;
+  isAdmin: boolean;
   onStartPractice?: (assignment: Assignment) => Promise<void>;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -35,7 +37,9 @@ export default function LevelAssignments({
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    apiFetch(`/api/assignments?level=${encodeURIComponent(level)}`, {
+    apiFetch(isAdmin
+      ? '/api/admin/assignments'
+      : `/api/assignments?level=${encodeURIComponent(level)}`, {
       credentials: 'include',
       signal: controller.signal,
     })
@@ -44,7 +48,10 @@ export default function LevelAssignments({
         return response.json() as Promise<Assignment[]>;
       })
       .then((loaded) => {
-        setAssignments(loaded);
+        setAssignments(isAdmin
+          ? loaded.filter((assignment) =>
+            assignment.isPublished && (assignment.level === level || assignment.level === 'All'))
+          : loaded);
       })
       .catch((error) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -55,7 +62,7 @@ export default function LevelAssignments({
       });
 
     return () => controller.abort();
-  }, [level]);
+  }, [isAdmin, level]);
 
   const selectedAssignments = assignments.filter((assignment) => assignment.materialType === selectedType);
   const wordCount = assignments.filter((assignment) => assignment.materialType === 'word').length;
