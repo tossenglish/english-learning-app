@@ -87,6 +87,16 @@ const modes: Array<{
   },
 ];
 
+const wordModes: Array<{
+  id: ExerciseMode;
+  label: string;
+  description: string;
+  icon: typeof Headphones;
+}> = [
+  { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 영어 단어를 써요', icon: PenLine },
+  { id: 'dictation', label: '영어 퀴즈', description: '영어 단어의 뜻을 맞혀요', icon: CheckCircle2 },
+];
+
 const blankCompletion = (): Completion => ({
   dictation: false,
   writing: false,
@@ -318,7 +328,9 @@ export default function PassagePractice({
   const [currentIndex, setCurrentIndex] = useState(
     () => activeMaterial ? 0 : (hasSavedCustomPassage ? initialState.currentIndex : 0),
   );
-  const [mode, setMode] = useState<ExerciseMode>('dictation');
+  const [mode, setMode] = useState<ExerciseMode>(() =>
+    activeMaterial?.materialType === 'word' ? 'writing' : 'dictation',
+  );
   const [answers, setAnswers] = useState<Record<number, Record<ExerciseMode, string>>>(
     () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.answers : {}),
   );
@@ -344,6 +356,7 @@ export default function PassagePractice({
     ? activeMaterial.sentences
     : parsedPassageSentences;
   const isWordMaterial = usingActiveMaterial && activeMaterial?.materialType === 'word';
+  const availableModes = isWordMaterial ? wordModes : modes;
 
   const safeCurrentIndex = Math.min(currentIndex, Math.max(0, passageSentences.length - 1));
   const current = passageSentences[safeCurrentIndex] ?? passageSentences[0];
@@ -353,6 +366,20 @@ export default function PassagePractice({
   );
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
+  const wordQuizOptions = useMemo(() => {
+    const meanings = [...new Set(passageSentences.map((sentence) => sentence.korean.trim()).filter(Boolean))];
+    const options = [current?.korean, ...meanings.filter((meaning) => meaning !== current?.korean)]
+      .filter((meaning): meaning is string => Boolean(meaning))
+      .slice(0, 4);
+    if (options.length > 1 && current?.id) {
+      const correctIndex = current.id % options.length;
+      const answerIndex = options.indexOf(current.korean);
+      if (answerIndex !== correctIndex) {
+        [options[answerIndex], options[correctIndex]] = [options[correctIndex], options[answerIndex]];
+      }
+    }
+    return options;
+  }, [current?.id, current?.korean, passageSentences]);
   const totalProgressSteps = passageSentences.length * (isWordMaterial ? 1 : modes.length);
   const completedSteps = passageSentences.reduce((total, sentence) => {
     const doneModes = Object.values(completed[sentence.id] ?? blankCompletion());
@@ -367,12 +394,18 @@ export default function PassagePractice({
   const canAdvance = sentenceCompleted || (isWordMaterial && feedback === 'correct');
   const isDefaultPassage = !usingActiveMaterial && normalizePassage(passageText) === normalizePassage(DEFAULT_PASSAGE_TEXT);
   const isAnswerMode = mode === 'dictation' || mode === 'writing';
-  const hidePassageText = isAnswerMode && !showPassageEditor;
 
   const currentMode = useMemo(
-    () => modes.find((item) => item.id === mode) ?? modes[0],
-    [mode],
+    () => availableModes.find((item) => item.id === mode) ?? availableModes[0],
+    [availableModes, mode],
   );
+  const expectedAnswer = isWordMaterial
+    ? mode === 'writing' ? current.english : current.korean
+    : currentCloze.answer;
+  const hidePassageText = isWordMaterial
+    ? mode === 'writing' && !showAnswer
+    : isAnswerMode && !showPassageEditor;
+  const shouldShowMeaning = !isWordMaterial || mode === 'writing' || feedback === 'correct' || showAnswer;
 
   const stopSpeech = () => {
     speechLoopRef.current = false;
@@ -472,6 +505,15 @@ export default function PassagePractice({
         [mode]: value,
       },
     }));
+    if (isWordMaterial && currentCompletion[mode]) {
+      setCompleted((previous) => ({
+        ...previous,
+        [current.id]: {
+          ...(previous[current.id] ?? blankCompletion()),
+          [mode]: false,
+        },
+      }));
+    }
     setFeedback(null);
     setShowAnswer(false);
   };
@@ -556,7 +598,7 @@ export default function PassagePractice({
       return;
     }
 
-    if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(currentCloze.answer)) {
+    if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(expectedAnswer)) {
       markComplete();
     } else {
       setFeedback('wrong');
@@ -650,7 +692,7 @@ export default function PassagePractice({
     stopSpeech();
     if (safeCurrentIndex < passageSentences.length - 1) {
       setCurrentIndex((index) => index + 1);
-      setMode('dictation');
+      if (!isWordMaterial) setMode('dictation');
       setFeedback(null);
       setShowAnswer(false);
     }
@@ -880,7 +922,7 @@ export default function PassagePractice({
                 >
                   <div className="flex items-center gap-3">
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                      count === modes.length
+                  count === (isWordMaterial ? 1 : modes.length)
                         ? 'bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]'
                         : active
                           ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
@@ -890,13 +932,15 @@ export default function PassagePractice({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-xs font-semibold ${active ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]'}`}>
-                        {hidePassageText ? `문장 ${index + 1} · 원문 숨김` : sentence.english}
+                        {hidePassageText
+                          ? `${isWordMaterial ? '단어' : '문장'} ${index + 1} · 원문 숨김`
+                          : sentence.english}
                       </span>
                       <span className="mt-1.5 block line-clamp-2 text-[11px] leading-relaxed text-[hsl(var(--foreground)/.72)]">
-                        {sentence.korean}
+                        {isWordMaterial && mode === 'dictation' ? '뜻 퀴즈 · 정답 숨김' : sentence.korean}
                       </span>
                       <span className="mt-1 block text-[10px] text-[hsl(var(--muted-foreground))]">
-                        {count}/{modes.length} 완료
+                        {count}/{isWordMaterial ? 1 : modes.length} 완료
                       </span>
                     </span>
                     {active && <ArrowRight size={14} className="shrink-0 text-[hsl(var(--accent))]" />}
@@ -909,7 +953,7 @@ export default function PassagePractice({
 
         <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap gap-2 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-2">
-            {modes.map(({ id, label, description, icon: Icon }) => {
+            {availableModes.map(({ id, label, description, icon: Icon }) => {
               const done = currentCompletion[id];
               return (
                 <button
@@ -950,12 +994,12 @@ export default function PassagePractice({
                     </span>
                   ) : current.english}
                 </h2>
-                <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
-                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">한글 해석</p>
+                {shouldShowMeaning && <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
+                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">{isWordMaterial ? '단어 뜻' : '한글 해석'}</p>
                   <p className="mt-1.5 text-lg font-semibold leading-relaxed text-[hsl(var(--sidebar-foreground)/.9)] sm:text-xl">
                     {current.korean}
                   </p>
-                </div>
+                </div>}
               </div>
               <span className="rounded-full border border-[hsl(var(--sidebar-foreground)/.15)] px-3 py-1.5 font-mono text-[10px] text-[hsl(var(--sidebar-foreground)/.6)]">
                 {currentMode.label}
@@ -966,9 +1010,11 @@ export default function PassagePractice({
               {mode === 'dictation' && (
                 <div>
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
-                    빈칸에 들어갈 단어를 듣고 순서대로 적어보세요. 문장은 자동으로 반복 재생돼요.
+                    {isWordMaterial
+                      ? '영어 단어를 보고 알맞은 한글 뜻을 선택해 확인하세요.'
+                      : '빈칸에 들어갈 단어를 듣고 순서대로 적어보세요. 문장은 자동으로 반복 재생돼요.'}
                   </p>
-                  <button
+                  {!isWordMaterial && <button
                     type="button"
                     onClick={listen}
                     data-testid="button-passage-listen-dictation"
@@ -977,8 +1023,8 @@ export default function PassagePractice({
                     {dictationRepeating
                       ? <><Square size={13} fill="currentColor" /> 반복 듣기 중지</>
                       : <><Repeat2 size={15} /> 반복 듣기 시작</>}
-                  </button>
-                  {dictationRepeating && (
+                  </button>}
+                  {!isWordMaterial && dictationRepeating && (
                     <span className="ml-3 text-[11px] text-[hsl(var(--sidebar-foreground)/.5)]">
                       {speaking ? '재생 중...' : '다음 재생 준비 중...'}
                     </span>
@@ -988,9 +1034,11 @@ export default function PassagePractice({
               {mode === 'writing' && (
                 <div>
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
-                    한글 해석을 참고해 영어 빈칸을 순서대로 채워보세요.
+                    {isWordMaterial
+                      ? '한글 뜻을 보고 해당하는 영어 단어를 적어보세요.'
+                      : '한글 해석을 참고해 영어 빈칸을 순서대로 채워보세요.'}
                   </p>
-                  <p className="mt-2 flex items-center gap-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.45)]"><Lightbulb size={13} /> {current.hint}</p>
+                  {!isWordMaterial && <p className="mt-2 flex items-center gap-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.45)]"><Lightbulb size={13} /> {current.hint}</p>}
                 </div>
               )}
               {mode === 'shadowing' && (
@@ -1008,36 +1056,86 @@ export default function PassagePractice({
               )}
             </div>
 
-            {mode !== 'shadowing' && (
+            {isWordMaterial && mode === 'dictation' && wordQuizOptions.length > 1 ? (
+              <div className="mt-5 space-y-2.5" data-testid="group-word-meaning-options">
+                {wordQuizOptions.map((option, index) => {
+                  const selected = currentAnswers[mode] === option;
+                  return (
+                    <button
+                      key={`${current.id}-${option}`}
+                      type="button"
+                      onClick={() => updateAnswer(option)}
+                      aria-pressed={selected}
+                      data-testid={`button-word-meaning-option-${index + 1}`}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-semibold transition-colors ${selected ? 'border-[hsl(var(--sidebar-primary))] bg-[hsl(var(--sidebar-primary)/.14)] text-[hsl(var(--sidebar-foreground))]' : 'border-[hsl(var(--sidebar-foreground)/.16)] bg-[hsl(var(--sidebar-accent)/.4)] hover:border-[hsl(var(--sidebar-primary)/.6)]'}`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--sidebar-foreground)/.1)] font-mono text-xs">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      {option}
+                      {selected && <Check size={15} className="ml-auto text-[hsl(var(--sidebar-primary))]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : mode !== 'shadowing' && (
               <div className="mt-5">
-                <div
-                  className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5"
-                  data-testid="text-passage-cloze"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
-                    {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '빈칸 문장'}
-                  </p>
-                  <p className="mt-2 break-words text-lg font-semibold leading-relaxed sm:text-xl">
-                    {currentCloze.prompt}
-                  </p>
-                </div>
+                {isWordMaterial ? (
+                  <div className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5">
+                    <p className="text-sm font-semibold">
+                      {mode === 'writing' ? '한글 뜻을 보고 영어 단어를 입력하세요.' : '알맞은 한글 뜻을 직접 입력하세요.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5"
+                    data-testid="text-passage-cloze"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
+                      {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '빈칸 문장'}
+                    </p>
+                    <p className="mt-2 break-words text-lg font-semibold leading-relaxed sm:text-xl">
+                      {currentCloze.prompt}
+                    </p>
+                  </div>
+                )}
                 <label htmlFor={`passage-answer-${current.id}`} className="sr-only">{currentMode.label} 답안</label>
-                <textarea
-                  id={`passage-answer-${current.id}`}
-                  value={currentAnswers[mode]}
-                  onChange={(event) => updateAnswer(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      checkAnswer();
-                    }
-                  }}
-                  data-testid={`input-passage-${mode}`}
-                  rows={3}
-                  className="min-h-[144px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-base leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[168px] sm:text-lg"
-                  placeholder="빈칸에 들어갈 영어 단어를 순서대로 입력하세요"
-                  autoComplete="off"
-                />
+                {isWordMaterial ? (
+                  <input
+                    id={`passage-answer-${current.id}`}
+                    type="text"
+                    value={currentAnswers[mode]}
+                    onChange={(event) => updateAnswer(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        checkAnswer();
+                      }
+                    }}
+                    data-testid={`input-passage-${mode}`}
+                    className="h-14 w-full rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 text-base font-semibold text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:text-lg"
+                    placeholder={mode === 'writing' ? '영어 단어를 입력하세요' : '한글 뜻을 입력하세요'}
+                    autoComplete="off"
+                    autoCapitalize="off"
+                  />
+                ) : (
+                  <textarea
+                    id={`passage-answer-${current.id}`}
+                    value={currentAnswers[mode]}
+                    onChange={(event) => updateAnswer(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        checkAnswer();
+                      }
+                    }}
+                    data-testid={`input-passage-${mode}`}
+                    rows={3}
+                    className="min-h-[144px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-base leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[168px] sm:text-lg"
+                    placeholder="빈칸에 들어갈 영어 단어를 순서대로 입력하세요"
+                    autoComplete="off"
+                  />
+                )}
               </div>
             )}
 
@@ -1052,8 +1150,10 @@ export default function PassagePractice({
                 {feedback === 'correct' && <CheckCircle2 size={15} className="shrink-0" />}
                 {feedback === 'wrong' && <RotateCcw size={15} className="shrink-0" />}
                 <span>
-                  {feedback === 'correct' && (mode === 'shadowing' ? '좋아요. 입으로 직접 말해본 문장이에요.' : '정확해요. 이 문장은 이제 내 것이 됐어요.')}
-                  {feedback === 'wrong' && `조금 달라요. 정답을 확인하고 다시 한 번 써볼까요? ${showAnswer ? current.english : ''}`}
+                  {feedback === 'correct' && (isWordMaterial
+                    ? mode === 'writing' ? '정확해요. 이 단어를 직접 쓸 수 있어요.' : '정확해요. 단어의 뜻을 맞혔어요.'
+                    : mode === 'shadowing' ? '좋아요. 입으로 직접 말해본 문장이에요.' : '정확해요. 이 문장은 이제 내 것이 됐어요.')}
+                  {feedback === 'wrong' && `${isWordMaterial ? '아직 정답이 아니에요. 다시 확인해볼까요?' : '조금 달라요. 정답을 확인하고 다시 한 번 써볼까요?'} ${showAnswer ? expectedAnswer : ''}`}
                   {feedback === 'hint' && (sentenceCompleted
                     ? (isWordMaterial ? '정답이에요. 다음 단어로 넘어가 볼까요?' : '세 가지 연습을 모두 끝냈어요. 다음 문장으로 가볼까요?')
                     : (isWordMaterial ? '단어의 뜻을 맞히면 다음 단어로 넘어갈 수 있어요.' : '이 문장의 받아쓰기, 영작, 따라 말하기를 모두 끝내면 다음으로 갈 수 있어요.'))}
@@ -1063,7 +1163,7 @@ export default function PassagePractice({
 
             <div className="mt-5 flex flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center">
               <p className="flex items-center gap-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.45)]">
-                <Lightbulb size={13} /> 막히면 문장을 소리 내어 천천히 읽어보세요.
+                <Lightbulb size={13} /> {isWordMaterial ? '막히면 단어 뜻을 다시 떠올려보세요.' : '막히면 문장을 소리 내어 천천히 읽어보세요.'}
               </p>
               <div className="flex gap-2">
                 {mode !== 'shadowing' && (
