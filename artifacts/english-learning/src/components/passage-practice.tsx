@@ -286,6 +286,117 @@ function buildCloze(english: string) {
   };
 }
 
+function LetterBoxAnswer({
+  answerTemplate,
+  value,
+  onChange,
+  onSubmit,
+  disabled,
+  inputId,
+}: {
+  answerTemplate: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  disabled?: boolean;
+  inputId: string;
+}) {
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const templateChars = Array.from(answerTemplate);
+  const valueChars = Array.from(value);
+  const letterIndexes = templateChars.flatMap((character, index) => (
+    /[a-z]/i.test(character) ? [index] : []
+  ));
+  const readLetters = () => letterIndexes.map((index) => (
+    valueChars[index] && valueChars[index] !== '_' ? valueChars[index] : ''
+  ));
+  const serializeLetters = (letters: string[]) => templateChars.map((character, index) => {
+    if (!/[a-z]/i.test(character)) return character;
+    const letterIndex = letterIndexes.indexOf(index);
+    return letters[letterIndex] || '_';
+  }).join('');
+
+  const setLetter = (letterIndex: number, rawValue: string) => {
+    const letter = rawValue.match(/[a-z]/i)?.[0] ?? '';
+    const letters = readLetters();
+    letters[letterIndex] = letter;
+    onChange(serializeLetters(letters));
+    if (letter && letterIndex < letterIndexes.length - 1) {
+      inputRefs.current[letterIndex + 1]?.focus();
+    }
+  };
+
+  const pasteLetters = (letterIndex: number, pastedText: string) => {
+    const pastedLetters = pastedText.match(/[a-z]/gi) ?? [];
+    if (!pastedLetters.length) return;
+    const letters = readLetters();
+    pastedLetters.forEach((letter, offset) => {
+      if (letterIndex + offset < letters.length) letters[letterIndex + offset] = letter;
+    });
+    onChange(serializeLetters(letters));
+    inputRefs.current[Math.min(letterIndex + pastedLetters.length, letters.length - 1)]?.focus();
+  };
+
+  if (letterIndexes.length === 0) return null;
+
+  return (
+    <div
+      role="group"
+      aria-label="받아쓰기 철자 입력"
+      data-testid="group-passage-dictation-letter-boxes"
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-2 rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] p-4 sm:gap-x-2 sm:p-5"
+    >
+      {templateChars.map((character, index) => {
+        if (/\s/.test(character)) {
+          return <span key={`space-${index}`} aria-hidden="true" className="w-2 sm:w-3" />;
+        }
+        const letterIndex = letterIndexes.indexOf(index);
+        if (letterIndex < 0) {
+          return <span key={`punctuation-${index}`} aria-hidden="true" className="px-0.5 text-lg font-semibold text-[hsl(var(--sidebar-foreground)/.7)]">{character}</span>;
+        }
+        const typedLetter = readLetters()[letterIndex] ?? '';
+        return (
+          <input
+            key={`letter-${index}`}
+            ref={(element) => { inputRefs.current[letterIndex] = element; }}
+            id={letterIndex === 0 ? inputId : `${inputId}-${letterIndex + 1}`}
+            type="text"
+            value={typedLetter}
+            onChange={(event) => setLetter(letterIndex, event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onSubmit();
+              } else if (event.key === 'Backspace' && !typedLetter && letterIndex > 0) {
+                event.preventDefault();
+                inputRefs.current[letterIndex - 1]?.focus();
+              } else if (event.key === 'ArrowLeft' && letterIndex > 0) {
+                event.preventDefault();
+                inputRefs.current[letterIndex - 1]?.focus();
+              } else if (event.key === 'ArrowRight' && letterIndex < letterIndexes.length - 1) {
+                event.preventDefault();
+                inputRefs.current[letterIndex + 1]?.focus();
+              }
+            }}
+            onPaste={(event) => {
+              event.preventDefault();
+              pasteLetters(letterIndex, event.clipboardData.getData('text'));
+            }}
+            disabled={disabled}
+            maxLength={1}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            aria-label={`철자 ${letterIndex + 1}`}
+            data-testid={letterIndex === 0 ? 'input-passage-dictation' : `input-dictation-letter-${letterIndex + 1}`}
+            className="h-11 w-9 rounded-lg border border-[hsl(var(--sidebar-foreground)/.22)] bg-[hsl(var(--sidebar))] text-center font-mono text-lg font-bold uppercase text-[hsl(var(--sidebar-foreground))] outline-none transition-colors focus:border-[hsl(var(--sidebar-primary))] focus:ring-2 focus:ring-[hsl(var(--sidebar-primary)/.25)] disabled:opacity-50 sm:h-12 sm:w-10"
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function speakSentence(sentence: string, onStart: () => void, onEnd: () => void) {
   if (!('speechSynthesis' in window)) {
     onEnd();
@@ -1097,7 +1208,7 @@ export default function PassagePractice({
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
                     {isWordMaterial
                       ? '영어 단어를 보고 알맞은 한글 뜻을 선택해 확인하세요.'
-                      : '빈칸에 들어갈 단어를 듣고 순서대로 적어보세요. 문장은 자동으로 반복 재생돼요.'}
+                      : '빈칸 단어를 듣고 글자 칸에 철자를 입력하세요. 문장은 자동으로 반복 재생돼요.'}
                   </p>
                   {!isWordMaterial && <button
                     type="button"
@@ -1199,6 +1310,14 @@ export default function PassagePractice({
                     placeholder="답을 입력하세요"
                     autoComplete="off"
                     autoCapitalize="off"
+                  />
+                ) : mode === 'dictation' ? (
+                  <LetterBoxAnswer
+                    answerTemplate={expectedAnswer}
+                    value={currentAnswers[mode]}
+                    onChange={updateAnswer}
+                    onSubmit={checkAnswer}
+                    inputId={`passage-answer-${current.id}`}
                   />
                 ) : (
                   <textarea
