@@ -114,6 +114,25 @@ function getManualWordDraftCount(draft: WordDraft): number {
   );
 }
 
+async function createDefaultWordFolder(level: LearningContentLevel): Promise<AssignmentFolder> {
+  const response = await apiFetch('/api/admin/assignment-folders', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: `${levelLabels[level]} 단어 자료`,
+      materialType: 'word',
+      level,
+      parentFolderId: null,
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error || '단어 폴더를 만들지 못했습니다.');
+  }
+  return response.json() as Promise<AssignmentFolder>;
+}
+
 function getContentInput(
   saved: LearningContent | undefined,
   level: LearningContentLevel,
@@ -244,9 +263,22 @@ export default function AdminWordContentSettings() {
         if (!response.ok) throw new Error('단어 폴더 목록을 불러오지 못했습니다.');
         return response.json() as Promise<AssignmentFolder[]>;
       })
-      .then((folders) => setWordFolders(folders.filter((folder) =>
-        folder.materialType === 'word' || folder.materialType === 'mixed',
-      )))
+      .then((folders) => {
+        const availableFolders = folders.filter((folder) =>
+          folder.materialType === 'word' || folder.materialType === 'mixed',
+        );
+        setWordFolders(availableFolders);
+        setFolderByLevel((current) => {
+          const next = { ...current };
+          for (const level of levelOrder) {
+            if (next[level]) continue;
+            const preferred = availableFolders.find((folder) => folder.level === level)
+              ?? availableFolders.find((folder) => folder.level == null);
+            if (preferred) next[level] = String(preferred.id);
+          }
+          return next;
+        });
+      })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           setStatusMessage(error instanceof Error ? error.message : '단어 폴더를 불러오지 못했습니다.');
@@ -332,16 +364,23 @@ export default function AdminWordContentSettings() {
       setStatusIsError(true);
       return;
     }
-    const folderId = folderByLevel[level];
-    if (!folderId) {
-      setStatusMessage(`${levelLabels[level]} 과정에서 저장할 단어 폴더를 선택해 주세요.`);
-      setStatusIsError(true);
-      return;
-    }
+    let folderId = folderByLevel[level];
     setSavingLevel(level);
     setStatusMessage('');
     setStatusIsError(false);
     try {
+      if (!folderId) {
+        const availableFolder = wordFolders.find((folder) => folder.level === level)
+          ?? wordFolders.find((folder) => folder.level == null);
+        if (availableFolder) {
+          folderId = String(availableFolder.id);
+        } else {
+          const createdFolder = await createDefaultWordFolder(level);
+          folderId = String(createdFolder.id);
+          setWordFolders((current) => [...current, createdFolder]);
+        }
+        setFolderByLevel((current) => ({ ...current, [level]: folderId }));
+      }
       const todayWord = preview[0];
       const assignmentResponse = await apiFetch('/api/admin/assignments', {
         method: 'POST',
@@ -542,7 +581,7 @@ export default function AdminWordContentSettings() {
               </label>
               {!foldersLoading && wordFolders.length === 0 && (
                 <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-                  과제 관리에서 단어 폴더를 먼저 만들어 주세요.
+                  저장할 폴더가 없으면 이 과정의 단어 폴더를 자동으로 만듭니다.
                 </p>
               )}
               {upload.error && <p role="alert" className="mt-3 text-xs font-semibold text-[hsl(var(--destructive))]">{upload.error}</p>}
@@ -571,7 +610,7 @@ export default function AdminWordContentSettings() {
                 <button
                   type="button"
                   onClick={() => void saveLevel(level)}
-                  disabled={loading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
+                  disabled={loading || foldersLoading || Boolean(savingLevel) || Boolean(savingSentenceLevel)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-45"
                   data-testid={`button-save-word-${level.toLowerCase()}`}
                 >
