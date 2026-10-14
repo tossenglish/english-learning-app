@@ -603,7 +603,7 @@ export default function PassagePractice({
   };
 
   const advanceToNextWordAutomatically = () => {
-    if (!isWordMaterial || (!hasNextWord && mode !== 'writing')) return;
+    if (!isWordMaterial) return;
     focusWordAnswerAfterAdvanceRef.current = mode === 'writing' && hasNextWord;
     setIsWordAutoAdvancing(true);
     const advance = () => {
@@ -620,31 +620,26 @@ export default function PassagePractice({
       wordAdvanceTimerRef.current = window.setTimeout(advance, delay);
     };
 
-    if (mode === 'writing') {
-      const pronunciationGeneration = speechGenerationRef.current;
-      let pronunciationEnded = false;
-      const finishPronunciation = () => {
-        if (pronunciationEnded || speechGenerationRef.current !== pronunciationGeneration) return;
-        pronunciationEnded = true;
-        setSpeaking(false);
-        if (hasNextWord) scheduleAdvance(250);
-        else setIsWordAutoAdvancing(false);
-      };
-      try {
-        speakSentence(
-          current.english,
-          () => {
-            if (speechGenerationRef.current === pronunciationGeneration) setSpeaking(true);
-          },
-          finishPronunciation,
-        );
-      } catch {
-        finishPronunciation();
-      }
-      return;
+    const pronunciationGeneration = speechGenerationRef.current;
+    let pronunciationEnded = false;
+    const finishPronunciation = () => {
+      if (pronunciationEnded || speechGenerationRef.current !== pronunciationGeneration) return;
+      pronunciationEnded = true;
+      setSpeaking(false);
+      if (hasNextWord) scheduleAdvance(250);
+      else setIsWordAutoAdvancing(false);
+    };
+    try {
+      speakSentence(
+        current.english,
+        () => {
+          if (speechGenerationRef.current === pronunciationGeneration) setSpeaking(true);
+        },
+        finishPronunciation,
+      );
+    } catch {
+      finishPronunciation();
     }
-
-    scheduleAdvance(700);
   };
 
   const checkAnswer = () => {
@@ -1231,11 +1226,9 @@ export default function PassagePractice({
                 <span>
                   {feedback === 'correct' && (isWordMaterial
                     ? isWordAutoAdvancing
-                      ? mode === 'writing'
-                        ? speaking
-                          ? '정답이에요. 단어 발음을 듣고 있어요.'
-                          : hasNextWord ? '정답이에요. 발음을 재생한 뒤 다음 단어로 넘어가요.' : '정답이에요. 마지막 단어 발음을 들어보세요.'
-                        : '정답이에요. 다음 단어로 넘어가요.'
+                      ? speaking
+                        ? '정답이에요. 단어 발음을 듣고 있어요.'
+                        : hasNextWord ? '정답이에요. 발음을 재생한 뒤 다음 단어로 넘어가요.' : '정답이에요. 마지막 단어 발음을 들어보세요.'
                       : mode === 'writing' ? '정확해요. 이 단어를 직접 쓸 수 있어요.' : '정확해요. 단어의 뜻을 맞혔어요.'
                     : mode === 'shadowing' ? '좋아요. 입으로 직접 말해본 문장이에요.' : '정확해요. 이 문장은 이제 내 것이 됐어요.')}
                   {feedback === 'wrong' && `${isWordMaterial ? '아직 정답이 아니에요. 다시 확인해볼까요?' : '조금 달라요. 정답을 확인하고 다시 한 번 써볼까요?'} ${showAnswer ? expectedAnswer : ''}`}
