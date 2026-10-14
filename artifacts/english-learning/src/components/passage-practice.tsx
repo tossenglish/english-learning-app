@@ -286,119 +286,6 @@ function buildCloze(english: string) {
   };
 }
 
-type SentenceWordTile = { id: number; word: string };
-
-function shuffleSentenceWords(sentence: string, sentenceId: number): SentenceWordTile[] {
-  const words = sentence.trim().split(/\s+/).filter(Boolean).map((word, id) => ({ id, word }));
-  let seed = 2166136261;
-  for (const character of `${sentenceId}:${sentence}`) {
-    seed = Math.imul(seed ^ character.charCodeAt(0), 16777619) >>> 0;
-  }
-  for (let index = words.length - 1; index > 0; index -= 1) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const swapIndex = seed % (index + 1);
-    [words[index], words[swapIndex]] = [words[swapIndex], words[index]];
-  }
-  if (words.length > 1 && words.every((word, index) => word.id === index)) {
-    words.unshift(words.pop()!);
-  }
-  return words;
-}
-
-function SentenceWordOrderInput({
-  words,
-  value,
-  onChange,
-}: {
-  words: SentenceWordTile[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const selectedWords = value.trim() ? value.trim().split(/\s+/) : [];
-  const selectedCounts = selectedWords.reduce((counts, word) => {
-    counts.set(word, (counts.get(word) ?? 0) + 1);
-    return counts;
-  }, new Map<string, number>());
-  const tileOccurrences = new Map<string, number>();
-  const wordTiles = words.map((tile) => {
-    const occurrence = tileOccurrences.get(tile.word) ?? 0;
-    tileOccurrences.set(tile.word, occurrence + 1);
-    return { ...tile, used: occurrence < (selectedCounts.get(tile.word) ?? 0) };
-  });
-
-  return (
-    <section
-      className="space-y-4 rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] p-4 sm:p-5"
-      data-testid="group-sentence-word-order"
-    >
-      <div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-bold">내가 만든 문장</p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => onChange(selectedWords.slice(0, -1).join(' '))}
-              disabled={selectedWords.length === 0}
-              className="text-[11px] font-semibold text-[hsl(var(--sidebar-foreground)/.7)] underline underline-offset-4 disabled:opacity-40"
-              data-testid="button-undo-sentence-word"
-            >
-              되돌리기
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange('')}
-              disabled={selectedWords.length === 0}
-              className="text-[11px] font-semibold text-[hsl(var(--sidebar-foreground)/.7)] underline underline-offset-4 disabled:opacity-40"
-              data-testid="button-clear-sentence-words"
-            >
-              다시 하기
-            </button>
-          </div>
-        </div>
-        <div
-          className="mt-2 flex min-h-14 flex-wrap items-center gap-2 rounded-xl border border-dashed border-[hsl(var(--sidebar-foreground)/.25)] bg-[hsl(var(--sidebar)/.55)] p-3"
-          aria-label="선택한 단어 순서"
-          aria-live="polite"
-          data-testid="text-sentence-word-order-answer"
-        >
-          {selectedWords.length === 0 ? (
-            <span className="text-xs text-[hsl(var(--sidebar-foreground)/.45)]">아래 단어를 올바른 순서로 눌러 문장을 만들어보세요.</span>
-          ) : selectedWords.map((word, index) => (
-            <button
-              key={`${word}-${index}`}
-              type="button"
-              onClick={() => onChange(selectedWords.filter((_, wordIndex) => wordIndex !== index).join(' '))}
-              aria-label={`${word} 선택 취소`}
-              className="rounded-lg border border-[hsl(var(--sidebar-primary)/.45)] bg-[hsl(var(--sidebar-primary)/.15)] px-3 py-2 text-sm font-semibold text-[hsl(var(--sidebar-foreground))]"
-              data-testid={`button-selected-sentence-word-${index + 1}`}
-            >
-              {word}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="mb-2 text-xs font-bold">섞인 단어</p>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="순서에 추가할 단어">
-          {wordTiles.map((tile) => (
-            <button
-              key={tile.id}
-              type="button"
-              onClick={() => onChange([...selectedWords, tile.word].join(' '))}
-              disabled={tile.used}
-              aria-pressed={tile.used}
-              className="rounded-lg border border-[hsl(var(--sidebar-foreground)/.2)] bg-[hsl(var(--sidebar))] px-3 py-2 text-sm font-semibold text-[hsl(var(--sidebar-foreground))] transition-colors hover:border-[hsl(var(--sidebar-primary))] disabled:cursor-default disabled:opacity-35"
-              data-testid={`button-scrambled-sentence-word-${tile.id + 1}`}
-            >
-              {tile.word}
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function LetterBoxAnswer({
   answerTemplate,
   value,
@@ -594,10 +481,6 @@ export default function PassagePractice({
   const currentCloze = useMemo(
     () => buildCloze(current?.english ?? ''),
     [current?.english],
-  );
-  const scrambledSentenceWords = useMemo(
-    () => shuffleSentenceWords(current?.english ?? '', current?.id ?? 0),
-    [current?.english, current?.id],
   );
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
@@ -1380,7 +1263,7 @@ export default function PassagePractice({
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
                     {isWordMaterial
                       ? '한글 뜻을 보고 해당하는 영어 단어를 적어보세요.'
-                      : '섞인 단어를 올바른 순서로 눌러 빈칸 문장을 완성해보세요.'}
+                      : '빈칸 문장과 한글 해석을 참고해 전체 문장을 직접 입력해보세요.'}
                   </p>
                   {!isWordMaterial && <p className="mt-2 flex items-center gap-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.45)]"><Lightbulb size={13} /> {current.hint}</p>}
                 </div>
@@ -1431,7 +1314,7 @@ export default function PassagePractice({
                     data-testid="text-passage-cloze"
                   >
                     <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
-                      {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '단어 순서를 바꿔 문장을 완성하세요'}
+                      {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '빈칸 문장'}
                     </p>
                     <p className="mt-2 break-words text-lg font-semibold leading-relaxed sm:text-xl">
                       {currentCloze.prompt}
@@ -1467,13 +1350,11 @@ export default function PassagePractice({
                     onSubmit={checkAnswer}
                     inputId={`passage-answer-${current.id}`}
                   />
-                ) : mode === 'writing' ? (
-                  <SentenceWordOrderInput
-                    words={scrambledSentenceWords}
-                    value={currentAnswers[mode]}
-                    onChange={updateAnswer}
-                  />
                 ) : (
+                  <>
+                  {!isWordMaterial && mode === 'writing' && (
+                    <p className="mb-2 text-xs font-bold">내가 만든 문장</p>
+                  )}
                   <textarea
                     id={`passage-answer-${current.id}`}
                     value={currentAnswers[mode]}
@@ -1486,10 +1367,11 @@ export default function PassagePractice({
                     }}
                     data-testid={`input-passage-${mode}`}
                     rows={3}
-                    className="min-h-[144px] w-full resize-y rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 py-4 text-base leading-relaxed text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:min-h-[168px] sm:text-lg"
-                    placeholder="빈칸에 들어갈 영어 단어를 순서대로 입력하세요"
+                    className="min-h-[144px] w-full resize-y rounded-2xl border border-slate-300 bg-slate-50 px-4 py-4 text-base leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-500 focus:border-[hsl(var(--sidebar-primary))] focus:ring-2 focus:ring-[hsl(var(--sidebar-primary)/.2)] sm:min-h-[168px] sm:text-lg"
+                    placeholder="완성한 영어 문장을 직접 입력하세요."
                     autoComplete="off"
                   />
+                  </>
                 )}
               </div>
             )}
