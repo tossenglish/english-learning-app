@@ -528,30 +528,7 @@ function LevelPills({ level, onChange }: { level: Level; onChange: (level: Level
   );
 }
 
-function ProgressRing({ percent }: { percent: number }) {
-  return (
-    <div className="relative flex h-28 w-28 items-center justify-center rounded-full" style={{ background: `conic-gradient(hsl(var(--sidebar-primary)) ${percent * 3.6}deg, hsl(var(--sidebar)/.55) 0deg)` }} data-testid="progress-ring">
-      <div className="flex h-[88px] w-[88px] flex-col items-center justify-center rounded-full bg-[hsl(var(--sidebar))]">
-        <span className="font-mono text-2xl font-bold text-[hsl(var(--sidebar-foreground))]" data-testid="text-today-percent">{percent}%</span>
-        <span className="text-[10px] text-[hsl(var(--sidebar-foreground)/.55)]">오늘의 달성</span>
-      </div>
-    </div>
-  );
-}
-
-function Home({ level, onLevelChange, learned, onStart, content }: { level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; content: LearnContent }) {
-  const completed = learned ? 4 : 3;
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [startError, setStartError] = useState('');
-
-  const startPractice = async (assignment?: Assignment) => {
-    setStartError('');
-    try {
-      await onStart(assignment);
-    } catch (error) {
-      setStartError(error instanceof Error ? error.message : '자료를 연습으로 불러오지 못했습니다.');
-    }
-  };
+function Home({ level, onLevelChange, onStart }: { level: Level; onLevelChange: (level: Level) => void; onStart: (assignment?: Assignment) => Promise<void> }) {
   return (
     <div className="space-y-8">
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -568,57 +545,9 @@ function Home({ level, onLevelChange, learned, onStart, content }: { level: Leve
         </div>
       </section>
 
-      <section className="rise-in stagger-1 grid gap-5 lg:grid-cols-[1.28fr_.72fr]">
-        <div className="relative overflow-hidden rounded-[28px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
-          <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full border-[36px] border-[hsl(var(--sidebar-primary)/.12)]" />
-          <div className="absolute -bottom-20 right-24 h-40 w-40 rounded-full border-[22px] border-[hsl(var(--accent)/.12)]" />
-          <div className="relative flex flex-col justify-between gap-8 sm:flex-row sm:items-center">
-            <div>
-              <div className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
-                <Clock3 size={15} /> Today's focus
-              </div>
-              <h2 className="max-w-md text-3xl font-bold leading-[1.12] tracking-[-.04em] text-[hsl(var(--sidebar-primary))] sm:text-[40px]">{levelCopy[level].next}.</h2>
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.6)]">{levelCopy[level].detail} Let&apos;s do it.</p>
-              <button type="button" onClick={() => void startPractice(assignments[0])} data-testid="button-start-session" className="button-pop mt-7 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--sidebar))]">
-                {learned ? '한 번 더 연습하기' : '오늘의 연습 시작'} <ArrowRight size={17} />
-              </button>
-              {startError && <p className="mt-3 max-w-sm text-xs font-semibold text-[hsl(var(--sidebar-primary))]">{startError}</p>}
-            </div>
-            <div className="flex shrink-0 justify-center sm:pr-5">
-              <ProgressRing percent={learned ? 80 : 60} />
-            </div>
-          </div>
-          <div className="relative mt-8 flex items-center gap-3 border-t border-[hsl(var(--sidebar-foreground)/.12)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]">
-            <Flame size={16} className="text-[hsl(var(--sidebar-primary))]" />
-            <span><strong className="text-[hsl(var(--sidebar-foreground))]" data-testid="text-streak">7일 연속</strong>으로 이어가는 중이에요</span>
-            <span className="ml-auto font-mono text-[11px]" data-testid="status-session-progress">{completed} / 5 lessons</span>
-          </div>
-        </div>
-
-        <div className="card-lift rounded-[28px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-7 sm:p-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Word of the day</span>
-               <h2 className="mt-5 font-sans text-3xl font-bold tracking-[-.05em]" data-testid="text-word-serendipity">{content.word}</h2>
-               <p className="mt-1 text-base font-semibold text-[hsl(var(--accent))]" data-testid="text-meaning-serendipity">{content.shortMeaning}</p>
-            </div>
-            <div className="float-soft flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"><Lightbulb size={20} /></div>
-          </div>
-          <div className="mt-8 border-l-2 border-[hsl(var(--accent)/.55)] pl-4">
-             <p className="text-sm font-medium leading-relaxed text-[hsl(var(--foreground)/.8)]" data-testid="text-phrase-cafe">“{content.exampleSentence}”</p>
-             <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">{content.exampleKorean}</p>
-          </div>
-          <Link href="/learn" data-testid="link-word-practice" className="mt-7 flex items-center justify-between border-t border-[hsl(var(--border))] pt-5 text-xs font-bold text-[hsl(var(--foreground))] hover:text-[hsl(var(--accent))]">
-            <span className="flex items-center gap-2"><Volume2 size={15} /> 발음 듣고 연습하기</span>
-            <ArrowRight size={15} />
-          </Link>
-        </div>
-      </section>
-
       <LevelAssignments
         level={level}
-        onAssignmentsChange={setAssignments}
-        onStartPractice={(assignment) => void startPractice(assignment)}
+        onStartPractice={onStart}
       />
 
       <HomeVideoPlayer />
@@ -765,7 +694,7 @@ function RouterContent({ level, onLevelChange, learned, onStart, cardFlipped, se
   level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void; content: LearnContent; quizContent: LearnContent; quizPosition: number; quizTotal: number; hasNextQuizWord: boolean; onNextQuizWord: () => void;
 }) {
   return <Switch>
-    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} learned={learned} onStart={onStart} content={content} /></Route>
+    <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} onStart={onStart} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={quizContent} quizPosition={quizPosition} quizTotal={quizTotal} hasNextWord={hasNextQuizWord} onNextWord={onNextQuizWord} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
