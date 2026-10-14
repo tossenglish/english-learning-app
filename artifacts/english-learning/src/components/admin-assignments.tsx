@@ -188,6 +188,18 @@ function getFolderAndDescendantIds(folderId: number, folders: AssignmentFolder[]
   return [...ids];
 }
 
+function getMaterialEntryCount(assignment: Assignment): number {
+  return assignment.materialContent?.trim()
+    ? parseDirectMaterial(assignment.materialContent, assignment.materialType).length
+    : 0;
+}
+
+function getWordCount(assignments: Assignment[]): number {
+  return assignments
+    .filter((assignment) => assignment.materialType === 'word')
+    .reduce((total, assignment) => total + getMaterialEntryCount(assignment), 0);
+}
+
 export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
@@ -273,6 +285,9 @@ export default function AdminAssignments() {
   const courseSubfolders = folders.filter((folder) =>
     folder.level === listLevel || folder.level == null,
   );
+  const assignmentsForFolderCounter = courseFolderOpen
+    ? folderListFilter === '' ? courseAssignments : visibleAssignments
+    : assignments.filter((assignment) => assignment.materialType === materialFolder);
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -669,6 +684,10 @@ export default function AdminAssignments() {
                   && assignment.level === level
                   && assignment.materialType === materialType,
                 );
+                const folderWordCount = folderItems.reduce(
+                  (total, assignment) => total + getMaterialEntryCount(assignment),
+                  0,
+                );
                 const sourceKey = `folder:${folder.id}`;
                 return (
                   <label key={folder.id} className="flex items-start gap-2 rounded-lg p-2 text-xs hover:bg-[hsl(var(--muted)/.5)]">
@@ -681,7 +700,9 @@ export default function AdminAssignments() {
                     />
                     <span>
                       <strong>{getFolderPath(folder.id, folders)}</strong>
-                      <span className="ml-1 text-[hsl(var(--muted-foreground))]">{folderItems.length}개 자료</span>
+                      <span className="ml-1 text-[hsl(var(--muted-foreground))]">
+                        {folderItems.length}개 자료{materialType === 'word' ? ` · ${folderWordCount}개 단어` : ''}
+                      </span>
                       <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
                         {folderItems.slice(0, 3).map((item) => item.title).join(' · ')}
                         {folderItems.length > 3 ? ' …' : ''}
@@ -1166,6 +1187,9 @@ export default function AdminAssignments() {
                       <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">{assignment.description}</p>
                     )}
                     <div className="mt-3 flex flex-wrap gap-3 text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">
+                      {assignment.materialType === 'word' && (
+                        <span>{getMaterialEntryCount(assignment)}개 단어</span>
+                      )}
                       {assignment.dueDate && <span className="flex items-center gap-1"><CalendarDays size={12} /> {assignment.dueDate}</span>}
                       {assignment.resourceName && <span className="flex items-center gap-1"><FileText size={12} /> {assignment.resourceName}</span>}
                       {assignment.folderId != null && (
