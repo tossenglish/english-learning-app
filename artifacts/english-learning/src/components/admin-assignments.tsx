@@ -10,6 +10,7 @@ import type {
 import {
   ArrowLeft,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   ClipboardList,
   FileText,
@@ -998,7 +999,7 @@ export default function AdminAssignments() {
             </div>
           ) : (
             <div className="mt-7">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
                 <button
                   type="button"
                   onClick={() => {
@@ -1007,12 +1008,30 @@ export default function AdminAssignments() {
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 >
-                  <ArrowLeft size={14} /> 과정 폴더
+                  <ArrowLeft size={14} /> 상위 폴더
                 </button>
                 <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={14} />
-                <h3 className="font-bold">{courseOptions.find((course) => course.value === listLevel)?.label} 하위 폴더</h3>
+                <span>{materialFolder === 'word' ? '단어 폴더' : '문장 폴더'}</span>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-3 rounded-2xl border border-[hsl(var(--accent)/.35)] bg-[hsl(var(--accent)/.04)] p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))]">
+                    <FolderOpen size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">상위 폴더 · 과정</span>
+                    <span className="mt-0.5 block text-sm font-bold">
+                      {courseOptions.find((course) => course.value === listLevel)?.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">
+                      아래 하위 폴더에서 과제를 골라보세요.
+                    </span>
+                  </span>
+                  <ChevronDown className="text-[hsl(var(--accent))]" size={18} />
+                </div>
+                <div className="ml-5 mt-3 border-l-2 border-[hsl(var(--accent)/.3)] pl-4">
+                  <h3 className="mb-3 text-xs font-bold text-[hsl(var(--muted-foreground))]">하위 폴더</h3>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   { value: 'all', label: '전체 자료', count: courseAssignments.length },
                   ...courseSubfolders.map((folder) => ({
@@ -1048,6 +1067,8 @@ export default function AdminAssignments() {
                     <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={16} />
                   </button>
                 ))}
+                  </div>
+                </div>
               </div>
               {courseAssignments.length === 0 && (
                 <p className="mt-4 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-5 text-center text-sm text-[hsl(var(--muted-foreground))]">
