@@ -243,21 +243,14 @@ export interface CreateAssignmentRequest {
   isPublished: boolean;
 }
 
-export interface AssignmentFolder {
-  id: number;
-  name: string;
-  materialType: MaterialType;
-  createdAt: string;
-}
+export type FolderMaterialType = typeof FolderMaterialType[keyof typeof FolderMaterialType];
 
-export interface AssignmentFolderInput {
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  name: string;
-  materialType: MaterialType;
-}
+
+export const FolderMaterialType = {
+  sentence: 'sentence',
+  word: 'word',
+  mixed: 'mixed',
+} as const;
 
 export type CourseLevel = typeof CourseLevel[keyof typeof CourseLevel];
 
@@ -267,6 +260,31 @@ export const CourseLevel = {
   Intermediate: 'Intermediate',
   Advanced: 'Advanced',
 } as const;
+
+export interface AssignmentFolder {
+  id: number;
+  name: string;
+  materialType: FolderMaterialType;
+  level: CourseLevel | null;
+  /** @nullable */
+  parentFolderId: number | null;
+  createdAt: string;
+}
+
+export interface AssignmentFolderInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  materialType: FolderMaterialType;
+  level: CourseLevel;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  parentFolderId: number | null;
+}
 
 export interface AssignmentMember {
   id: string;

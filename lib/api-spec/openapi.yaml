@@ -885,27 +885,41 @@ components:
           type: boolean
     AssignmentFolder:
       type: object
-      required: [id, name, materialType, createdAt]
+      required: [id, name, materialType, level, parentFolderId, createdAt]
       properties:
         id:
           type: integer
         name:
           type: string
         materialType:
-          $ref: "#/components/schemas/MaterialType"
+          $ref: "#/components/schemas/FolderMaterialType"
+        level:
+          oneOf:
+            - $ref: "#/components/schemas/CourseLevel"
+            - type: "null"
+        parentFolderId:
+          type: [integer, "null"]
         createdAt:
           type: string
           format: date-time
     AssignmentFolderInput:
       type: object
-      required: [name, materialType]
+      required: [name, materialType, level, parentFolderId]
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 80
         materialType:
-          $ref: "#/components/schemas/MaterialType"
+          $ref: "#/components/schemas/FolderMaterialType"
+        level:
+          $ref: "#/components/schemas/CourseLevel"
+        parentFolderId:
+          type: [integer, "null"]
+          minimum: 1
+    FolderMaterialType:
+      type: string
+      enum: [sentence, word, mixed]
     MaterialType:
       type: string
       enum: [sentence, word]

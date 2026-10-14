@@ -5,7 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { MaterialType } from './materialType';
+import type { CourseLevel } from './courseLevel';
+import type { FolderMaterialType } from './folderMaterialType';
 
 export interface AssignmentFolderInput {
   /**
@@ -13,5 +14,11 @@ export interface AssignmentFolderInput {
      * @maxLength 80
      */
   name: string;
-  materialType: MaterialType;
+  materialType: FolderMaterialType;
+  level: CourseLevel;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  parentFolderId: number | null;
 }

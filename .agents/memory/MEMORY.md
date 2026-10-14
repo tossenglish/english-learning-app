@@ -2,3 +2,4 @@
 - [GitHub push fallback](github-push.md) — if Git CLI auth fails, preserve Git object bytes and fast-forward through the connected GitHub API.
 - [Database schema push safety](database-schema-push.md) — avoid force-pushing when Drizzle requests unrelated data truncation; apply only the needed safe schema change.
 - [Separate word quiz flows](word-quiz-flows.md) — the home quick check and course assignment practice are distinct paths; validate both when word progression is reported broken.
+- [Course folder organization](course-folder-organization.md) — keep the three learning courses separate, while allowing words and sentences together in nested folders.

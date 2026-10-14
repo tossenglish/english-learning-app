@@ -14,6 +14,7 @@ export * from './assignmentMember';
 export * from './courseLevel';
 export * from './createAssignmentRequest';
 export * from './errorEnvelope';
+export * from './folderMaterialType';
 export * from './getLearningContentParams';
 export * from './healthStatus';
 export * from './homeVideoSettings';

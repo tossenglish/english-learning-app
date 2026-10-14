@@ -135,16 +135,40 @@ router.post(
       return;
     }
 
+    const { level, parentFolderId } = parsed.data;
+    if (parentFolderId !== null) {
+      const [parent] = await db
+        .select({ id: assignmentFoldersTable.id })
+        .from(assignmentFoldersTable)
+        .where(and(
+          eq(assignmentFoldersTable.id, parentFolderId),
+          eq(assignmentFoldersTable.level, level),
+        ));
+      if (!parent) {
+        res.status(400).json({ error: "Parent folder must belong to the same course" });
+        return;
+      }
+    }
+    const siblingConditions = [
+      eq(assignmentFoldersTable.name, name),
+      eq(assignmentFoldersTable.level, level),
+      parentFolderId === null
+        ? isNull(assignmentFoldersTable.parentFolderId)
+        : eq(assignmentFoldersTable.parentFolderId, parentFolderId),
+    ];
+    const [duplicate] = await db
+      .select({ id: assignmentFoldersTable.id })
+      .from(assignmentFoldersTable)
+      .where(and(...siblingConditions));
+    if (duplicate) {
+      res.status(409).json({ error: "A folder with this name already exists here" });
+      return;
+    }
+
     const [folder] = await db
       .insert(assignmentFoldersTable)
       .values({ ...parsed.data, name })
-      .onConflictDoNothing()
       .returning();
-
-    if (!folder) {
-      res.status(409).json({ error: "A folder with this name already exists for this material type" });
-      return;
-    }
 
     res.status(201).json(CreateAssignmentFolderResponse.parse(folder));
   },
@@ -259,11 +283,14 @@ router.post(
         .where(
           and(
             eq(assignmentFoldersTable.id, folderId),
-            eq(assignmentFoldersTable.materialType, parsed.data.materialType),
+            or(
+              eq(assignmentFoldersTable.level, parsed.data.level),
+              isNull(assignmentFoldersTable.level),
+            ),
           ),
         );
       if (!folder) {
-        res.status(400).json({ error: "Selected folder does not match the material type" });
+        res.status(400).json({ error: "Selected folder does not match the course" });
         return;
       }
     }

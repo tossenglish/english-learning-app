@@ -160,6 +160,34 @@ function splitMaterialColumns(content: string): { english: string; korean: strin
   };
 }
 
+function getFolderPath(folderId: number, folders: AssignmentFolder[]): string {
+  const segments: string[] = [];
+  const visited = new Set<number>();
+  let folder = folders.find((item) => item.id === folderId);
+  while (folder && !visited.has(folder.id)) {
+    visited.add(folder.id);
+    segments.unshift(folder.name);
+    const parentId = folder.parentFolderId;
+    folder = parentId == null ? undefined : folders.find((item) => item.id === parentId);
+  }
+  return segments.join(' / ');
+}
+
+function getFolderAndDescendantIds(folderId: number, folders: AssignmentFolder[]): number[] {
+  const ids = new Set<number>([folderId]);
+  let foundNew = true;
+  while (foundNew) {
+    foundNew = false;
+    folders.forEach((folder) => {
+      if (folder.parentFolderId != null && ids.has(folder.parentFolderId) && !ids.has(folder.id)) {
+        ids.add(folder.id);
+        foundNew = true;
+      }
+    });
+  }
+  return [...ids];
+}
+
 export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
@@ -167,6 +195,7 @@ export default function AdminAssignments() {
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
   const [materialType, setMaterialType] = useState<MaterialType>('sentence');
   const [assignmentFolderId, setAssignmentFolderId] = useState('');
+  const [newFolderParentId, setNewFolderParentId] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [materialEnglish, setMaterialEnglish] = useState('');
   const [materialKorean, setMaterialKorean] = useState('');
@@ -188,17 +217,29 @@ export default function AdminAssignments() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
-  const foldersForMaterialType = folders.filter((folder) => folder.materialType === materialType);
+  const foldersForCourse = folders.filter((folder) =>
+    folder.level === level || folder.level == null,
+  );
   const selectedLearningContent = level === 'All'
     ? undefined
     : learningContents.find((content) => content.level === level);
-  const sourceFolders = level === 'All' ? [] : folders.filter((folder) =>
-    folder.materialType === materialType && assignments.some((assignment) =>
-      assignment.folderId === folder.id
-      && assignment.level === level
-      && assignment.materialType === materialType,
-    ),
-  );
+  const sourceFolderIds = new Set<number>();
+  if (level !== 'All') {
+    assignments
+      .filter((assignment) => assignment.level === level && assignment.materialType === materialType)
+      .forEach((assignment) => {
+        let folder = folders.find((item) => item.id === assignment.folderId);
+        while (folder && !sourceFolderIds.has(folder.id)) {
+          sourceFolderIds.add(folder.id);
+          folder = folder.parentFolderId == null
+            ? undefined
+            : folders.find((item) => item.id === folder!.parentFolderId);
+        }
+      });
+  }
+  const sourceFolders = level === 'All'
+    ? []
+    : foldersForCourse.filter((folder) => sourceFolderIds.has(folder.id));
 
   const loadLearningContents = () => {
     apiFetch('/api/admin/learning-content', { credentials: 'include' })
@@ -212,6 +253,10 @@ export default function AdminAssignments() {
       });
   };
 
+  const selectedFolderId = /^\d+$/.test(folderListFilter) ? Number(folderListFilter) : null;
+  const selectedFolderDescendants = selectedFolderId == null
+    ? []
+    : getFolderAndDescendantIds(selectedFolderId, folders);
   const visibleAssignments = assignments.filter((assignment) => {
     const matchesCourse = listLevel === 'All'
       ? assignment.level === 'All'
@@ -219,16 +264,14 @@ export default function AdminAssignments() {
     const matchesSubfolder = folderListFilter === 'all'
       || (folderListFilter === 'unfiled'
         ? assignment.folderId == null
-        : assignment.folderId === Number(folderListFilter));
+        : assignment.folderId != null && selectedFolderDescendants.includes(assignment.folderId));
     return matchesCourse && assignment.materialType === materialFolder && matchesSubfolder;
   });
   const courseAssignments = assignments.filter((assignment) =>
     assignment.level === listLevel && assignment.materialType === materialFolder,
   );
   const courseSubfolders = folders.filter((folder) =>
-    folder.materialType === materialFolder && courseAssignments.some((assignment) =>
-      assignment.folderId === folder.id,
-    ),
+    folder.level === listLevel || folder.level == null,
   );
 
   const loadAssignments = async () => {
@@ -288,9 +331,11 @@ export default function AdminAssignments() {
 
     for (const key of nextKeys.filter((candidate) => candidate.startsWith('folder:'))) {
       const folderId = Number(key.slice('folder:'.length));
+      const folderIds = getFolderAndDescendantIds(folderId, folders);
       contentLines.push(...assignments
         .filter((assignment) =>
-          assignment.folderId === folderId
+          assignment.folderId != null
+          && folderIds.includes(assignment.folderId)
           && assignment.level === level
           && assignment.materialType === materialType,
         )
@@ -309,6 +354,10 @@ export default function AdminAssignments() {
   const createAssignmentFolder = async () => {
     const name = newFolderName.trim();
     if (!name || creatingFolder) return;
+    if (level === 'All') {
+      setError('초급·중급·고급 과정 중 하나를 선택해 폴더를 만들어 주세요.');
+      return;
+    }
 
     setCreatingFolder(true);
     setError('');
@@ -317,7 +366,12 @@ export default function AdminAssignments() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, materialType }),
+        body: JSON.stringify({
+          name,
+          materialType: 'mixed',
+          level,
+          parentFolderId: newFolderParentId ? Number(newFolderParentId) : null,
+        }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null;
@@ -327,6 +381,7 @@ export default function AdminAssignments() {
       const created = await response.json() as AssignmentFolder;
       setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
       setAssignmentFolderId(String(created.id));
+      setNewFolderParentId(String(created.id));
       setNewFolderName('');
       setMaterialFolder(materialType);
       setFolderListFilter(String(created.id));
@@ -441,6 +496,7 @@ export default function AdminAssignments() {
       setSelectedSourceKeys([]);
       setMaterialType('sentence');
       setAssignmentFolderId('');
+      setNewFolderParentId('');
       setMaterialImportMessage('');
       setDueDate('');
       setAssigneeUserId('');
@@ -606,8 +662,10 @@ export default function AdminAssignments() {
                 </label>
               )}
               {sourceFolders.map((folder) => {
+                const descendantFolderIds = getFolderAndDescendantIds(folder.id, folders);
                 const folderItems = assignments.filter((assignment) =>
-                  assignment.folderId === folder.id
+                  assignment.folderId != null
+                  && descendantFolderIds.includes(assignment.folderId)
                   && assignment.level === level
                   && assignment.materialType === materialType,
                 );
@@ -622,7 +680,7 @@ export default function AdminAssignments() {
                       data-testid={`checkbox-source-folder-${folder.id}`}
                     />
                     <span>
-                      <strong>{folder.name}</strong>
+                      <strong>{getFolderPath(folder.id, folders)}</strong>
                       <span className="ml-1 text-[hsl(var(--muted-foreground))]">{folderItems.length}개 자료</span>
                       <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
                         {folderItems.slice(0, 3).map((item) => item.title).join(' · ')}
@@ -643,22 +701,22 @@ export default function AdminAssignments() {
               폴더를 체크하면 그 안의 해당 과정 자료를 모두 가져옵니다. 여러 폴더를 함께 선택할 수 있어요.
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
             <label className="grid gap-2">
-              <span className="text-xs font-bold">저장할 하위 폴더</span>
+              <span className="text-xs font-bold">저장할 과정 폴더</span>
               <select
                 value={assignmentFolderId}
                 onChange={(event) => setAssignmentFolderId(event.target.value)}
                 className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
               >
                 <option value="">폴더 없이 저장</option>
-                {foldersForMaterialType.map((folder) => (
-                  <option key={folder.id} value={folder.id}>{folder.name}</option>
+                {foldersForCourse.map((folder) => (
+                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
                 ))}
               </select>
             </label>
             <label className="grid gap-2">
-              <span className="text-xs font-bold">새 하위 폴더</span>
+              <span className="text-xs font-bold">새 폴더 이름</span>
               <input
                 value={newFolderName}
                 onChange={(event) => setNewFolderName(event.target.value)}
@@ -666,6 +724,20 @@ export default function AdminAssignments() {
                 placeholder={materialType === 'word' ? '예: 여행 단어' : '예: 일상 회화'}
                 className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
               />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs font-bold">상위 폴더</span>
+              <select
+                value={newFolderParentId}
+                onChange={(event) => setNewFolderParentId(event.target.value)}
+                disabled={level === 'All'}
+                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-3 text-sm outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+              >
+                <option value="">과정 바로 아래에 만들기</option>
+                {foldersForCourse.filter((folder) => folder.level === level).map((folder) => (
+                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
+                ))}
+              </select>
             </label>
             <button
               type="button"
@@ -769,7 +841,10 @@ export default function AdminAssignments() {
             <select
               value={level}
               onChange={(event) => {
-                setLevel(event.target.value as LearningLevel);
+                const nextLevel = event.target.value as LearningLevel;
+                setLevel(nextLevel);
+                setAssignmentFolderId('');
+                setNewFolderParentId('');
                 if (selectedSourceKeys.length) {
                   setMaterialEnglish('');
                   setMaterialKorean('');
@@ -1020,8 +1095,11 @@ export default function AdminAssignments() {
                   { value: 'all', label: '전체 자료', count: courseAssignments.length },
                   ...courseSubfolders.map((folder) => ({
                     value: String(folder.id),
-                    label: folder.name,
-                    count: courseAssignments.filter((assignment) => assignment.folderId === folder.id).length,
+                    label: getFolderPath(folder.id, folders),
+                    count: courseAssignments.filter((assignment) =>
+                      assignment.folderId != null
+                      && getFolderAndDescendantIds(folder.id, folders).includes(assignment.folderId),
+                    ).length,
                   })),
                   ...(courseAssignments.some((assignment) => assignment.folderId == null)
                     ? [{

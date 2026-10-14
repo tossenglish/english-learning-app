@@ -173,7 +173,9 @@ export const CreateAssignmentResponse = zod.object({
 export const ListAdminAssignmentFoldersResponseItem = zod.object({
   "id": zod.number().int(),
   "name": zod.string(),
-  "materialType": zod.enum(['sentence', 'word']),
+  "materialType": zod.enum(['sentence', 'word', 'mixed']),
+  "level": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()]),
+  "parentFolderId": zod.number().int().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListAdminAssignmentFoldersResponse = zod.array(ListAdminAssignmentFoldersResponseItem)
@@ -186,15 +188,20 @@ export const createAssignmentFolderBodyNameMax = 80;
 
 
 
+
 export const CreateAssignmentFolderBody = zod.object({
   "name": zod.string().min(1).max(createAssignmentFolderBodyNameMax),
-  "materialType": zod.enum(['sentence', 'word'])
+  "materialType": zod.enum(['sentence', 'word', 'mixed']),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "parentFolderId": zod.number().int().min(1).nullable()
 })
 
 export const CreateAssignmentFolderResponse = zod.object({
   "id": zod.number().int(),
   "name": zod.string(),
-  "materialType": zod.enum(['sentence', 'word']),
+  "materialType": zod.enum(['sentence', 'word', 'mixed']),
+  "level": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()]),
+  "parentFolderId": zod.number().int().nullable(),
   "createdAt": zod.coerce.date()
 })
 

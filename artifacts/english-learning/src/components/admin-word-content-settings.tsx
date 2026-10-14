@@ -21,6 +21,20 @@ const levelLabels: Record<LearningContentLevel, string> = {
   Advanced: '고급',
 };
 
+function getWordFolderPath(folderId: number, folders: AssignmentFolder[]): string {
+  const path: string[] = [];
+  const seen = new Set<number>();
+  let folder = folders.find((item) => item.id === folderId);
+  while (folder && !seen.has(folder.id)) {
+    seen.add(folder.id);
+    path.unshift(folder.name);
+    folder = folder.parentFolderId == null
+      ? undefined
+      : folders.find((item) => item.id === folder!.parentFolderId);
+  }
+  return path.join(' / ');
+}
+
 type UploadState = {
   fileName: string;
   preview: ParsedLearningContentCsvItem[] | null;
@@ -165,7 +179,9 @@ export default function AdminWordContentSettings() {
         if (!response.ok) throw new Error('단어 폴더 목록을 불러오지 못했습니다.');
         return response.json() as Promise<AssignmentFolder[]>;
       })
-      .then((folders) => setWordFolders(folders.filter((folder) => folder.materialType === 'word')))
+      .then((folders) => setWordFolders(folders.filter((folder) =>
+        folder.materialType === 'word' || folder.materialType === 'mixed',
+      )))
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           setStatusMessage(error instanceof Error ? error.message : '단어 폴더를 불러오지 못했습니다.');
@@ -388,8 +404,10 @@ export default function AdminWordContentSettings() {
                   data-testid={`select-word-folder-${level.toLowerCase()}`}
                 >
                   <option value="">폴더 선택</option>
-                  {wordFolders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>{folder.name}</option>
+                  {wordFolders.filter((folder) => folder.level == null || folder.level === level).map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {getWordFolderPath(folder.id, wordFolders)}
+                    </option>
                   ))}
                 </select>
               </label>
