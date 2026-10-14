@@ -286,6 +286,23 @@ function buildCloze(english: string) {
   };
 }
 
+function scrambleSentenceWords(sentence: string, sentenceId: number): string {
+  const words = sentence.trim().split(/\s+/).filter(Boolean).map((word, id) => ({ word, id }));
+  let seed = 2166136261;
+  for (const character of `${sentenceId}:${sentence}`) {
+    seed = Math.imul(seed ^ character.charCodeAt(0), 16777619) >>> 0;
+  }
+  for (let index = words.length - 1; index > 0; index -= 1) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const swapIndex = seed % (index + 1);
+    [words[index], words[swapIndex]] = [words[swapIndex], words[index]];
+  }
+  if (words.length > 1 && words.every((word, index) => word.id === index)) {
+    words.unshift(words.pop()!);
+  }
+  return words.map(({ word }) => word).join(' ');
+}
+
 function LetterBoxAnswer({
   answerTemplate,
   value,
@@ -481,6 +498,10 @@ export default function PassagePractice({
   const currentCloze = useMemo(
     () => buildCloze(current?.english ?? ''),
     [current?.english],
+  );
+  const scrambledSentence = useMemo(
+    () => scrambleSentenceWords(current?.english ?? '', current?.id ?? 0),
+    [current?.english, current?.id],
   );
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
@@ -1314,10 +1335,10 @@ export default function PassagePractice({
                     data-testid="text-passage-cloze"
                   >
                     <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">
-                      {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '빈칸 문장'}
+                      {mode === 'dictation' ? '들은 문장의 빈칸을 채워보세요' : '단어 순서를 섞은 문장'}
                     </p>
                     <p className="mt-2 break-words text-lg font-semibold leading-relaxed sm:text-xl">
-                      {currentCloze.prompt}
+                      {mode === 'writing' ? scrambledSentence : currentCloze.prompt}
                     </p>
                   </div>
                 )}
