@@ -93,7 +93,7 @@ const wordModes: Array<{
   description: string;
   icon: typeof Headphones;
 }> = [
-  { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 영어 단어를 써요', icon: PenLine },
+  { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 답하기', icon: PenLine },
   { id: 'dictation', label: '영어 퀴즈', description: '영어 단어의 뜻을 맞혀요', icon: CheckCircle2 },
 ];
 
@@ -345,12 +345,14 @@ export default function PassagePractice({
   const [showAnswer, setShowAnswer] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [dictationRepeating, setDictationRepeating] = useState(false);
+  const [isWordAutoAdvancing, setIsWordAutoAdvancing] = useState(false);
   const [passageListening, setPassageListening] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const passageFileInputRef = useRef<HTMLInputElement>(null);
   const speechLoopRef = useRef(false);
   const speechGenerationRef = useRef(0);
   const speechTimerRef = useRef<number | null>(null);
+  const wordAdvanceTimerRef = useRef<number | null>(null);
   const parsedPassageSentences = useMemo(() => buildPassageSentences(passageText), [passageText]);
   const passageSentences = usingActiveMaterial && activeMaterial
     ? activeMaterial.sentences
@@ -449,6 +451,7 @@ export default function PassagePractice({
   useEffect(() => () => {
     speechLoopRef.current = false;
     if (speechTimerRef.current !== null) window.clearTimeout(speechTimerRef.current);
+    if (wordAdvanceTimerRef.current !== null) window.clearTimeout(wordAdvanceTimerRef.current);
     window.speechSynthesis?.cancel();
   }, []);
 
@@ -584,7 +587,20 @@ export default function PassagePractice({
     setFeedback('correct');
   };
 
+  const advanceToNextWordAutomatically = () => {
+    if (!isWordMaterial || safeCurrentIndex >= passageSentences.length - 1) return;
+    setIsWordAutoAdvancing(true);
+    wordAdvanceTimerRef.current = window.setTimeout(() => {
+      wordAdvanceTimerRef.current = null;
+      setCurrentIndex((index) => Math.min(index + 1, passageSentences.length - 1));
+      setFeedback(null);
+      setShowAnswer(false);
+      setIsWordAutoAdvancing(false);
+    }, 700);
+  };
+
   const checkAnswer = () => {
+    if (isWordAutoAdvancing) return;
     setAttempts((previous) => ({
       ...previous,
       [current.id]: {
@@ -600,6 +616,7 @@ export default function PassagePractice({
 
     if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(expectedAnswer)) {
       markComplete();
+      advanceToNextWordAutomatically();
     } else {
       setFeedback('wrong');
       setShowAnswer(true);
@@ -670,6 +687,11 @@ export default function PassagePractice({
   };
 
   const selectMode = (nextMode: ExerciseMode) => {
+    if (wordAdvanceTimerRef.current !== null) {
+      window.clearTimeout(wordAdvanceTimerRef.current);
+      wordAdvanceTimerRef.current = null;
+      setIsWordAutoAdvancing(false);
+    }
     stopSpeech();
     setMode(nextMode);
     if (nextMode !== 'shadowing') setShowPassageEditor(false);
@@ -678,6 +700,11 @@ export default function PassagePractice({
   };
 
   const selectSentence = (index: number) => {
+    if (wordAdvanceTimerRef.current !== null) {
+      window.clearTimeout(wordAdvanceTimerRef.current);
+      wordAdvanceTimerRef.current = null;
+      setIsWordAutoAdvancing(false);
+    }
     stopSpeech();
     setCurrentIndex(index);
     setFeedback(null);
@@ -738,7 +765,7 @@ export default function PassagePractice({
         </div>
       </section>
 
-      <section className="rise-in stagger-1 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.78)] p-5 sm:p-7" data-testid="section-passage-input">
+      {!isWordMaterial && <section className="rise-in stagger-1 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.78)] p-5 sm:p-7" data-testid="section-passage-input">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
@@ -869,10 +896,10 @@ export default function PassagePractice({
             {editorError}
           </p>
         )}
-      </section>
+      </section>}
 
-      <section className="rise-in stagger-1 grid gap-6 lg:grid-cols-[minmax(230px,.48fr)_minmax(0,1.52fr)]">
-        <aside className="min-w-0 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-5">
+      <section className={`rise-in stagger-1 grid gap-6 ${isWordMaterial ? 'lg:grid-cols-1' : 'lg:grid-cols-[minmax(230px,.48fr)_minmax(0,1.52fr)]'}`}>
+        {!isWordMaterial && <aside className="min-w-0 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.75)] p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">
@@ -949,7 +976,7 @@ export default function PassagePractice({
               );
             })}
           </div>
-        </aside>
+        </aside>}
 
         <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap gap-2 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.7)] p-2">
@@ -960,6 +987,7 @@ export default function PassagePractice({
                   key={id}
                   type="button"
                   onClick={() => selectMode(id)}
+                  disabled={isWordAutoAdvancing}
                   data-testid={`button-passage-mode-${id}`}
                   className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-all ${
                     mode === id
@@ -990,7 +1018,11 @@ export default function PassagePractice({
                   {hidePassageText ? (
                     <span className="flex items-center gap-3 text-[hsl(var(--sidebar-foreground)/.72)]">
                       <EyeOff className="shrink-0 text-[hsl(var(--sidebar-primary))]" size={24} />
-                      <span>{mode === 'dictation' ? '소리를 듣고 문장을 적어보세요.' : '한글 뜻만 보고 영어로 써보세요.'}</span>
+                      <span>
+                        {isWordMaterial
+                          ? '단어 원문을 숨겼어요.'
+                          : mode === 'dictation' ? '소리를 듣고 문장을 적어보세요.' : '한글 뜻만 보고 영어로 써보세요.'}
+                      </span>
                     </span>
                   ) : current.english}
                 </h2>
@@ -1065,6 +1097,7 @@ export default function PassagePractice({
                       key={`${current.id}-${option}`}
                       type="button"
                       onClick={() => updateAnswer(option)}
+                      disabled={isWordAutoAdvancing}
                       aria-pressed={selected}
                       data-testid={`button-word-meaning-option-${index + 1}`}
                       className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-semibold transition-colors ${selected ? 'border-[hsl(var(--sidebar-primary))] bg-[hsl(var(--sidebar-primary)/.14)] text-[hsl(var(--sidebar-foreground))]' : 'border-[hsl(var(--sidebar-foreground)/.16)] bg-[hsl(var(--sidebar-accent)/.4)] hover:border-[hsl(var(--sidebar-primary)/.6)]'}`}
@@ -1080,13 +1113,7 @@ export default function PassagePractice({
               </div>
             ) : mode !== 'shadowing' && (
               <div className="mt-5">
-                {isWordMaterial ? (
-                  <div className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5">
-                    <p className="text-sm font-semibold">
-                      {mode === 'writing' ? '한글 뜻을 보고 영어 단어를 입력하세요.' : '알맞은 한글 뜻을 직접 입력하세요.'}
-                    </p>
-                  </div>
-                ) : (
+                {!isWordMaterial && (
                   <div
                     className="mb-3 rounded-2xl border border-[hsl(var(--sidebar-primary)/.3)] bg-[hsl(var(--sidebar-accent)/.5)] p-4 sm:p-5"
                     data-testid="text-passage-cloze"
@@ -1106,6 +1133,7 @@ export default function PassagePractice({
                     type="text"
                     value={currentAnswers[mode]}
                     onChange={(event) => updateAnswer(event.target.value)}
+                    disabled={isWordAutoAdvancing}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         event.preventDefault();
@@ -1114,7 +1142,7 @@ export default function PassagePractice({
                     }}
                     data-testid={`input-passage-${mode}`}
                     className="h-14 w-full rounded-2xl border border-[hsl(var(--sidebar-foreground)/.18)] bg-[hsl(var(--sidebar-accent)/.55)] px-4 text-base font-semibold text-[hsl(var(--sidebar-foreground))] outline-none transition-colors placeholder:text-[hsl(var(--sidebar-foreground)/.35)] focus:border-[hsl(var(--sidebar-primary))] sm:text-lg"
-                    placeholder={mode === 'writing' ? '영어 단어를 입력하세요' : '한글 뜻을 입력하세요'}
+                    placeholder="답을 입력하세요"
                     autoComplete="off"
                     autoCapitalize="off"
                   />
@@ -1151,7 +1179,9 @@ export default function PassagePractice({
                 {feedback === 'wrong' && <RotateCcw size={15} className="shrink-0" />}
                 <span>
                   {feedback === 'correct' && (isWordMaterial
-                    ? mode === 'writing' ? '정확해요. 이 단어를 직접 쓸 수 있어요.' : '정확해요. 단어의 뜻을 맞혔어요.'
+                    ? isWordAutoAdvancing
+                      ? '정답이에요. 다음 단어로 넘어가요.'
+                      : mode === 'writing' ? '정확해요. 이 단어를 직접 쓸 수 있어요.' : '정확해요. 단어의 뜻을 맞혔어요.'
                     : mode === 'shadowing' ? '좋아요. 입으로 직접 말해본 문장이에요.' : '정확해요. 이 문장은 이제 내 것이 됐어요.')}
                   {feedback === 'wrong' && `${isWordMaterial ? '아직 정답이 아니에요. 다시 확인해볼까요?' : '조금 달라요. 정답을 확인하고 다시 한 번 써볼까요?'} ${showAnswer ? expectedAnswer : ''}`}
                   {feedback === 'hint' && (sentenceCompleted
@@ -1170,6 +1200,7 @@ export default function PassagePractice({
                   <button
                     type="button"
                     onClick={checkAnswer}
+                    disabled={isWordAutoAdvancing}
                     data-testid={`button-check-passage-${mode}`}
                     className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--sidebar))]"
                   >
@@ -1199,7 +1230,9 @@ export default function PassagePractice({
             <button
               type="button"
               onClick={nextSentence}
-              disabled={safeCurrentIndex === passageSentences.length - 1 && (!canAdvance || allCompleted)}
+              disabled={isWordMaterial
+                ? isWordAutoAdvancing || !canAdvance || safeCurrentIndex === passageSentences.length - 1
+                : safeCurrentIndex === passageSentences.length - 1 && (!canAdvance || allCompleted)}
               data-testid="button-next-passage-sentence"
               className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-45"
             >
