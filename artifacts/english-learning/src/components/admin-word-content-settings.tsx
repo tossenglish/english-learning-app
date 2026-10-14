@@ -498,8 +498,30 @@ export default function AdminWordContentSettings() {
         </p>
         <h2 className="text-2xl font-bold tracking-[-.04em]">초기화면 단어 콘텐츠 설정</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
-          과정별 단어와 뜻을 여러 줄로 입력하거나 CSV로 불러오세요. 최대 200개까지 선택한 폴더에 저장되며, 초기화면 카드에는 첫 단어가 표시됩니다.
+          초급·중급·고급 과정의 초기화면 단어 카드를 설정합니다. 아래 순서대로 입력하고 저장하세요.
         </p>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-[hsl(var(--accent)/.2)] bg-[hsl(var(--secondary)/.35)] p-4 sm:p-5" data-testid="panel-word-settings-help">
+        <h3 className="text-sm font-bold">사용 방법</h3>
+        <ol className="mt-3 grid gap-3 text-xs leading-relaxed text-[hsl(var(--muted-foreground))] sm:grid-cols-2">
+          <li className="flex gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--accent))] text-[10px] font-bold text-white">1</span>
+            <span><strong className="text-[hsl(var(--foreground))]">과정을 고르고 단어와 뜻을 입력하세요.</strong> 각각 한 줄에 하나씩, 순서와 줄 수를 똑같이 맞춰 주세요. 예: serendipity ↔ 뜻밖의 행운.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--accent))] text-[10px] font-bold text-white">2</span>
+            <span><strong className="text-[hsl(var(--foreground))]">직접 입력 또는 CSV 중 하나를 사용하세요.</strong> CSV는 ‘양식 받기’로 만든 뒤 단어·뜻 두 열을 채워 업로드하고 미리보기를 확인하세요. 최대 200개까지 가능합니다.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--accent))] text-[10px] font-bold text-white">3</span>
+            <span><strong className="text-[hsl(var(--foreground))]">필요하면 폴더를 선택하고 아래의 저장 버튼을 누르세요.</strong> 폴더를 비워두면 과정 폴더를 자동으로 선택하거나 만듭니다.</span>
+          </li>
+          <li className="flex gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--accent))] text-[10px] font-bold text-white">4</span>
+            <span><strong className="text-[hsl(var(--foreground))]">저장 결과:</strong> 초기화면 카드에는 첫 단어가 표시되고, 전체 단어 목록은 선택한 자료 폴더에 초안으로 보관됩니다.</span>
+          </li>
+        </ol>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
