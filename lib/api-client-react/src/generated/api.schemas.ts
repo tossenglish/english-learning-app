@@ -216,6 +216,43 @@ export interface Assignment {
   createdAt: string;
 }
 
+export interface LibraryMaterial {
+  id: number;
+  title: string;
+  materialType: MaterialType;
+  /** @nullable */
+  folderId: number | null;
+  materialContent: string;
+  level: LearningLevel;
+  /** @nullable */
+  resourcePath: string | null;
+  /** @nullable */
+  resourceName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryMaterialInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  materialType: MaterialType;
+  /** @nullable */
+  folderId?: number | null;
+  /**
+     * @minLength 1
+     * @maxLength 45000
+     */
+  materialContent: string;
+  level: LearningLevel;
+  /** @nullable */
+  resourcePath?: string | null;
+  /** @nullable */
+  resourceName?: string | null;
+}
+
 export interface CreateAssignmentRequest {
   /**
      * @minLength 1

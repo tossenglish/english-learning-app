@@ -3,7 +3,12 @@ import {
   CreateAssignmentFolderResponse,
   CreateAssignmentBody,
   CreateAssignmentResponse,
+  CreateAdminLibraryMaterialBody,
+  CreateAdminLibraryMaterialResponse,
   DeleteAssignmentParams,
+  DeleteAdminLibraryMaterialParams,
+  DeleteAdminLibraryMaterialResponse,
+  ListAdminLibraryMaterialsResponse,
   ListAdminAssignmentFoldersResponse,
   ListAdminAssignmentsResponse,
   ListAdminMembersResponse,
@@ -18,6 +23,7 @@ import {
   assignmentFoldersTable,
   assignmentsTable,
   db,
+  libraryMaterialsTable,
   memberCoursesTable,
 } from "@workspace/db";
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
@@ -101,6 +107,98 @@ router.get(
       .orderBy(desc(assignmentsTable.createdAt));
 
     res.json(ListAdminAssignmentsResponse.parse(assignments));
+  },
+);
+
+router.get(
+  "/admin/library-materials",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+    const materials = await db
+      .select()
+      .from(libraryMaterialsTable)
+      .orderBy(desc(libraryMaterialsTable.createdAt));
+    res.json(ListAdminLibraryMaterialsResponse.parse(materials));
+  },
+);
+
+router.post(
+  "/admin/library-materials",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const parsed = CreateAdminLibraryMaterialBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const title = parsed.data.title.trim();
+    const materialContent = parsed.data.materialContent.trim();
+    if (!title || !materialContent) {
+      res.status(400).json({ error: "Title and material content cannot be empty" });
+      return;
+    }
+
+    const folderId = parsed.data.folderId ?? null;
+    if (folderId !== null) {
+      const [folder] = await db
+        .select({ id: assignmentFoldersTable.id })
+        .from(assignmentFoldersTable)
+        .where(
+          and(
+            eq(assignmentFoldersTable.id, folderId),
+            or(
+              eq(assignmentFoldersTable.level, parsed.data.level),
+              isNull(assignmentFoldersTable.level),
+            ),
+            or(
+              eq(assignmentFoldersTable.materialType, parsed.data.materialType),
+              eq(assignmentFoldersTable.materialType, "mixed"),
+            ),
+          ),
+        );
+      if (!folder) {
+        res.status(400).json({ error: "Selected folder does not match the course or material type" });
+        return;
+      }
+    }
+
+    const [material] = await db
+      .insert(libraryMaterialsTable)
+      .values({
+        ...parsed.data,
+        title,
+        materialContent,
+        folderId,
+      })
+      .returning();
+
+    res.status(201).json(CreateAdminLibraryMaterialResponse.parse(material));
+  },
+);
+
+router.delete(
+  "/admin/library-materials/:materialId",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const params = DeleteAdminLibraryMaterialParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const [deleted] = await db
+      .delete(libraryMaterialsTable)
+      .where(eq(libraryMaterialsTable.id, params.data.materialId))
+      .returning({ id: libraryMaterialsTable.id });
+    if (!deleted) {
+      res.status(404).json({ error: "Library material not found" });
+      return;
+    }
+
+    res.status(204).send(DeleteAdminLibraryMaterialResponse.parse(undefined));
   },
 );
 

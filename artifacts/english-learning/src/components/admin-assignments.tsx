@@ -3,24 +3,35 @@ import type {
   Assignment,
   AssignmentFolder,
   AssignmentMember,
+  LibraryMaterial,
   LearningContent,
   LearningLevel,
   MaterialType,
 } from '@workspace/api-client-react';
 import {
   ArrowLeft,
+  BookOpen,
   CalendarDays,
+  Check,
   ChevronDown,
   ChevronRight,
   ClipboardList,
   FileText,
   FolderOpen,
   Layers3,
+  Library,
   LoaderCircle,
   Plus,
   Trash2,
   Upload,
 } from 'lucide-react';
+import {
+  getListAdminLibraryMaterialsQueryKey,
+  useCreateAdminLibraryMaterial,
+  useDeleteAdminLibraryMaterial,
+  useListAdminLibraryMaterials,
+} from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseDirectMaterial } from '@/lib/practice-material';
 import { apiFetch } from '@/lib/api-fetch';
 import { LEARNING_CONTENT_UPDATED_EVENT } from '@/lib/learning-content';
@@ -201,25 +212,24 @@ function getWordCount(assignments: Assignment[]): number {
 }
 
 export default function AdminAssignments() {
+  const queryClient = useQueryClient();
+  const libraryQuery = useListAdminLibraryMaterials();
+  const createLibraryMaterial = useCreateAdminLibraryMaterial();
+  const deleteLibraryMaterial = useDeleteAdminLibraryMaterial();
+  const libraryMaterials = libraryQuery.data ?? [];
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
-  const [materialType, setMaterialType] = useState<MaterialType>('sentence');
-  const [assignmentFolderId, setAssignmentFolderId] = useState('');
-  const [materialEnglish, setMaterialEnglish] = useState('');
-  const [materialKorean, setMaterialKorean] = useState('');
-  const [selectedSourceKeys, setSelectedSourceKeys] = useState<string[]>([]);
+  const [libraryHomeContentSelected, setLibraryHomeContentSelected] = useState(false);
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [resourcePath, setResourcePath] = useState('');
-  const [resourceName, setResourceName] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [materialImportMessage, setMaterialImportMessage] = useState('');
+  const [assignmentNotice, setAssignmentNotice] = useState('');
   const [listLevel, setListLevel] = useState<LearningLevel>('Intermediate');
   const [materialFolder, setMaterialFolder] = useState<MaterialType>('sentence');
   const [folderListFilter, setFolderListFilter] = useState('all');
@@ -230,10 +240,22 @@ export default function AdminAssignments() {
   const [subfolderName, setSubfolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
-  const materialContent = combineMaterialColumns(materialEnglish, materialKorean);
-  const selectedLearningContent = level === 'All'
+  const [activeView, setActiveView] = useState<'library' | 'assignments'>('library');
+  const [libraryTitle, setLibraryTitle] = useState('');
+  const [libraryMaterialType, setLibraryMaterialType] = useState<MaterialType>('sentence');
+  const [libraryLevel, setLibraryLevel] = useState<LearningLevel>('Intermediate');
+  const [libraryFolderId, setLibraryFolderId] = useState('');
+  const [libraryEnglish, setLibraryEnglish] = useState('');
+  const [libraryKorean, setLibraryKorean] = useState('');
+  const [libraryNotice, setLibraryNotice] = useState('');
+  const [libraryError, setLibraryError] = useState('');
+  const [libraryImportMessage, setLibraryImportMessage] = useState('');
+  const [selectedLibraryId, setSelectedLibraryId] = useState<number | null>(null);
+  const libraryContent = combineMaterialColumns(libraryEnglish, libraryKorean);
+  const selectedLibraryLearningContent = libraryLevel === 'All'
     ? undefined
-    : learningContents.find((content) => content.level === level);
+    : learningContents.find((content) => content.level === libraryLevel);
+  const selectedLibraryMaterial = libraryMaterials.find((material) => material.id === selectedLibraryId);
 
   const loadLearningContents = () => {
     apiFetch('/api/admin/learning-content', { credentials: 'include' })
@@ -315,20 +337,20 @@ export default function AdminAssignments() {
   }, []);
 
   const toggleLearningContentSource = () => {
-    const shouldLoad = !selectedSourceKeys.includes('learning-content');
-    setSelectedSourceKeys(shouldLoad ? ['learning-content'] : []);
-    if (!shouldLoad || !selectedLearningContent) {
-      setMaterialEnglish('');
-      setMaterialKorean('');
-      setMaterialImportMessage('');
+    const shouldLoad = !libraryHomeContentSelected;
+    setLibraryHomeContentSelected(shouldLoad);
+    if (!shouldLoad || !selectedLibraryLearningContent) {
+      setLibraryEnglish('');
+      setLibraryKorean('');
+      setLibraryImportMessage('');
       return;
     }
-    const english = materialType === 'word' ? selectedLearningContent.word : selectedLearningContent.exampleSentence;
-    const korean = materialType === 'word' ? selectedLearningContent.shortMeaning : selectedLearningContent.exampleKorean;
-    setMaterialEnglish(english);
-    setMaterialKorean(korean);
-    setMaterialImportMessage('초기화면 콘텐츠를 과제 자료로 불러왔어요.');
-    setError('');
+    const english = libraryMaterialType === 'word' ? selectedLibraryLearningContent.word : selectedLibraryLearningContent.exampleSentence;
+    const korean = libraryMaterialType === 'word' ? selectedLibraryLearningContent.shortMeaning : selectedLibraryLearningContent.exampleKorean;
+    setLibraryEnglish(english);
+    setLibraryKorean(korean);
+    setLibraryImportMessage('초기화면 콘텐츠를 보관함 작성기로 가져왔어요. 필요하면 수정한 뒤 별도 저장하세요.');
+    setLibraryError('');
   };
 
   const loadSelectedFolderMaterials = () => {
@@ -343,17 +365,18 @@ export default function AdminAssignments() {
       )
       .flatMap((assignment) => assignment.materialContent.split(/\r?\n/).filter(Boolean));
     const columns = splitMaterialColumns(contentLines.join('\n'));
-    setLevel(listLevel);
-    setMaterialType(materialFolder);
-    setAssignmentFolderId(String(selectedFolderId));
-    setMaterialEnglish(columns.english);
-    setMaterialKorean(columns.korean);
-    setSelectedSourceKeys([]);
-    setMaterialImportMessage(contentLines.length
-      ? `${contentLines.length}개 자료를 과제 등록에 불러왔어요.`
-      : '선택한 위치에 가져올 자료가 없어요. 새 자료를 직접 입력해 주세요.');
-    setError('');
-    document.getElementById('course-assignment-registration')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setLibraryLevel(listLevel);
+    setLibraryMaterialType(materialFolder);
+    setLibraryFolderId(String(selectedFolderId));
+    setLibraryTitle(`${getFolderPath(selectedFolderId, folders)} 자료 모음`.slice(0, 160));
+    setLibraryEnglish(columns.english);
+    setLibraryKorean(columns.korean);
+    setLibraryImportMessage(contentLines.length
+      ? `${contentLines.length}개 기존 과제 항목을 보관함 작성기로 가져왔습니다. 저장하면 독립된 라이브러리 자료가 됩니다.`
+      : '선택한 위치에 가져올 과제가 없습니다. 보관함에서 새로 작성할 수 있습니다.');
+    setActiveView('library');
+    setLibraryError('');
+    window.setTimeout(() => document.getElementById('input-library-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
   };
 
   const createCourseFolder = async () => {
@@ -397,8 +420,6 @@ export default function AdminAssignments() {
               setFolders(latestFolders);
               setCourseFolderName('');
               setLevel(listLevel);
-              setMaterialType(materialFolder);
-              setAssignmentFolderId(String(existing.id));
               setFolderListFilter(String(existing.id));
               setCourseFolderMessage('같은 이름의 과정 폴더가 이미 있어 기존 폴더를 선택했어요.');
               return;
@@ -413,8 +434,6 @@ export default function AdminAssignments() {
       setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
       setCourseFolderName('');
       setLevel(listLevel);
-      setMaterialType(materialFolder);
-      setAssignmentFolderId(String(created.id));
       setFolderListFilter(String(created.id));
       setCourseFolderMessage('과정 폴더를 만들고 선택했어요.');
     } catch (createError) {
@@ -454,8 +473,6 @@ export default function AdminAssignments() {
       setFolders((current) => [created, ...current.filter((folder) => folder.id !== created.id)]);
       setSubfolderName('');
       setLevel(listLevel);
-      setMaterialType(materialFolder);
-      setAssignmentFolderId(String(created.id));
       setFolderListFilter(String(created.id));
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : '하위 자료 위치 생성 오류');
@@ -495,59 +512,36 @@ export default function AdminAssignments() {
   const saveAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving) return;
-
-    if (materialContent.trim()) {
-      if (materialContent.length > 20000) {
-        setError('영어와 한글 자료를 합쳐 20,000자 이내로 등록해 주세요.');
-        return;
-      }
-      const entries = parseDirectMaterial(materialContent, materialType);
-      if (entries.length === 0) {
-        setError('직접 입력한 자료에서 영어 단어 또는 문장을 찾지 못했습니다.');
-        return;
-      }
-      if (entries.length > 200) {
-        setError('한 번에 최대 200개까지 등록할 수 있어요. 자료를 나눠 등록해 주세요.');
-        return;
-      }
-      if (materialKorean.trim()) {
-        const englishLines = materialEnglish.replace(/\r/g, '').trimEnd().split('\n');
-        const koreanLines = materialKorean.replace(/\r/g, '').split('\n');
-        if (englishLines.length !== koreanLines.length) {
-          setError('영어 목록과 한글 뜻·해석 목록의 줄 수를 맞춰 주세요.');
-          return;
-        }
-      }
+    if (!selectedLibraryMaterial) {
+      setError('과제로 배정할 보관함 자료를 먼저 선택해 주세요.');
+      return;
     }
-
-    const materialLabel = materialType === 'word' ? '단어' : '문장';
-    const firstMaterialLine = materialContent.trim().split(/\r?\n/, 1)[0] ?? '';
-    const firstMaterialName = firstMaterialLine.split(/\s*\|\|\s*/, 1)[0].trim();
-    const selectedFolder = folders.find((folder) => String(folder.id) === assignmentFolderId);
-    const generatedTitle = (
-      firstMaterialName
-        ? `${materialLabel} · ${firstMaterialName}`
-        : selectedFolder?.name || resourceName || `${materialLabel} 자료`
-    ).slice(0, 160);
 
     setSaving(true);
     setError('');
+    setAssignmentNotice('');
     try {
+      const sourceFolder = selectedLibraryMaterial.folderId == null
+        ? undefined
+        : folders.find((folder) => folder.id === selectedLibraryMaterial.folderId);
+      const assignmentFolderId = sourceFolder?.level != null && sourceFolder.level !== level
+        ? null
+        : selectedLibraryMaterial.folderId;
       const response = await apiFetch('/api/admin/assignments', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: generatedTitle,
+          title: selectedLibraryMaterial.title,
           description: '',
-          materialType,
-          folderId: assignmentFolderId ? Number(assignmentFolderId) : null,
-          materialContent: materialContent.trim(),
+          materialType: selectedLibraryMaterial.materialType,
+          folderId: assignmentFolderId,
+          materialContent: selectedLibraryMaterial.materialContent,
           level,
           assigneeUserId: assigneeUserId || null,
           dueDate: dueDate || null,
-          resourcePath: resourcePath || null,
-          resourceName: resourceName || null,
+          resourcePath: selectedLibraryMaterial.resourcePath,
+          resourceName: selectedLibraryMaterial.resourceName,
           isPublished,
         }),
       });
@@ -558,24 +552,92 @@ export default function AdminAssignments() {
 
       const created = await response.json() as Assignment;
       setAssignments((current) => [created, ...current]);
+      setAssignmentNotice(`“${created.title}” 과제를 저장했습니다${isPublished ? ' · 공개 상태' : ' · 비공개 상태'}. 보관함 자료는 별도로 유지됩니다.`);
       setListLevel(level);
-      setMaterialFolder(materialType);
+      setMaterialFolder(selectedLibraryMaterial.materialType);
       setCourseFolderOpen(true);
       setFolderListFilter(created.folderId == null ? 'all' : String(created.folderId));
-      setMaterialEnglish('');
-      setMaterialKorean('');
-      setSelectedSourceKeys([]);
-      setMaterialImportMessage('');
       setDueDate('');
       setAssigneeUserId('');
-      setResourcePath('');
-      setResourceName('');
       setIsPublished(true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '과제 저장 오류');
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveLibraryMaterial = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const title = libraryTitle.trim();
+    const content = libraryContent.trim();
+    if (!title) {
+      setLibraryError('보관함 자료의 이름을 입력해 주세요.');
+      return;
+    }
+    if (!content) {
+      setLibraryError('저장할 영어 단어 또는 문장을 입력해 주세요.');
+      return;
+    }
+    const entries = parseDirectMaterial(content, libraryMaterialType);
+    if (entries.length === 0 || entries.length > 200 || content.length > 45000) {
+      setLibraryError('자료는 1~200개, 총 45,000자 이내로 입력해 주세요.');
+      return;
+    }
+    if (libraryKorean.trim()) {
+      const englishRows = libraryEnglish.replace(/\r/g, '').trimEnd().split('\n');
+      const koreanRows = libraryKorean.replace(/\r/g, '').split('\n');
+      if (englishRows.length !== koreanRows.length) {
+        setLibraryError('영어와 한국어 목록의 줄 수를 맞춰 주세요.');
+        return;
+      }
+    }
+    setLibraryError('');
+    setLibraryNotice('');
+    try {
+      await createLibraryMaterial.mutateAsync({
+        data: {
+          title: title.slice(0, 160),
+          materialType: libraryMaterialType,
+          folderId: libraryFolderId ? Number(libraryFolderId) : null,
+          materialContent: content,
+          level: libraryLevel,
+          resourcePath: null,
+          resourceName: null,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListAdminLibraryMaterialsQueryKey() });
+      setLibraryNotice('보관함에 저장했습니다. 아직 회원 과제로 배정되지는 않았어요.');
+      setLibraryTitle('');
+      setLibraryEnglish('');
+      setLibraryKorean('');
+    } catch (saveError) {
+      setLibraryError(saveError instanceof Error ? saveError.message : '보관함에 저장하지 못했습니다.');
+    }
+  };
+
+  const removeLibraryMaterial = async (material: LibraryMaterial) => {
+    if (!window.confirm(`“${material.title}” 보관 자료를 삭제할까요?`)) return;
+    setLibraryError('');
+    setLibraryNotice('');
+    try {
+      await deleteLibraryMaterial.mutateAsync({ materialId: material.id });
+      await queryClient.invalidateQueries({ queryKey: getListAdminLibraryMaterialsQueryKey() });
+      if (selectedLibraryId === material.id) setSelectedLibraryId(null);
+      setLibraryNotice('보관 자료를 삭제했습니다.');
+    } catch (deleteError) {
+      setLibraryError(deleteError instanceof Error ? deleteError.message : '보관 자료를 삭제하지 못했습니다.');
+    }
+  };
+
+  const prepareAssignmentFromLibrary = (material: LibraryMaterial) => {
+    setLevel(material.level);
+    setListLevel(material.level);
+    setMaterialFolder(material.materialType);
+    setSelectedLibraryId(material.id);
+    setActiveView('assignments');
+    setError('');
+    window.setTimeout(() => document.getElementById('course-assignment-registration')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
   const importMaterialFiles = async (fileList: FileList | null) => {
@@ -590,7 +652,7 @@ export default function AdminAssignments() {
               throw new Error('TXT, Markdown 또는 CSV 파일을 선택해 주세요.');
             }
             const contents = await file.text();
-            return materialType === 'word'
+            return libraryMaterialType === 'word'
               ? parseWordFile(contents)
               : parseSentenceFile(contents, /\.csv$/i.test(file.name));
           }),
@@ -601,28 +663,27 @@ export default function AdminAssignments() {
         throw new Error('파일에서 영어 단어 또는 문장을 찾지 못했습니다.');
       }
 
-      const currentItems = materialContent
+      const currentItems = libraryContent
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean);
       const nextContent = [...currentItems, ...importedItems].join('\n');
-      if (parseDirectMaterial(nextContent, materialType).length > 200) {
+      if (parseDirectMaterial(nextContent, libraryMaterialType).length > 200) {
         throw new Error('한 번에 최대 200개까지 등록할 수 있어요. 자료를 나눠 등록해 주세요.');
       }
-      if (nextContent.length > 20000) {
-        throw new Error('가져온 자료가 너무 많아요. 20,000자 이내로 나눠 등록해 주세요.');
+      if (nextContent.length > 45000) {
+        throw new Error('가져온 자료가 너무 많아요. 45,000자 이내로 나눠 등록해 주세요.');
       }
 
       const columns = splitMaterialColumns(nextContent);
-      setMaterialEnglish(columns.english);
-      setMaterialKorean(columns.korean);
-      setSelectedSourceKeys([]);
-      const itemLabel = materialType === 'word' ? '단어' : '문장';
-      setMaterialImportMessage(`${files.length}개 파일에서 ${importedItems.length}개 ${itemLabel}를 불러왔어요.`);
-      setError('');
+      setLibraryEnglish(columns.english);
+      setLibraryKorean(columns.korean);
+      const itemLabel = libraryMaterialType === 'word' ? '단어' : '문장';
+      setLibraryImportMessage(`${files.length}개 파일에서 ${importedItems.length}개 ${itemLabel}를 보관함 작성기로 가져왔어요.`);
+      setLibraryError('');
     } catch (importError) {
-      setMaterialImportMessage('');
-      setError(importError instanceof Error ? importError.message : '자료 파일을 불러오지 못했습니다.');
+      setLibraryImportMessage('');
+      setLibraryError(importError instanceof Error ? importError.message : '자료 파일을 불러오지 못했습니다.');
     }
   };
 
@@ -659,185 +720,103 @@ export default function AdminAssignments() {
         </p>
       </div>
 
-      <form id="course-assignment-registration" onSubmit={saveAssignment} className="mt-5 grid gap-4">
-        <div className="grid gap-3 rounded-2xl bg-[hsl(var(--background)/.55)] p-4 sm:grid-cols-2">
-          <label className="grid min-w-0 content-start gap-2">
-            <span className="text-xs font-bold">배정 과정</span>
-            <select
-              value={level}
-              onChange={(event) => {
-                const nextLevel = event.target.value as LearningLevel;
-                setLevel(nextLevel);
-                setListLevel(nextLevel);
-                setAssignmentFolderId('');
-                if (selectedSourceKeys.length) {
-                  setMaterialEnglish('');
-                  setMaterialKorean('');
-                  setMaterialImportMessage('');
-                }
-                setSelectedSourceKeys([]);
-              }}
-              disabled={Boolean(assigneeUserId)}
-              className="h-11 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {courseOptions.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="grid min-w-0 content-start gap-2">
-            <span className="text-xs font-bold">저장할 자료 폴더 <span className="font-normal text-[hsl(var(--muted-foreground))]">선택</span></span>
-            <select
-              value={assignmentFolderId}
-              onChange={(event) => setAssignmentFolderId(event.target.value)}
-              className="h-11 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
-            >
-              <option value="">폴더 없이 저장</option>
-              {folders
-                .filter((folder) => (folder.level === level || folder.level == null)
-                  && (folder.materialType === 'mixed' || folder.materialType === materialType))
-                .map((folder) => (
-                  <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>
-                ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              const management = document.getElementById('assignment-management-details') as HTMLDetailsElement | null;
-              if (management) management.open = true;
-              document.getElementById('assignment-folder-management')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
-            className="justify-self-start text-xs font-bold text-[hsl(var(--accent))] underline-offset-4 hover:underline sm:col-span-2"
-          >
-            새 폴더 만들기 또는 자료 가져오기
-          </button>
-        </div>
-        <div className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
-          <div>
-            <span className="text-xs font-bold">학습자료 유형</span>
-            <p className="mt-1 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">
-              파일을 첨부하지 않아도 직접 입력한 내용을 회원에게 바로 연습 자료로 제공할 수 있어요.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={`cursor-pointer rounded-xl border p-3 transition-colors ${materialType === 'sentence' ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]' : 'border-[hsl(var(--border))]'}`}>
-              <input
-                type="radio"
-                name="material-type"
-                value="sentence"
-                checked={materialType === 'sentence'}
-                onChange={() => {
-                  setMaterialType('sentence');
-                  const selected = folders.find((folder) => String(folder.id) === assignmentFolderId);
-                  if (selected && selected.materialType !== 'mixed' && selected.materialType !== 'sentence') {
-                    setAssignmentFolderId('');
-                  }
-                  if (selectedSourceKeys.length) {
-                    setMaterialEnglish('');
-                    setMaterialKorean('');
-                  }
-                  setSelectedSourceKeys([]);
-                  setMaterialImportMessage('');
-                  setError('');
-                }}
-                className="sr-only"
-              />
-              <span className="block text-sm font-bold">문장</span>
-              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 문장을 한 번에 입력하거나 파일로 등록</span>
-            </label>
-            <label className={`cursor-pointer rounded-xl border p-3 transition-colors ${materialType === 'word' ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]' : 'border-[hsl(var(--border))]'}`}>
-              <input
-                type="radio"
-                name="material-type"
-                value="word"
-                checked={materialType === 'word'}
-                onChange={() => {
-                  setMaterialType('word');
-                  const selected = folders.find((folder) => String(folder.id) === assignmentFolderId);
-                  if (selected && selected.materialType !== 'mixed' && selected.materialType !== 'word') {
-                    setAssignmentFolderId('');
-                  }
-                  if (selectedSourceKeys.length) {
-                    setMaterialEnglish('');
-                    setMaterialKorean('');
-                  }
-                  setSelectedSourceKeys([]);
-                  setMaterialImportMessage('');
-                  setError('');
-                }}
-                className="sr-only"
-              />
-              <span className="block text-sm font-bold">단어</span>
-              <span className="mt-1 block text-[11px] text-[hsl(var(--muted-foreground))]">여러 단어를 한 번에 입력하거나 파일로 등록</span>
-            </label>
-          </div>
-          {level !== 'All'
-            && selectedLearningContent
-            && !(level === 'Intermediate' && materialType === 'sentence') && (
-            <label className="flex items-start gap-2 rounded-xl border border-[hsl(var(--border))] p-3 text-xs hover:bg-[hsl(var(--muted)/.5)]">
-              <input
-                type="checkbox"
-                checked={selectedSourceKeys.includes('learning-content')}
-                onChange={toggleLearningContentSource}
-                className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
-              />
-              <span>
-                <strong>{levelLabels[level]} 초기화면 {materialType === 'word' ? '단어 콘텐츠' : '문장 콘텐츠'} 가져오기</strong>
-                <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
-                  {materialType === 'word'
-                    ? `${selectedLearningContent.word} · ${selectedLearningContent.shortMeaning}`
-                    : `${selectedLearningContent.exampleSentence} · ${selectedLearningContent.exampleKorean}`}
-                </span>
-              </span>
-            </label>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">
-                {materialType === 'word' ? '영어 단어' : '영어 원문'}
-              </span>
-              <textarea
-                value={materialEnglish}
-                onChange={(event) => {
-                  setMaterialEnglish(event.target.value);
-                  setSelectedSourceKeys([]);
-                setMaterialImportMessage('');
-                }}
-                maxLength={20000}
-                rows={6}
-                data-testid="textarea-assignment-material-english"
-                placeholder={materialType === 'sentence'
-                  ? 'I take a short walk every morning.\nSmall habits make a big difference.'
-                  : 'apple\ncurious'}
-                className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-bold">
-                {materialType === 'word' ? '한글 뜻' : '한글 해석'}
-              </span>
-              <textarea
-                value={materialKorean}
-                onChange={(event) => {
-                  setMaterialKorean(event.target.value);
-                  setSelectedSourceKeys([]);
-                setMaterialImportMessage('');
-                }}
-                maxLength={20000}
-                rows={6}
-                data-testid="textarea-assignment-material-korean"
-                placeholder={materialType === 'sentence'
-                  ? '나는 매일 아침 짧게 산책해요.\n작은 습관이 큰 차이를 만들어요.'
-                  : '사과\n호기심 많은'}
-                className="resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]"
-              />
-            </label>
-            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--background)/.5)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <nav className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-[hsl(var(--muted))] p-1.5" aria-label="관리자 자료 작업 단계">
+        <button
+          type="button"
+          onClick={() => setActiveView('library')}
+          aria-pressed={activeView === 'library'}
+          className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${activeView === 'library' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}
+          data-testid="button-admin-library-tab"
+        >
+          <Library size={16} /> 1. 콘텐츠 보관함
+          <span className="font-mono text-[10px]">{libraryMaterials.length}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView('assignments')}
+          aria-pressed={activeView === 'assignments'}
+          className={`flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-colors ${activeView === 'assignments' ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}
+          data-testid="button-admin-assignment-tab"
+        >
+          <ClipboardList size={16} /> 2. 과제 배정
+          <span className="font-mono text-[10px]">{assignments.length}</span>
+        </button>
+      </nav>
+
+      {activeView === 'library' && (
+        <div className="mt-5 grid gap-5">
+          <section className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.42)] p-4 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"><BookOpen size={18} /></span>
+              <div>
+                <h3 className="font-bold">새 자료를 보관함에 저장</h3>
+                <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                  직접 작성한 단어·문장을 언제든 다시 꺼내 쓸 수 있습니다. 저장만으로는 과제가 생성되거나 회원에게 공개되지 않습니다.
+                </p>
+              </div>
+            </div>
+            <form onSubmit={saveLibraryMaterial} className="mt-5 grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2 text-xs font-bold">
+                  보관함 이름
+                  <input id="input-library-title" value={libraryTitle} onChange={(event) => setLibraryTitle(event.target.value)} maxLength={160} required placeholder="예: 여행에서 길 묻기" className="h-11 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]" data-testid="input-library-title" />
+                </label>
+                <label className="grid gap-2 text-xs font-bold">
+                  콘텐츠 유형
+                  <select value={libraryMaterialType} onChange={(event) => setLibraryMaterialType(event.target.value as MaterialType)} className="h-11 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="select-library-material-type">
+                    <option value="sentence">문장</option><option value="word">단어</option>
+                  </select>
+                </label>
+                <label className="grid gap-2 text-xs font-bold">
+                  대상 과정
+                  <select value={libraryLevel} onChange={(event) => setLibraryLevel(event.target.value as LearningLevel)} className="h-11 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="select-library-level">
+                    {courseOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <label className="grid gap-2 text-xs font-bold">
+                  자료 폴더 <span className="font-normal text-[hsl(var(--muted-foreground))]">선택 사항</span>
+                  <select value={libraryFolderId} onChange={(event) => setLibraryFolderId(event.target.value)} className="h-11 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]" data-testid="select-library-folder">
+                    <option value="">폴더 없이 보관</option>
+                    {folders.filter((folder) => (folder.level === libraryLevel || folder.level == null) && (folder.materialType === 'mixed' || folder.materialType === libraryMaterialType)).map((folder) => <option key={folder.id} value={folder.id}>{getFolderPath(folder.id, folders)}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2 text-xs font-bold">
+                  영어 {libraryMaterialType === 'word' ? '단어' : '문장'} <span className="font-normal text-[hsl(var(--muted-foreground))]">한 줄에 하나씩</span>
+                  <textarea value={libraryEnglish} onChange={(event) => setLibraryEnglish(event.target.value)} rows={7} maxLength={45000} required placeholder={libraryMaterialType === 'word' ? 'curious\\npatient' : 'Would you mind opening the window?\\nI have been looking for this café.'} className="min-h-36 resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]" data-testid="textarea-library-english" />
+                </label>
+                <label className="grid gap-2 text-xs font-bold">
+                  한국어 뜻·해석 <span className="font-normal text-[hsl(var(--muted-foreground))]">영어와 줄 순서를 맞춰 주세요</span>
+                  <textarea value={libraryKorean} onChange={(event) => setLibraryKorean(event.target.value)} rows={7} maxLength={45000} placeholder="호기심 많은\\n참을성 있는" className="min-h-36 resize-y rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-sm leading-relaxed outline-none focus:border-[hsl(var(--accent))]" data-testid="textarea-library-korean" />
+                </label>
+              </div>
+              {libraryLevel !== 'All'
+                && selectedLibraryLearningContent
+                && !(libraryLevel === 'Intermediate' && libraryMaterialType === 'sentence') && (
+                <label className="flex items-start gap-2 rounded-xl border border-[hsl(var(--border))] p-3 text-xs hover:bg-[hsl(var(--muted)/.5)]">
+                  <input
+                    type="checkbox"
+                    checked={libraryHomeContentSelected}
+                    onChange={toggleLearningContentSource}
+                    className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
+                    data-testid="checkbox-library-home-content"
+                  />
+                  <span>
+                    <strong>{levelLabels[libraryLevel]} 초기화면 {libraryMaterialType === 'word' ? '단어 콘텐츠' : '문장 콘텐츠'} 가져오기</strong>
+                    <span className="mt-1 block text-[hsl(var(--muted-foreground))]">
+                      {libraryMaterialType === 'word'
+                        ? `${selectedLibraryLearningContent.word} · ${selectedLibraryLearningContent.shortMeaning}`
+                        : `${selectedLibraryLearningContent.exampleSentence} · ${selectedLibraryLearningContent.exampleKorean}`}
+                    </span>
+                  </span>
+                </label>
+              )}
+              <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card)/.65)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-bold">{materialType === 'word' ? '단어 파일 여러 개 불러오기' : '문장 파일 여러 개 불러오기'}</p>
+                  <p className="text-xs font-bold">{libraryMaterialType === 'word' ? '단어 파일 여러 개 불러오기' : '문장 파일 여러 개 불러오기'}</p>
                   <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    TXT·Markdown·CSV 파일을 여러 개 선택할 수 있어요. {materialType === 'word' ? '한 줄에 단어 하나, CSV는 단어와 뜻 순서예요.' : '문장은 줄마다 하나씩 적거나 CSV에 문장과 뜻을 넣어주세요.'} 한 번에 최대 200개까지 등록할 수 있어요.
+                    TXT·Markdown·CSV를 선택해 보관함 작성기로 가져옵니다. CSV는 영어와 한국어를 같은 행에 둘 수 있습니다.
                   </p>
                 </div>
                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold transition-colors hover:border-[hsl(var(--accent)/.6)]">
@@ -847,22 +826,165 @@ export default function AdminAssignments() {
                     accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
                     className="sr-only"
                     onChange={(event) => {
-                      void importMaterialFiles(event.target.files);
-                      event.target.value = '';
+                      void importMaterialFiles(event.currentTarget.files);
+                      event.currentTarget.value = '';
                     }}
-                    data-testid="input-assignment-material-files"
+                    data-testid="input-library-material-files"
                   />
                   <Upload size={15} /> 파일 선택
                 </label>
+              </div>
+              {libraryImportMessage && <p role="status" className="text-[11px] font-semibold text-[hsl(var(--accent))]" data-testid="status-library-import">{libraryImportMessage}</p>}
+              <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+                자료를 직접 작성하거나 가져온 뒤 저장해야 보관함에 추가됩니다. 파일·홈 콘텐츠 가져오기는 과제를 생성하지 않습니다.
+              </p>
+              {libraryError && <p role="alert" className="rounded-xl bg-[hsl(var(--destructive)/.1)] px-4 py-3 text-sm font-semibold text-[hsl(var(--destructive))]" data-testid="status-library-error">{libraryError}</p>}
+              {libraryNotice && <p role="status" className="rounded-xl bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-semibold text-[hsl(var(--secondary-foreground))]" data-testid="status-library-success">{libraryNotice}</p>}
+              <div className="flex justify-end">
+                <button type="submit" disabled={createLibraryMaterial.isPending} className="button-pop inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-save-library-material">
+                  {createLibraryMaterial.isPending ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />}
+                  {createLibraryMaterial.isPending ? '보관 중...' : '보관함에 저장'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="rounded-2xl border border-[hsl(var(--border))] p-4 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="font-bold">저장한 콘텐츠</h3>
+                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">라이브러리에서 항목을 골라 다음 단계에서 과제로 배정하세요.</p>
+              </div>
+              <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{libraryMaterials.length} items</span>
             </div>
-            {materialImportMessage && (
-              <p className="text-[11px] font-semibold text-[hsl(var(--accent))]" data-testid="status-material-import">{materialImportMessage}</p>
+            {libraryQuery.isLoading ? (
+              <div className="mt-4 grid gap-2" aria-label="보관함 불러오는 중">{[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-xl bg-[hsl(var(--muted))]" />)}</div>
+            ) : libraryQuery.isError ? (
+              <div className="mt-4 rounded-xl border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.06)] p-4 text-sm">
+                <p className="font-semibold text-[hsl(var(--destructive))]">보관함을 불러오지 못했습니다.</p>
+                <button type="button" onClick={() => void libraryQuery.refetch()} className="mt-2 text-xs font-bold underline underline-offset-4" data-testid="button-retry-library">다시 시도</button>
+              </div>
+            ) : libraryMaterials.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[hsl(var(--border))] px-4 py-8 text-center">
+                <Library className="mx-auto text-[hsl(var(--muted-foreground))]" size={24} />
+                <p className="mt-3 text-sm font-semibold">아직 저장된 자료가 없습니다.</p>
+                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">위에서 첫 자료를 보관하면 과제 없이도 언제든 불러올 수 있어요.</p>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3">
+                {libraryMaterials.map((material) => {
+                  const preview = material.materialContent.split(/\r?\n/).filter(Boolean).slice(0, 2);
+                  return (
+                    <article key={material.id} className={`rounded-xl border p-4 transition-colors ${selectedLibraryId === material.id ? 'border-[hsl(var(--accent)/.65)] bg-[hsl(var(--accent)/.05)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.4)]'}`} data-testid={`card-library-material-${material.id}`}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="truncate text-sm font-bold">{material.title}</h4>
+                            <span className="rounded-full bg-[hsl(var(--secondary))] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]">{material.materialType === 'word' ? '단어' : '문장'}</span>
+                            <span className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">{levelLabels[material.level]}</span>
+                          </div>
+                          <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{preview.join(' · ') || '내용 없음'}</p>
+                          <p className="mt-1 text-[10px] text-[hsl(var(--muted-foreground))]">{material.folderId == null ? '폴더 없음' : getFolderPath(material.folderId, folders)} · {parseDirectMaterial(material.materialContent, material.materialType).length}개 항목</p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <button type="button" onClick={() => prepareAssignmentFromLibrary(material)} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))]" data-testid={`button-assign-library-${material.id}`}>
+                            <ClipboardList size={14} /> 과제로 배정
+                          </button>
+                          <button type="button" onClick={() => void removeLibraryMaterial(material)} disabled={deleteLibraryMaterial.isPending} aria-label={`${material.title} 보관 자료 삭제`} className="rounded-lg border border-[hsl(var(--border))] px-3 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive)/.1)] hover:text-[hsl(var(--destructive))] disabled:opacity-50" data-testid={`button-delete-library-${material.id}`}>
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             )}
-            <span className="text-[11px] text-[hsl(var(--muted-foreground))]">
-              영어와 한글은 같은 줄끼리 연결돼요. 여러 항목을 입력할 때 각 입력칸의 줄 순서를 맞춰 주세요. 한글 뜻·해석은 비워둘 수 있어요.
-            </span>
-          </div>
+          </section>
         </div>
+      )}
+
+      {activeView === 'assignments' && (
+      <>
+      <div className="mt-4 flex items-start justify-between gap-4 rounded-xl bg-[hsl(var(--secondary)/.42)] p-4">
+        <div>
+          <p className="text-sm font-bold">2단계 · 과제 배정</p>
+          <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">저장된 보관함 자료를 선택한 뒤 과정·대상·마감일을 지정해 별도의 과제 사본을 발행합니다.</p>
+        </div>
+        <button type="button" onClick={() => setActiveView('library')} className="shrink-0 text-xs font-bold text-[hsl(var(--accent))] underline underline-offset-4" data-testid="button-back-to-library">보관함으로</button>
+      </div>
+      <form id="course-assignment-registration" onSubmit={saveAssignment} className="mt-5 grid gap-4">
+        <section className="grid gap-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 sm:p-5">
+          <div>
+            <p className="text-xs font-bold">배정할 보관함 자료</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[hsl(var(--muted-foreground))]">과제 발행은 저장된 콘텐츠를 기준으로 별도 사본을 만듭니다. 이 단계에서 자료 본문은 편집할 수 없습니다.</p>
+          </div>
+          <label className="grid gap-2 text-xs font-bold">
+            저장된 자료 선택
+            <select
+              value={selectedLibraryId == null ? '' : String(selectedLibraryId)}
+              onChange={(event) => {
+                const chosen = libraryMaterials.find((material) => String(material.id) === event.target.value);
+                if (chosen) prepareAssignmentFromLibrary(chosen);
+                else setSelectedLibraryId(null);
+              }}
+              className="h-12 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 text-sm outline-none focus:border-[hsl(var(--accent))]"
+              data-testid="select-assignment-library-material"
+            >
+              <option value="">보관함 자료 선택</option>
+              {libraryMaterials.map((material) => <option key={material.id} value={material.id}>{material.title} · {material.materialType === 'word' ? '단어' : '문장'} · {levelLabels[material.level]}</option>)}
+            </select>
+          </label>
+          {libraryMaterials.length === 0 && (
+            <div className="rounded-xl border border-dashed border-[hsl(var(--border))] p-4 text-sm">
+              <p className="font-semibold">배정할 보관 자료가 없습니다.</p>
+              <button type="button" onClick={() => setActiveView('library')} className="mt-2 text-xs font-bold text-[hsl(var(--accent))] underline underline-offset-4">콘텐츠 보관함에서 자료 만들기</button>
+            </div>
+          )}
+          {selectedLibraryMaterial && (
+            <div className="rounded-xl bg-[hsl(var(--card))] p-4" data-testid="preview-assignment-library-material">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold">{selectedLibraryMaterial.title}</h3>
+                <span className="rounded-full bg-[hsl(var(--secondary))] px-2 py-0.5 text-[10px] font-bold">{selectedLibraryMaterial.materialType === 'word' ? '단어' : '문장'}</span>
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{levelLabels[selectedLibraryMaterial.level]}</span>
+              </div>
+              <p className="mt-1 text-[10px] text-[hsl(var(--muted-foreground))]">보관 폴더: {selectedLibraryMaterial.folderId == null ? '폴더 없음' : getFolderPath(selectedLibraryMaterial.folderId, folders)}</p>
+              <div className="mt-3 grid gap-2">
+                {selectedLibraryMaterial.materialContent.split(/\r?\n/).filter(Boolean).slice(0, 5).map((line, index) => {
+                  const [english, korean = ''] = line.split(/\s*\|\|\s*/, 2);
+                  return <div key={`${selectedLibraryMaterial.id}-${index}`} className="grid gap-1 border-t border-[hsl(var(--border))] pt-2 text-xs sm:grid-cols-2"><span className="font-semibold">{english}</span><span className="text-[hsl(var(--muted-foreground))]">{korean || '한국어 뜻 없음'}</span></div>;
+                })}
+                {selectedLibraryMaterial.materialContent.split(/\r?\n/).filter(Boolean).length > 5 && <p className="text-[10px] text-[hsl(var(--muted-foreground))]">외 {selectedLibraryMaterial.materialContent.split(/\r?\n/).filter(Boolean).length - 5}개 항목</p>}
+              </div>
+              <p className="mt-3 text-[10px] font-semibold text-[hsl(var(--accent))]">발행하면 이 시점의 자료 내용이 과제에 복사됩니다. 이후 보관함 편집과는 독립적입니다.</p>
+            </div>
+          )}
+          <label className="grid gap-2 text-xs font-bold">
+            배정 과정
+            <select
+              value={level}
+              onChange={(event) => {
+                const nextLevel = event.target.value as LearningLevel;
+                setLevel(nextLevel);
+                setListLevel(nextLevel);
+              }}
+              disabled={Boolean(assigneeUserId)}
+              className="h-11 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+              data-testid="select-assignment-course"
+            >
+              {courseOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          {selectedLibraryMaterial?.folderId != null
+            && folders.some((folder) => folder.id === selectedLibraryMaterial.folderId
+              && folder.level != null
+              && folder.level !== level) && (
+            <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
+              선택한 자료의 폴더는 다른 과정 전용이라, 다른 과정에 배정하면 과제 사본은 폴더 없이 저장됩니다.
+            </p>
+          )}
+        </section>
+
         <details className="rounded-2xl border border-[hsl(var(--border))] px-4 py-3">
           <summary className="cursor-pointer text-xs font-bold">
             개별 회원 배정 또는 마감일 설정
@@ -901,25 +1023,6 @@ export default function AdminAssignments() {
         </p>
         </details>
 
-        {resourcePath && (
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-[hsl(var(--secondary)/.7)] px-4 py-3">
-            <span className="flex min-w-0 items-center gap-2 text-xs font-bold">
-              <FileText size={16} />
-              <span className="truncate">{resourceName || '첨부 자료'}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setResourcePath('');
-                setResourceName('');
-              }}
-              className="text-xs font-bold text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-            >
-              첨부 해제
-            </button>
-          </div>
-        )}
-
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <label className="flex items-center gap-2 text-xs font-bold">
             <input
@@ -932,7 +1035,7 @@ export default function AdminAssignments() {
           </label>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !selectedLibraryMaterial}
             className="button-pop inline-flex items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-45"
           >
             {saving ? <LoaderCircle className="animate-spin" size={17} /> : <Plus size={17} />}
@@ -944,6 +1047,11 @@ export default function AdminAssignments() {
       {error && (
         <p className="mt-5 rounded-xl bg-[hsl(var(--destructive)/.1)] px-4 py-3 text-sm font-semibold text-[hsl(var(--destructive))]">
           {error}
+        </p>
+      )}
+      {assignmentNotice && (
+        <p role="status" className="mt-4 rounded-xl bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-semibold text-[hsl(var(--secondary-foreground))]" data-testid="status-assignment-success">
+          {assignmentNotice}
         </p>
       )}
 
@@ -1024,10 +1132,8 @@ export default function AdminAssignments() {
                data-testid={`button-material-folder-${value}`}
                 onClick={() => {
                   setMaterialFolder(value);
-                  setMaterialType(value);
                    setFolderListFilter('');
                    setCourseFolderOpen(false);
-                  setAssignmentFolderId('');
                 }}
                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                  materialFolder === value
@@ -1074,8 +1180,6 @@ export default function AdminAssignments() {
                       onClick={() => {
                         setListLevel(value);
                         setLevel(value);
-                        setMaterialType(materialFolder);
-                        setAssignmentFolderId('');
                         setFolderListFilter('');
                         setCourseFolderOpen(true);
                       }}
@@ -1102,7 +1206,6 @@ export default function AdminAssignments() {
                   onClick={() => {
                     setCourseFolderOpen(false);
                     setFolderListFilter('');
-                    setAssignmentFolderId('');
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 >
@@ -1206,8 +1309,6 @@ export default function AdminAssignments() {
                     onClick={() => {
                       setFolderListFilter(value);
                       setLevel(listLevel);
-                      setMaterialType(materialFolder);
-                      setAssignmentFolderId(/^\d+$/.test(value) ? value : '');
                     }}
                     className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                       folderListFilter === value
@@ -1257,7 +1358,7 @@ export default function AdminAssignments() {
                       )}
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[hsl(var(--secondary)/.55)] px-3 py-3">
                         <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                          선택한 위치는 새 과제의 저장 위치가 되고, 안의 자료도 가져올 수 있어요.
+                          선택한 위치의 과제 자료를 보관함 작성기로 가져와 독립 자료로 저장할 수 있어요.
                         </p>
                         <button
                           type="button"
@@ -1265,7 +1366,7 @@ export default function AdminAssignments() {
                           className="inline-flex items-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))]"
                           data-testid="button-import-selected-folder"
                         >
-                          이 위치 자료 가져오기
+                          보관함 작성기로 가져오기
                         </button>
                       </div>
                     </>
@@ -1335,6 +1436,8 @@ export default function AdminAssignments() {
         </div>
         </div>
       </details>
+      </>
+      )}
     </section>
   );
 }

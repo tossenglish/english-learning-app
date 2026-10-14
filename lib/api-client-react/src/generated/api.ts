@@ -36,6 +36,8 @@ import type {
   LearningContentBatch,
   LearningContentInput,
   LearningContentLevel,
+  LibraryMaterial,
+  LibraryMaterialInput,
   ListAssignmentsParams,
   MemberCourseAssignment,
   MemberCourseInput,
@@ -649,6 +651,245 @@ export const useCreateAssignment = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getCreateAssignmentMutationOptions(options));
+    }
+
+export const getListAdminLibraryMaterialsUrl = () => {
+
+
+
+
+  return `/api/admin/library-materials`
+}
+
+/**
+ * @summary 관리자의 저장 콘텐츠 목록 조회
+ */
+export const listAdminLibraryMaterials = async ( options?: Parameters<typeof customFetch>[1]): Promise<LibraryMaterial[]> => {
+
+  return customFetch<LibraryMaterial[]>(getListAdminLibraryMaterialsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminLibraryMaterialsQueryKey = () => {
+    return [
+    `/api/admin/library-materials`
+    ] as const;
+    }
+
+
+export const getListAdminLibraryMaterialsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminLibraryMaterials>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLibraryMaterials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminLibraryMaterialsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminLibraryMaterials>>> = ({ signal }) => listAdminLibraryMaterials({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminLibraryMaterials>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminLibraryMaterialsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminLibraryMaterials>>>
+export type ListAdminLibraryMaterialsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 관리자의 저장 콘텐츠 목록 조회
+ */
+
+export function useListAdminLibraryMaterials<TData = Awaited<ReturnType<typeof listAdminLibraryMaterials>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminLibraryMaterials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminLibraryMaterialsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminLibraryMaterialUrl = () => {
+
+
+
+
+  return `/api/admin/library-materials`
+}
+
+/**
+ * @summary 콘텐츠 보관함에 자료 저장
+ */
+export const createAdminLibraryMaterial = async (libraryMaterialInput: LibraryMaterialInput, options?: Parameters<typeof customFetch>[1]): Promise<LibraryMaterial> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LibraryMaterial>(getCreateAdminLibraryMaterialUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(libraryMaterialInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminLibraryMaterialMutationKey = () => ['createAdminLibraryMaterial'] as const;
+
+export const getCreateAdminLibraryMaterialMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminLibraryMaterial>>, TError,CreateAdminLibraryMaterialMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminLibraryMaterial>>, TError,CreateAdminLibraryMaterialMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminLibraryMaterialMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminLibraryMaterial>>, CreateAdminLibraryMaterialMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminLibraryMaterial(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminLibraryMaterialMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminLibraryMaterial>>>
+    export type CreateAdminLibraryMaterialMutationBody = BodyType<LibraryMaterialInput>
+    export type CreateAdminLibraryMaterialMutationError = ErrorType<ErrorEnvelope>
+    export type CreateAdminLibraryMaterialMutationVariables = {data: BodyType<LibraryMaterialInput>}
+
+    /**
+ * @summary 콘텐츠 보관함에 자료 저장
+ */
+export const useCreateAdminLibraryMaterial = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminLibraryMaterial>>, TError,CreateAdminLibraryMaterialMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminLibraryMaterial>>,
+        TError,
+        CreateAdminLibraryMaterialMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminLibraryMaterialMutationOptions(options));
+    }
+
+export const getDeleteAdminLibraryMaterialUrl = (materialId: number,) => {
+
+
+
+
+  return `/api/admin/library-materials/${materialId}`
+}
+
+/**
+ * @summary 저장 콘텐츠 삭제
+ */
+export const deleteAdminLibraryMaterial = async (materialId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminLibraryMaterialUrl(materialId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminLibraryMaterialMutationKey = () => ['deleteAdminLibraryMaterial'] as const;
+
+export const getDeleteAdminLibraryMaterialMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>, TError,DeleteAdminLibraryMaterialMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>, TError,DeleteAdminLibraryMaterialMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAdminLibraryMaterialMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>, DeleteAdminLibraryMaterialMutationVariables> = (props) => {
+          const {materialId} = props ?? {};
+
+          return  deleteAdminLibraryMaterial(materialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminLibraryMaterialMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>>
+
+    export type DeleteAdminLibraryMaterialMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteAdminLibraryMaterialMutationVariables = {materialId: number}
+
+    /**
+ * @summary 저장 콘텐츠 삭제
+ */
+export const useDeleteAdminLibraryMaterial = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>, TError,DeleteAdminLibraryMaterialMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminLibraryMaterial>>,
+        TError,
+        DeleteAdminLibraryMaterialMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAdminLibraryMaterialMutationOptions(options));
     }
 
 export const getListAdminAssignmentFoldersUrl = () => {

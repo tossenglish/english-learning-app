@@ -26,6 +26,8 @@ export * from './learningContentBatchItem';
 export * from './learningContentInput';
 export * from './learningContentLevel';
 export * from './learningLevel';
+export * from './libraryMaterial';
+export * from './libraryMaterialInput';
 export * from './listAssignmentsParams';
 export * from './materialType';
 export * from './memberCourseAssignment';

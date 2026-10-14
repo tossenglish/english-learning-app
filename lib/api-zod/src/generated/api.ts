@@ -168,6 +168,70 @@ export const CreateAssignmentResponse = zod.object({
 
 
 /**
+ * @summary 관리자의 저장 콘텐츠 목록 조회
+ */
+export const ListAdminLibraryMaterialsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullable(),
+  "materialContent": zod.string(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "resourcePath": zod.string().nullable(),
+  "resourceName": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAdminLibraryMaterialsResponse = zod.array(ListAdminLibraryMaterialsResponseItem)
+
+
+/**
+ * @summary 콘텐츠 보관함에 자료 저장
+ */
+export const createAdminLibraryMaterialBodyTitleMax = 160;
+
+export const createAdminLibraryMaterialBodyMaterialContentMax = 45000;
+
+
+
+export const CreateAdminLibraryMaterialBody = zod.object({
+  "title": zod.string().min(1).max(createAdminLibraryMaterialBodyTitleMax),
+  "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullish(),
+  "materialContent": zod.string().min(1).max(createAdminLibraryMaterialBodyMaterialContentMax),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "resourcePath": zod.string().nullish(),
+  "resourceName": zod.string().nullish()
+})
+
+export const CreateAdminLibraryMaterialResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "materialType": zod.enum(['sentence', 'word']),
+  "folderId": zod.number().int().nullable(),
+  "materialContent": zod.string(),
+  "level": zod.enum(['Beginner', 'Intermediate', 'Advanced', 'All']),
+  "resourcePath": zod.string().nullable(),
+  "resourceName": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary 저장 콘텐츠 삭제
+ */
+
+
+
+export const DeleteAdminLibraryMaterialParams = zod.object({
+  "materialId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteAdminLibraryMaterialResponse = zod.void()
+
+
+/**
  * @summary 관리자의 학습자료 하위 폴더 목록 조회
  */
 export const ListAdminAssignmentFoldersResponseItem = zod.object({
