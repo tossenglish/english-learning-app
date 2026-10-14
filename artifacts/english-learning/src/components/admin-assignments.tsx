@@ -225,6 +225,8 @@ export default function AdminAssignments() {
   const [folderListFilter, setFolderListFilter] = useState('all');
   const [courseFolderOpen, setCourseFolderOpen] = useState(false);
   const [courseFolderName, setCourseFolderName] = useState('');
+  const [courseFolderMessage, setCourseFolderMessage] = useState('');
+  const [courseFolderError, setCourseFolderError] = useState('');
   const [subfolderName, setSubfolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
@@ -364,6 +366,8 @@ export default function AdminAssignments() {
 
     setCreatingFolder(true);
     setError('');
+    setCourseFolderMessage('');
+    setCourseFolderError('');
     try {
       const response = await apiFetch('/api/admin/assignment-folders', {
         method: 'POST',
@@ -377,6 +381,30 @@ export default function AdminAssignments() {
         }),
       });
       if (!response.ok) {
+        if (response.status === 409) {
+          const foldersResponse = await apiFetch('/api/admin/assignment-folders', {
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          if (foldersResponse.ok) {
+            const latestFolders = await foldersResponse.json() as AssignmentFolder[];
+            const existing = latestFolders.find((folder) =>
+              folder.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase()
+              && folder.level === listLevel
+              && folder.parentFolderId == null,
+            );
+            if (existing) {
+              setFolders(latestFolders);
+              setCourseFolderName('');
+              setLevel(listLevel);
+              setMaterialType(materialFolder);
+              setAssignmentFolderId(String(existing.id));
+              setFolderListFilter(String(existing.id));
+              setCourseFolderMessage('같은 이름의 과정 폴더가 이미 있어 기존 폴더를 선택했어요.');
+              return;
+            }
+          }
+        }
         const body = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(body?.error || '과정 폴더를 만들지 못했습니다.');
       }
@@ -388,8 +416,11 @@ export default function AdminAssignments() {
       setMaterialType(materialFolder);
       setAssignmentFolderId(String(created.id));
       setFolderListFilter(String(created.id));
+      setCourseFolderMessage('과정 폴더를 만들고 선택했어요.');
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : '과정 폴더 생성 오류');
+      const message = createError instanceof Error ? createError.message : '과정 폴더 생성 오류';
+      setError(message);
+      setCourseFolderError(message);
     } finally {
       setCreatingFolder(false);
     }
@@ -1057,7 +1088,11 @@ export default function AdminAssignments() {
                        <div className="flex w-full gap-2 sm:w-auto">
                          <input
                            value={courseFolderName}
-                           onChange={(event) => setCourseFolderName(event.target.value)}
+                            onChange={(event) => {
+                              setCourseFolderName(event.target.value);
+                              setCourseFolderMessage('');
+                              setCourseFolderError('');
+                            }}
                            onKeyDown={(event) => {
                              if (event.key === 'Enter') {
                                event.preventDefault();
@@ -1082,6 +1117,16 @@ export default function AdminAssignments() {
                          </button>
                        </div>
                      )}
+                      {courseFolderMessage && (
+                        <p role="status" aria-live="polite" className="mt-2 text-xs font-semibold text-[hsl(var(--accent))]">
+                          {courseFolderMessage}
+                        </p>
+                      )}
+                      {courseFolderError && (
+                        <p role="alert" className="mt-2 text-xs font-semibold text-[hsl(var(--destructive))]">
+                          {courseFolderError}
+                        </p>
+                      )}
                    </div>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
