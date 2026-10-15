@@ -94,8 +94,8 @@ const wordModes: Array<{
   description: string;
   icon: typeof Headphones;
 }> = [
-  { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 답하기', icon: PenLine },
   { id: 'dictation', label: '영어 퀴즈', description: '영어 단어의 뜻을 맞혀요', icon: CheckCircle2 },
+  { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 답하기', icon: PenLine },
 ];
 
 const blankCompletion = (): Completion => ({
@@ -457,9 +457,7 @@ export default function PassagePractice({
   const [currentIndex, setCurrentIndex] = useState(
     () => activeMaterial ? 0 : (hasSavedCustomPassage ? initialState.currentIndex : 0),
   );
-  const [mode, setMode] = useState<ExerciseMode>(() =>
-    activeMaterial?.materialType === 'word' ? 'writing' : 'dictation',
-  );
+  const [mode, setMode] = useState<ExerciseMode>('dictation');
   const [answers, setAnswers] = useState<Record<number, Record<ExerciseMode, string>>>(
     () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.answers : {}),
   );
@@ -519,16 +517,16 @@ export default function PassagePractice({
     }
     return options;
   }, [current?.id, current?.korean, passageSentences]);
-  const totalProgressSteps = passageSentences.length * (isWordMaterial ? 1 : modes.length);
+  const totalProgressSteps = passageSentences.length * (isWordMaterial ? wordModes.length : modes.length);
   const completedSteps = passageSentences.reduce((total, sentence) => {
-    const doneModes = Object.values(completed[sentence.id] ?? blankCompletion());
+    const sentenceProgress = completed[sentence.id] ?? blankCompletion();
     return total + (isWordMaterial
-      ? (doneModes.some(Boolean) ? 1 : 0)
-      : doneModes.filter(Boolean).length);
+      ? wordModes.filter(({ id }) => sentenceProgress[id]).length
+      : Object.values(sentenceProgress).filter(Boolean).length);
   }, 0);
   const allCompleted = passageSentences.length > 0 && completedSteps === totalProgressSteps;
   const sentenceCompleted = isWordMaterial
-    ? Object.values(currentCompletion).some(Boolean)
+    ? wordModes.every(({ id }) => currentCompletion[id])
     : modes.every((item) => currentCompletion[item.id]);
   const canAdvance = sentenceCompleted || (isWordMaterial && feedback === 'correct');
   const isDefaultPassage = !usingActiveMaterial && normalizePassage(passageText) === normalizePassage(DEFAULT_PASSAGE_TEXT);
@@ -537,6 +535,12 @@ export default function PassagePractice({
   const currentMode = useMemo(
     () => availableModes.find((item) => item.id === mode) ?? availableModes[0],
     [availableModes, mode],
+  );
+  const currentModeFinished = isWordMaterial
+    && passageSentences.length > 0
+    && passageSentences.every((sentence) => completed[sentence.id]?.[mode]);
+  const nextUnfinishedWordMode = wordModes.find(({ id }) =>
+    !passageSentences.every((sentence) => completed[sentence.id]?.[id]),
   );
   const expectedAnswer = isWordMaterial
     ? mode === 'writing' ? current.english : current.korean
@@ -893,11 +897,13 @@ export default function PassagePractice({
   };
 
   const selectMode = (nextMode: ExerciseMode) => {
+    const switchingWordModes = isWordMaterial && nextMode !== mode;
+    if (switchingWordModes) setCurrentIndex(0);
     if (modeAdvanceTimerRef.current !== null) {
       window.clearTimeout(modeAdvanceTimerRef.current);
       modeAdvanceTimerRef.current = null;
     }
-    focusWordAnswerAfterAdvanceRef.current = false;
+    focusWordAnswerAfterAdvanceRef.current = switchingWordModes && nextMode === 'writing';
     if (wordAdvanceTimerRef.current !== null) {
       window.clearTimeout(wordAdvanceTimerRef.current);
       wordAdvanceTimerRef.current = null;
@@ -960,7 +966,7 @@ export default function PassagePractice({
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
             {isWordMaterial
-              ? '단어의 뜻을 맞히면 다음 단어로 넘어갈 수 있어요.'
+              ? '영어 퀴즈와 단어 쓰기를 각각 처음부터 끝까지 완료해요.'
               : '한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.'}
           </p>
         </div>
@@ -1229,6 +1235,11 @@ export default function PassagePractice({
               );
             })}
           </div>
+          {isWordMaterial && currentModeFinished && !allCompleted && nextUnfinishedWordMode && (
+            <p role="status" className="rounded-xl bg-[hsl(var(--secondary)/.65)] px-4 py-3 text-xs font-semibold text-[hsl(var(--secondary-foreground))]">
+              {currentMode.label}를 모두 마쳤어요. 이제 {nextUnfinishedWordMode.label}를 처음부터 끝까지 진행해보세요.
+            </p>
+          )}
 
           <article className="min-w-0 rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-10 lg:p-12">
             <div className="flex items-start justify-between gap-4">
@@ -1424,7 +1435,7 @@ export default function PassagePractice({
                   {feedback === 'wrong' && `${isWordMaterial ? '아직 정답이 아니에요. 다시 확인해볼까요?' : '조금 달라요. 정답을 확인하고 다시 한 번 써볼까요?'} ${showAnswer ? expectedAnswer : ''}`}
                   {feedback === 'hint' && (sentenceCompleted
                     ? (isWordMaterial ? '정답이에요. 다음 단어로 넘어가 볼까요?' : '세 가지 연습을 모두 끝냈어요. 다음 문장으로 가볼까요?')
-                    : (isWordMaterial ? '단어의 뜻을 맞히면 다음 단어로 넘어갈 수 있어요.' : '이 문장의 받아쓰기, 영작, 따라 말하기를 모두 끝내면 다음으로 갈 수 있어요.'))}
+                    : (isWordMaterial ? `${currentMode.label}의 모든 단어를 끝내면 다음 연습으로 넘어갈 수 있어요.` : '이 문장의 받아쓰기, 영작, 따라 말하기를 모두 끝내면 다음으로 갈 수 있어요.'))}
                 </span>
               </div>
             )}
@@ -1462,7 +1473,7 @@ export default function PassagePractice({
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[hsl(var(--muted-foreground))]">
               {sentenceCompleted
-                ? (isWordMaterial ? '이 단어를 맞혔어요.' : '이 문장의 모든 연습을 완료했어요.')
+                ? (isWordMaterial ? '이 단어의 두 가지 연습을 모두 마쳤어요.' : '이 문장의 모든 연습을 완료했어요.')
                 : `${currentMode.label}을 완료해보세요.`}
             </p>
             <button
@@ -1475,7 +1486,7 @@ export default function PassagePractice({
               className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-45"
             >
               {allCompleted
-                ? (isWordMaterial ? '단어 퀴즈 완료' : '지문 연습 완료')
+                ? (isWordMaterial ? '단어 과제 완료' : '지문 연습 완료')
                 : currentIndex === passageSentences.length - 1
                   ? (isWordMaterial ? '마지막 단어' : '마지막 문장')
                   : (isWordMaterial ? '다음 단어' : '다음 문장')} <ArrowRight size={14} />
@@ -1487,9 +1498,9 @@ export default function PassagePractice({
       {allCompleted && (
         <section className="rise-in rounded-[26px] border border-[hsl(var(--accent)/.35)] bg-[hsl(var(--secondary)/.65)] p-6 text-center" data-testid="status-passage-complete">
           <CheckCircle2 className="mx-auto text-[hsl(var(--accent))]" size={28} />
-          <h2 className="mt-3 text-xl font-bold">{isWordMaterial ? '단어 퀴즈를 모두 풀었어요.' : '지문의 모든 문장을 완주했어요.'}</h2>
+          <h2 className="mt-3 text-xl font-bold">{isWordMaterial ? '단어 과제를 모두 마쳤어요.' : '지문의 모든 문장을 완주했어요.'}</h2>
           <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-            {isWordMaterial ? '모든 단어를 확인했어요.' : '이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.'}
+            {isWordMaterial ? '영어 퀴즈와 단어 쓰기를 모든 단어에서 마쳤어요.' : '이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.'}
           </p>
         </section>
       )}
