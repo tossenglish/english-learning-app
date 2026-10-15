@@ -5,9 +5,9 @@ type PersianCatFriendsProps = {
 const assetBase = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const cats = [
-  { name: 'cream', file: 'persian-cat-cream.png' },
-  { name: 'silver', file: 'persian-cat-silver.png' },
-  { name: 'ginger', file: 'persian-cat-ginger.png' },
+  { name: 'cream', file: 'persian-cat-cream.webp' },
+  { name: 'silver', file: 'persian-cat-silver.webp' },
+  { name: 'ginger', file: 'persian-cat-ginger.webp' },
 ] as const;
 
 export default function PersianCatFriends({ variant }: PersianCatFriendsProps) {
