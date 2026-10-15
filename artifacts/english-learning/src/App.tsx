@@ -475,7 +475,7 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
           <div className="md:hidden"><Logo /></div>
           <div className="hidden items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] md:flex">
             <span className="h-2 w-2 rounded-full bg-[hsl(var(--accent))]" />
-            해봐~ 된다니깐!
+            일곡동 영어맛집
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
