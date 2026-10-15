@@ -216,6 +216,45 @@ router.get(
   },
 );
 
+router.delete(
+  "/admin/assignment-folders/:folderId",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const folderId = Number(req.params.folderId);
+    if (!Number.isSafeInteger(folderId) || folderId <= 0) {
+      res.status(400).json({ error: "Invalid folder ID" });
+      return;
+    }
+
+    const [childFolder] = await db
+      .select({ id: assignmentFoldersTable.id })
+      .from(assignmentFoldersTable)
+      .where(eq(assignmentFoldersTable.parentFolderId, folderId))
+      .limit(1);
+    const [assignment] = await db
+      .select({ id: assignmentsTable.id })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.folderId, folderId))
+      .limit(1);
+    if (childFolder || assignment) {
+      res.status(409).json({ error: "Move or remove the folder contents before deleting it" });
+      return;
+    }
+
+    const [deleted] = await db
+      .delete(assignmentFoldersTable)
+      .where(eq(assignmentFoldersTable.id, folderId))
+      .returning({ id: assignmentFoldersTable.id });
+    if (!deleted) {
+      res.status(404).json({ error: "Folder not found" });
+      return;
+    }
+
+    res.status(204).send();
+  },
+);
+
 router.post(
   "/admin/assignment-folders",
   async (req: Request, res: Response): Promise<void> => {

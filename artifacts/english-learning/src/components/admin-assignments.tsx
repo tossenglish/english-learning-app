@@ -239,6 +239,7 @@ export default function AdminAssignments() {
   const [courseFolderError, setCourseFolderError] = useState('');
   const [subfolderName, setSubfolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [deletingFolderId, setDeletingFolderId] = useState<number | null>(null);
   const [updatingMemberIds, setUpdatingMemberIds] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<'library' | 'assignments'>('library');
   const [libraryTitle, setLibraryTitle] = useState('');
@@ -280,7 +281,7 @@ export default function AdminAssignments() {
     const matchesSubfolder = folderListFilter === 'all'
       || (folderListFilter === 'unfiled'
         ? assignment.folderId == null
-        : assignment.folderId != null && selectedFolderDescendants.includes(assignment.folderId));
+        : selectedFolderId != null && assignment.folderId === selectedFolderId);
     return matchesCourse && assignment.materialType === materialFolder && matchesSubfolder;
   });
   const courseAssignments = assignments.filter((assignment) =>
@@ -289,6 +290,11 @@ export default function AdminAssignments() {
   const courseSubfolders = folders.filter((folder) =>
     (folder.level === listLevel || folder.level == null)
     && (folder.materialType === 'mixed' || folder.materialType === materialFolder),
+  );
+  const visibleSubfolders = courseSubfolders.filter((folder) =>
+    selectedFolderId == null
+      ? folder.parentFolderId == null
+      : folder.parentFolderId === selectedFolderId,
   );
   const assignmentsForFolderCounter = courseFolderOpen
     ? folderListFilter === '' ? courseAssignments : visibleAssignments
@@ -478,6 +484,38 @@ export default function AdminAssignments() {
       setError(createError instanceof Error ? createError.message : '하위 자료 위치 생성 오류');
     } finally {
       setCreatingFolder(false);
+    }
+  };
+
+  const deleteFolder = async (folder: AssignmentFolder) => {
+    if (deletingFolderId != null) return;
+    if (!window.confirm(`비어 있는 "${folder.name}" 폴더를 삭제할까요?`)) return;
+
+    setDeletingFolderId(folder.id);
+    setError('');
+    setCourseFolderMessage('');
+    setCourseFolderError('');
+    try {
+      const response = await apiFetch(`/api/admin/assignment-folders/${folder.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        if (response.status === 409) {
+          throw new Error('하위 폴더나 과제가 있는 폴더는 삭제할 수 없습니다.');
+        }
+        throw new Error(body?.error || '폴더를 삭제하지 못했습니다.');
+      }
+
+      setFolders((current) => current.filter((item) => item.id !== folder.id));
+      setCourseFolderMessage(`"${folder.name}" 폴더를 삭제했습니다.`);
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : '폴더 삭제 오류';
+      setError(message);
+      setCourseFolderError(message);
+    } finally {
+      setDeletingFolderId(null);
     }
   };
 
@@ -1204,15 +1242,28 @@ export default function AdminAssignments() {
                 <button
                   type="button"
                   onClick={() => {
-                    setCourseFolderOpen(false);
-                    setFolderListFilter('');
+                    const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
+                    if (selectedFolderId == null) {
+                      setCourseFolderOpen(false);
+                      setFolderListFilter('');
+                    } else {
+                      setFolderListFilter(
+                        selectedFolder?.parentFolderId == null
+                          ? ''
+                          : String(selectedFolder.parentFolderId),
+                      );
+                    }
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
                 >
-                  <ArrowLeft size={14} /> 상위 폴더
+                  <ArrowLeft size={14} /> {selectedFolderId == null ? '과정 선택' : '상위 폴더'}
                 </button>
                 <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={14} />
-                <span>{materialFolder === 'word' ? '단어 폴더' : '문장 폴더'}</span>
+                <span>
+                  {selectedFolderId == null
+                    ? materialFolder === 'word' ? '단어 폴더' : '문장 폴더'
+                    : getFolderPath(selectedFolderId, folders)}
+                </span>
               </div>
               <div className="mt-3 rounded-2xl border border-[hsl(var(--accent)/.35)] bg-[hsl(var(--accent)/.04)] p-4">
                 <div className="flex items-center gap-3">
@@ -1283,47 +1334,84 @@ export default function AdminAssignments() {
                       )}
                    </div>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  { value: 'all', label: '전체 자료', count: courseAssignments.length },
-                  ...courseSubfolders.map((folder) => ({
-                    value: String(folder.id),
-                    label: getFolderPath(folder.id, folders),
-                    count: courseAssignments.filter((assignment) =>
-                      assignment.folderId != null
-                      && getFolderAndDescendantIds(folder.id, folders).includes(assignment.folderId),
-                    ).length,
-                  })),
-                  ...(courseAssignments.some((assignment) => assignment.folderId == null)
-                    ? [{
-                        value: 'unfiled',
-                        label: '폴더 없음',
-                        count: courseAssignments.filter((assignment) => assignment.folderId == null).length,
-                      }]
-                    : []),
-                ].map(({ value, label, count }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    data-testid={`button-assignment-subfolder-${value}`}
-                    aria-pressed={folderListFilter === value}
-                    onClick={() => {
-                      setFolderListFilter(value);
-                      setLevel(listLevel);
-                    }}
-                    className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
-                      folderListFilter === value
-                        ? 'border-[hsl(var(--accent))] bg-[hsl(var(--accent)/.08)]'
-                        : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] hover:border-[hsl(var(--accent)/.55)]'
-                    }`}
-                  >
-                    <FolderOpen className="shrink-0 text-[hsl(var(--accent))]" size={18} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold">{label}</span>
-                      <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{count}개 과제</span>
-                    </span>
-                    <ChevronRight className="text-[hsl(var(--muted-foreground))]" size={16} />
-                  </button>
-                ))}
+                    {selectedFolderId == null && (
+                      <button
+                        type="button"
+                        data-testid="button-assignment-subfolder-all"
+                        onClick={() => setFolderListFilter('all')}
+                        className="flex min-h-20 items-center gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 text-left transition-colors hover:border-[hsl(var(--accent)/.55)]"
+                      >
+                        <FolderOpen className="shrink-0 text-[hsl(var(--accent))]" size={18} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold">전체 자료</span>
+                          <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{courseAssignments.length}개 과제</span>
+                        </span>
+                      </button>
+                    )}
+                    {visibleSubfolders.map((folder) => {
+                      const folderIds = getFolderAndDescendantIds(folder.id, folders);
+                      const count = courseAssignments.filter((assignment) =>
+                        assignment.folderId != null && folderIds.includes(assignment.folderId),
+                      ).length;
+                      const hasSubfolders = folders.some((item) => item.parentFolderId === folder.id);
+                      const hasAssignments = assignments.some((assignment) => assignment.folderId === folder.id);
+                      const canDelete = !hasSubfolders && !hasAssignments;
+
+                      return (
+                        <div
+                          key={folder.id}
+                          className="flex min-h-20 items-stretch overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] transition-colors hover:border-[hsl(var(--accent)/.55)]"
+                        >
+                          <button
+                            type="button"
+                            data-testid={`button-assignment-subfolder-${folder.id}`}
+                            onClick={() => setFolderListFilter(String(folder.id))}
+                            className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left"
+                          >
+                            <FolderOpen className="shrink-0 text-[hsl(var(--accent))]" size={18} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-bold">{folder.name}</span>
+                              <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">{count}개 과제 · 하위 폴더 포함</span>
+                            </span>
+                            <ChevronRight className="shrink-0 text-[hsl(var(--muted-foreground))]" size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteFolder(folder)}
+                            disabled={!canDelete || deletingFolderId != null}
+                            title={canDelete ? '빈 폴더 삭제' : '과제나 하위 폴더가 있어 삭제할 수 없습니다.'}
+                            aria-label={`${folder.name} 폴더 삭제`}
+                            data-testid={`button-delete-folder-${folder.id}`}
+                            className="m-2 inline-flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-xl text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--destructive)/.1)] hover:text-[hsl(var(--destructive))] disabled:cursor-not-allowed disabled:opacity-35"
+                          >
+                            {deletingFolderId === folder.id
+                              ? <LoaderCircle className="animate-spin" size={16} />
+                              : <Trash2 size={16} />}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {selectedFolderId == null && courseAssignments.some((assignment) => assignment.folderId == null) && (
+                      <button
+                        type="button"
+                        data-testid="button-assignment-subfolder-unfiled"
+                        onClick={() => setFolderListFilter('unfiled')}
+                        className="flex min-h-20 items-center gap-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.45)] p-4 text-left transition-colors hover:border-[hsl(var(--accent)/.55)]"
+                      >
+                        <FolderOpen className="shrink-0 text-[hsl(var(--muted-foreground))]" size={18} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold">폴더 없음</span>
+                          <span className="mt-1 block text-xs text-[hsl(var(--muted-foreground))]">
+                            {courseAssignments.filter((assignment) => assignment.folderId == null).length}개 과제
+                          </span>
+                        </span>
+                      </button>
+                    )}
+                    {selectedFolderId != null && visibleSubfolders.length === 0 && (
+                      <p className="rounded-xl bg-[hsl(var(--muted)/.45)] px-4 py-5 text-sm text-[hsl(var(--muted-foreground))]">
+                        하위 폴더가 없습니다. 이 위치에 과제를 추가하거나 새 하위 폴더를 만들 수 있어요.
+                      </p>
+                    )}
                   </div>
                   {selectedFolderId != null && listLevel !== 'All' && (
                     <>
