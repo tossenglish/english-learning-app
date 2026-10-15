@@ -381,9 +381,39 @@ router.post(
         email: user.primaryEmailAddress?.emailAddress ?? email,
         course: null,
       });
-    } catch {
+    } catch (createError) {
+      const clerkErrors = (createError as {
+        errors?: Array<{
+          code?: unknown;
+          longMessage?: unknown;
+          message?: unknown;
+        }>;
+      })?.errors;
+      const firstError = clerkErrors?.[0];
+      const code = typeof firstError?.code === "string" ? firstError.code : "";
+      const detail = typeof firstError?.longMessage === "string"
+        ? firstError.longMessage
+        : typeof firstError?.message === "string"
+          ? firstError.message
+          : "";
+
+      if (code === "form_identifier_exists") {
+        res.status(409).json({ error: "이미 등록된 이메일 주소입니다." });
+        return;
+      }
+      if (code.includes("password")) {
+        res.status(400).json({
+          error: detail
+            ? `비밀번호가 Clerk의 보안 기준을 통과하지 못했습니다. ${detail}`
+            : "다른 비밀번호를 사용해 주세요. 비밀번호가 너무 짧거나 유출된 비밀번호일 수 있습니다.",
+        });
+        return;
+      }
+
       res.status(400).json({
-        error: "계정을 만들지 못했습니다. 이메일 중복 여부와 Clerk의 비밀번호 기준을 확인해 주세요.",
+        error: detail
+          ? `계정을 만들지 못했습니다. ${detail}`
+          : "계정을 만들지 못했습니다. 이메일 주소와 Clerk 계정 설정을 확인해 주세요.",
       });
     }
   },
