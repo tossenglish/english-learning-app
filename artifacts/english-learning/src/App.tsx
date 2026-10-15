@@ -486,7 +486,6 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
                 className="button-pop flex items-center gap-2 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-xs font-bold text-[hsl(var(--foreground))]"
                 aria-expanded={levelOpen}
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-[10px] text-[hsl(var(--secondary-foreground))]">민</span>
                 <span className="hidden sm:inline">{level}</span>
                 <ChevronRight size={14} className={`transition-transform ${levelOpen ? 'rotate-90' : ''}`} />
               </button>
