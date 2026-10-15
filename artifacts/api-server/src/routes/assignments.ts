@@ -348,6 +348,47 @@ router.get(
   },
 );
 
+router.post(
+  "/admin/members",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const body = req.body as { email?: unknown; password?: unknown };
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      res.status(400).json({ error: "올바른 이메일 주소를 입력해 주세요." });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: "비밀번호는 8자 이상이어야 합니다." });
+      return;
+    }
+    if (isAdminEmail(email)) {
+      res.status(400).json({ error: "관리자 계정은 회원 계정 생성에서 추가할 수 없습니다." });
+      return;
+    }
+
+    try {
+      const user = await clerkClient.users.createUser({
+        emailAddress: [email],
+        emailAddressIdentificationStatus: ["reserved"],
+        password,
+      });
+      res.status(201).json({
+        id: user.id,
+        displayName: getDisplayName(user),
+        email: user.primaryEmailAddress?.emailAddress ?? email,
+        course: null,
+      });
+    } catch {
+      res.status(400).json({
+        error: "계정을 만들지 못했습니다. 이메일 중복 여부와 Clerk의 비밀번호 기준을 확인해 주세요.",
+      });
+    }
+  },
+);
+
 router.put(
   "/admin/members/:memberId/course",
   async (req: Request, res: Response): Promise<void> => {

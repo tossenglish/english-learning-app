@@ -220,6 +220,12 @@ export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberPassword, setNewMemberPassword] = useState('');
+  const [newMemberPasswordConfirm, setNewMemberPasswordConfirm] = useState('');
+  const [creatingMember, setCreatingMember] = useState(false);
+  const [memberCreateError, setMemberCreateError] = useState('');
+  const [memberCreateNotice, setMemberCreateNotice] = useState('');
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
   const [libraryHomeContentSelected, setLibraryHomeContentSelected] = useState(false);
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
@@ -544,6 +550,46 @@ export default function AdminAssignments() {
       setError(updateError instanceof Error ? updateError.message : '과정 배정 오류');
     } finally {
       setUpdatingMemberIds((current) => current.filter((id) => id !== memberId));
+    }
+  };
+
+  const createMember = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (creatingMember) return;
+    if (newMemberPassword !== newMemberPasswordConfirm) {
+      setMemberCreateError('비밀번호 확인이 일치하지 않습니다.');
+      setMemberCreateNotice('');
+      return;
+    }
+
+    setCreatingMember(true);
+    setMemberCreateError('');
+    setMemberCreateNotice('');
+    try {
+      const response = await apiFetch('/api/admin/members', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newMemberEmail,
+          password: newMemberPassword,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '회원 계정을 만들지 못했습니다.');
+      }
+
+      const created = await response.json() as AssignmentMember;
+      setMembers((current) => [created, ...current.filter((member) => member.id !== created.id)]);
+      setNewMemberEmail('');
+      setNewMemberPassword('');
+      setNewMemberPasswordConfirm('');
+      setMemberCreateNotice(`${created.email ?? '회원'} 계정을 만들었습니다. 아래에서 학습 과정을 배정할 수 있어요.`);
+    } catch (createError) {
+      setMemberCreateError(createError instanceof Error ? createError.message : '회원 계정 생성 오류');
+    } finally {
+      setCreatingMember(false);
     }
   };
 
@@ -1111,6 +1157,76 @@ export default function AdminAssignments() {
           </div>
           <span className="shrink-0 font-mono text-xs text-[hsl(var(--muted-foreground))]">{members.length}명</span>
         </div>
+        <form onSubmit={(event) => void createMember(event)} className="mt-5 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.5)] p-4">
+          <div className="mb-3">
+            <h4 className="text-sm font-bold">회원 계정 만들기</h4>
+            <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+              이메일 주소가 로그인 아이디가 됩니다. 비밀번호는 8자 이상으로 입력하세요.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
+            <label className="block text-xs font-semibold">
+              로그인 아이디 (이메일)
+              <input
+                type="email"
+                required
+                autoComplete="off"
+                value={newMemberEmail}
+                onChange={(event) => setNewMemberEmail(event.target.value)}
+                placeholder="learner@example.com"
+                data-testid="input-new-member-email"
+                className="mt-1.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
+            <label className="block text-xs font-semibold">
+              초기 비밀번호
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={newMemberPassword}
+                onChange={(event) => setNewMemberPassword(event.target.value)}
+                placeholder="8자 이상"
+                data-testid="input-new-member-password"
+                className="mt-1.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
+            <label className="block text-xs font-semibold">
+              비밀번호 확인
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={newMemberPasswordConfirm}
+                onChange={(event) => setNewMemberPasswordConfirm(event.target.value)}
+                placeholder="비밀번호 다시 입력"
+                data-testid="input-new-member-password-confirm"
+                className="mt-1.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={creatingMember || !newMemberEmail.trim() || newMemberPassword.length < 8 || !newMemberPasswordConfirm}
+              data-testid="button-create-member"
+              className="inline-flex min-h-10 items-center justify-center gap-2 self-end rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creatingMember ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}
+              계정 만들기
+            </button>
+          </div>
+          {memberCreateError && (
+            <p className="mt-3 text-sm font-semibold text-[hsl(var(--destructive))]" role="alert" data-testid="error-create-member">
+              {memberCreateError}
+            </p>
+          )}
+          {memberCreateNotice && (
+            <p className="mt-3 text-sm font-semibold text-[hsl(var(--accent))]" role="status" data-testid="status-create-member">
+              {memberCreateNotice}
+            </p>
+          )}
+        </form>
         {members.length === 0 ? (
           <p className="mt-5 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
             배정할 회원이 없습니다.
