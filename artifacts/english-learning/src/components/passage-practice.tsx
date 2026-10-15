@@ -20,6 +20,7 @@ import {
 import { Link } from 'wouter';
 import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
+import PersianCatFriends from '@/components/persian-cat-friends';
 
 type ExerciseMode = 'dictation' | 'writing' | 'shadowing';
 
@@ -985,12 +986,7 @@ export default function PassagePractice({
             />
           </div>
         </div>
-        <img
-          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio-transparent.png`}
-          alt=""
-          aria-hidden="true"
-          className="mascot-art hidden h-[72px] w-[100px] object-contain sm:block"
-        />
+        <PersianCatFriends variant="practice" />
       </section>
 
       {!isWordMaterial && <section className="rise-in stagger-1 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.78)] p-5 sm:p-7" data-testid="section-passage-input">

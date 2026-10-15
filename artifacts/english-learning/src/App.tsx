@@ -39,6 +39,7 @@ import PassagePractice, { type PassageEvaluation } from '@/components/passage-pr
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
+import PersianCatFriends from '@/components/persian-cat-friends';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
 import type { Assignment, LearningContent } from '@workspace/api-client-react';
@@ -319,7 +320,7 @@ function PublicLanding() {
                 <span className="rounded-full border border-white/25 bg-black/10 px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[.14em]">Your storybook friends</span>
                 <CheckCircle2 size={18} className="text-[hsl(var(--sidebar-primary))]" />
               </div>
-              <img src={`${basePath}/english-mascot-trio-transparent.png`} alt="영어를 함께 배우는 여우, 곰, 토끼 친구들" className="mascot-art mascot-bob relative z-0 mx-auto mt-9 w-[88%] object-contain sm:w-[78%]" />
+              <PersianCatFriends variant="landing" />
             </div>
             <div className="px-2 pb-1 pt-5 sm:px-3">
               <div className="flex items-end justify-between gap-4">
@@ -553,7 +554,7 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
           <p className="mt-2 text-lg font-extrabold leading-snug sm:text-xl">오늘도 친구들과<br className="sm:hidden" /> 한 걸음씩 배워봐요.</p>
           <p className="mt-1 text-xs text-[hsl(var(--sidebar-foreground)/.72)]">짧게 연습하고, 크게 자라나요.</p>
         </div>
-        <img src={`${basePath}/english-mascot-trio-transparent.png`} alt="" aria-hidden="true" className="mascot-art mascot-bob absolute -bottom-5 right-0 w-[46%] max-w-[290px] sm:right-5 sm:w-[34%]" />
+        <PersianCatFriends variant="dashboard" />
       </section>
 
       <LevelAssignments
