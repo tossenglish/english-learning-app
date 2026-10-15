@@ -129,15 +129,54 @@ const levelCopy: Record<Level, { korean: string; detail: string; next: string }>
   },
 };
 
-const weekData = [
-  { day: '월', minutes: 10, done: true },
-  { day: '화', minutes: 8, done: true },
-  { day: '수', minutes: 12, done: true },
-  { day: '목', minutes: 9, done: true },
-  { day: '금', minutes: 0, done: false },
-  { day: '토', minutes: 0, done: false },
-  { day: '일', minutes: 0, done: false },
-];
+const SEOUL_TIME_ZONE = 'Asia/Seoul';
+
+function getSeoulCalendarDate(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: SEOUL_TIME_ZONE,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(now);
+  const getPart = (type: 'year' | 'month' | 'day') => Number(parts.find((part) => part.type === type)?.value);
+  return new Date(Date.UTC(getPart('year'), getPart('month') - 1, getPart('day')));
+}
+
+function getCurrentWeekData(now = new Date()) {
+  const today = getSeoulCalendarDate(now);
+  const monday = new Date(today);
+  monday.setUTCDate(today.getUTCDate() - ((today.getUTCDay() + 6) % 7));
+  const sampleMinutes = [10, 8, 12, 9, 0, 0, 0];
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setUTCDate(monday.getUTCDate() + index);
+    const isToday = date.getTime() === today.getTime();
+    const isPast = date.getTime() < today.getTime();
+    const minutes = isPast ? sampleMinutes[index] : 0;
+    return {
+      date,
+      day: new Intl.DateTimeFormat('ko-KR', { weekday: 'short', timeZone: 'UTC' }).format(date),
+      minutes,
+      done: minutes > 0,
+      isToday,
+    };
+  });
+}
+
+function formatTodayLabel() {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(getSeoulCalendarDate());
+}
+
+function formatWeekRange(weekData: ReturnType<typeof getCurrentWeekData>) {
+  const dateFormat = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  return `${dateFormat.format(weekData[0].date)} — ${dateFormat.format(weekData[6].date)}`;
+}
 
 const emptyPassageEvaluation: PassageEvaluation = {
   completedSteps: 0,
@@ -503,7 +542,7 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
       <section className="rise-in flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[hsl(var(--accent))]" data-testid="text-greeting-label">
-            <Sparkles size={14} /> Friday, May 24
+            <Sparkles size={14} /> {formatTodayLabel()}
           </p>
           <h1 className="font-sans text-3xl font-bold tracking-[-.04em] text-[hsl(var(--foreground))] sm:text-4xl" data-testid="text-welcome">다시 만나서 반가워요, 회원님<span className="text-[hsl(var(--accent))]">.</span></h1>
           <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]" data-testid="text-level-message">{levelCopy[level].korean}</p>
@@ -649,6 +688,7 @@ function Vocabulary({ learned, onRemove, content }: { learned: boolean; onRemove
 }
 
 function Progress({ learned }: { learned: boolean }) {
+  const weekData = getCurrentWeekData();
   const totalMinutes = weekData.reduce((sum, day) => sum + day.minutes, 0) + (learned ? 10 : 0);
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
@@ -657,7 +697,7 @@ function Progress({ learned }: { learned: boolean }) {
         {[{ label: '현재 스트릭', value: '7일', detail: '꾸준히 이어가는 중', icon: Flame, accent: true }, { label: '이번 주 학습', value: `${totalMinutes}분`, detail: '목표 70분 중', icon: Clock3, accent: false }, { label: '완료한 레슨', value: learned ? '4개' : '3개', detail: '오늘의 목표 5개', icon: CheckCircle2, accent: false }].map(({ label, value, detail, icon: Icon, accent }) => <div key={label} className={`card-lift rounded-[22px] border p-5 ${accent ? 'border-[hsl(var(--accent)/.4)] bg-[hsl(var(--accent)/.1)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'}`}><div className="flex items-center justify-between"><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">{label}</span><Icon size={17} className={accent ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'} /></div><p className="mt-5 font-mono text-3xl font-bold tracking-[-.07em]" data-testid={`text-progress-${label}`}>{value}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{detail}</p></div>)}
       </section>
       <section className="rise-in stagger-2 grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
-        <div className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8"><div className="flex items-end justify-between"><div><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Weekly rhythm</p><h2 className="mt-2 text-lg font-bold">이번 주 학습 리듬</h2></div><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">May 20 — 26</span></div><div className="mt-10 flex h-44 items-end justify-between gap-2 sm:gap-4">{weekData.map((day, index) => { const current = index === 4 && learned; const height = current ? 65 : day.minutes ? Math.max(35, day.minutes * 7) : 9; return <div key={day.day} className="flex h-full flex-1 flex-col items-center justify-end gap-3"><div className="relative flex h-full w-full items-end justify-center"><div className={`progress-grow w-full max-w-[40px] rounded-t-lg ${current ? 'bg-[hsl(var(--accent))]' : day.done ? 'bg-[hsl(var(--secondary-foreground)/.72)]' : 'bg-[hsl(var(--muted))]'}`} style={{ height: `${height}%` }} data-testid={`bar-progress-${day.day}`} />{current && <span className="absolute -top-6 font-mono text-[9px] font-bold text-[hsl(var(--accent))]">10m</span>}</div><span className={`text-xs font-bold ${current ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>{day.day}</span></div>; })}</div></div>
+        <div className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8"><div className="flex items-end justify-between"><div><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--muted-foreground))]">Weekly rhythm</p><h2 className="mt-2 text-lg font-bold">이번 주 학습 리듬</h2></div><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">{formatWeekRange(weekData)}</span></div><div className="mt-10 flex h-44 items-end justify-between gap-2 sm:gap-4">{weekData.map((day) => { const current = day.isToday && learned; const height = current ? 65 : day.minutes ? Math.max(35, day.minutes * 7) : 9; return <div key={day.day} className="flex h-full flex-1 flex-col items-center justify-end gap-3"><div className="relative flex h-full w-full items-end justify-center"><div className={`progress-grow w-full max-w-[40px] rounded-t-lg ${current ? 'bg-[hsl(var(--accent))]' : day.done ? 'bg-[hsl(var(--secondary-foreground)/.72)]' : 'bg-[hsl(var(--muted))]'}`} style={{ height: `${height}%` }} data-testid={`bar-progress-${day.day}`} />{current && <span className="absolute -top-6 font-mono text-[9px] font-bold text-[hsl(var(--accent))]">10m</span>}</div><span className={`text-xs font-bold ${current ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'}`}>{day.day}</span></div>; })}</div></div>
         <div className="rounded-[26px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))]"><div className="flex items-center justify-between"><span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.5)]">Next milestone</span><Trophy size={18} className="text-[hsl(var(--sidebar-primary))]" /></div><div className="mt-10"><p className="text-4xl font-bold tracking-[-.07em]">10일</p><p className="mt-2 text-sm text-[hsl(var(--sidebar-foreground)/.6)]">연속 학습까지 3일 남았어요.</p></div><div className="mt-8 h-2 overflow-hidden rounded-full bg-[hsl(var(--sidebar-accent))]"><div className="progress-grow h-full w-[70%] rounded-full bg-[hsl(var(--sidebar-primary))]" /></div><p className="mt-3 text-right font-mono text-[10px] text-[hsl(var(--sidebar-foreground)/.45)]">7 / 10 DAYS</p></div>
       </section>
       <section className="rise-in stagger-3 flex flex-col items-start justify-between gap-4 rounded-[24px] border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)] p-6 sm:flex-row sm:items-center"><div className="flex items-start gap-3"><Sparkles size={20} className="mt-0.5 text-[hsl(var(--accent))]" /><div><p className="text-sm font-bold">회원님의 루프는 잘 돌아가고 있어요.</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">오늘 10분을 채우면 이번 주 목표의 57%를 달성해요.</p></div></div><div className="flex flex-wrap items-center gap-4"><Link href="/report" data-testid="link-progress-report" className="flex shrink-0 items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">평가 리포트 <BarChart3 size={14} /></Link><Link href="/learn" data-testid="link-progress-practice" className="flex shrink-0 items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">오늘 연습하기 <ArrowRight size={14} /></Link></div></section>
