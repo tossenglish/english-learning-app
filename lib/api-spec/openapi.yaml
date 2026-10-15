@@ -400,6 +400,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/members/{memberId}:
+    delete:
+      operationId: deleteAdminMember
+      tags: [Assignments]
+      summary: 회원 계정과 연결된 과정 및 개인 과제 삭제
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "204":
+          description: 회원 계정과 연결 자료가 삭제됨
+        "400":
+          description: 잘못된 회원 ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 관리자 계정 또는 현재 로그인 계정은 삭제할 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: 회원 계정을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: 회원 삭제 또는 연결 자료 정리 실패
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/members/{memberId}/course:
     put:
       operationId: updateMemberCourse

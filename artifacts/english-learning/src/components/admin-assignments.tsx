@@ -226,6 +226,9 @@ export default function AdminAssignments() {
   const [creatingMember, setCreatingMember] = useState(false);
   const [memberCreateError, setMemberCreateError] = useState('');
   const [memberCreateNotice, setMemberCreateNotice] = useState('');
+  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
+  const [memberDeleteError, setMemberDeleteError] = useState('');
+  const [memberDeleteNotice, setMemberDeleteNotice] = useState('');
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
   const [libraryHomeContentSelected, setLibraryHomeContentSelected] = useState(false);
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
@@ -550,6 +553,38 @@ export default function AdminAssignments() {
       setError(updateError instanceof Error ? updateError.message : '과정 배정 오류');
     } finally {
       setUpdatingMemberIds((current) => current.filter((id) => id !== memberId));
+    }
+  };
+
+  const deleteMember = async (member: AssignmentMember) => {
+    if (deletingMemberId || updatingMemberIds.includes(member.id)) return;
+    const identity = member.email ?? member.displayName;
+    const confirmed = window.confirm(
+      `${identity} 계정을 영구 삭제할까요?\n\n이 계정과 학습 과정 배정, 이 회원에게 직접 배정된 과제가 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingMemberId(member.id);
+    setMemberDeleteError('');
+    setMemberDeleteNotice('');
+    try {
+      const response = await apiFetch(`/api/admin/members/${encodeURIComponent(member.id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '회원 계정을 삭제하지 못했습니다.');
+      }
+
+      setMembers((current) => current.filter((item) => item.id !== member.id));
+      setAssignments((current) => current.filter((item) => item.assigneeUserId !== member.id));
+      setAssigneeUserId((current) => current === member.id ? '' : current);
+      setMemberDeleteNotice(`${identity} 계정과 연결된 과정·개인 과제를 삭제했습니다.`);
+    } catch (deleteError) {
+      setMemberDeleteError(deleteError instanceof Error ? deleteError.message : '회원 계정 삭제 오류');
+    } finally {
+      setDeletingMemberId(null);
     }
   };
 
@@ -1227,6 +1262,16 @@ export default function AdminAssignments() {
             </p>
           )}
         </form>
+        {memberDeleteError && (
+          <p className="mt-4 rounded-xl bg-[hsl(var(--destructive)/.1)] px-4 py-3 text-sm font-semibold text-[hsl(var(--destructive))]" role="alert">
+            {memberDeleteError}
+          </p>
+        )}
+        {memberDeleteNotice && (
+          <p className="mt-4 rounded-xl bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-semibold text-[hsl(var(--secondary-foreground))]" role="status">
+            {memberDeleteNotice}
+          </p>
+        )}
         {members.length === 0 ? (
           <p className="mt-5 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
             배정할 회원이 없습니다.
@@ -1239,25 +1284,39 @@ export default function AdminAssignments() {
                   <p className="truncate text-sm font-bold">{member.displayName}</p>
                   {member.email && <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{member.email}</p>}
                 </div>
-                <label className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">학습 과정</span>
-                  <select
-                    aria-label={`${member.displayName} 학습 과정`}
-                    value={member.course ?? ''}
-                    disabled={updatingMemberIds.includes(member.id)}
-                    onChange={(event) => {
-                      const selectedCourse = event.target.value as AssignmentMember['course'] | '';
-                      void updateMemberCourse(member.id, selectedCourse || null);
-                    }}
-                    className="min-w-32 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                  <label className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">학습 과정</span>
+                    <select
+                      aria-label={`${member.displayName} 학습 과정`}
+                      value={member.course ?? ''}
+                      disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id}
+                      onChange={(event) => {
+                        const selectedCourse = event.target.value as AssignmentMember['course'] | '';
+                        void updateMemberCourse(member.id, selectedCourse || null);
+                      }}
+                      className="min-w-32 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                    >
+                      <option value="">과정 미배정</option>
+                      {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
+                  </label>
+                  <button
+                    type="button"
+                    aria-label={`${member.email ?? member.displayName} 계정 삭제`}
+                    title="회원 계정 삭제"
+                    disabled={deletingMemberId !== null || updatingMemberIds.includes(member.id)}
+                    onClick={() => void deleteMember(member)}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--destructive)/.3)] text-[hsl(var(--destructive))] transition hover:bg-[hsl(var(--destructive)/.1)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="">과정 미배정</option>
-                    {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                  {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
-                </label>
+                    {deletingMemberId === member.id
+                      ? <LoaderCircle size={16} className="animate-spin" />
+                      : <Trash2 size={16} />}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -283,6 +283,19 @@ export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
 
 
 /**
+ * @summary 회원 계정과 연결된 과정 및 개인 과제 삭제
+ */
+
+
+
+export const DeleteAdminMemberParams = zod.object({
+  "memberId": zod.coerce.string().min(1)
+})
+
+export const DeleteAdminMemberResponse = zod.void()
+
+
+/**
  * @summary 회원의 학습 과정 배정 또는 변경
  */
 

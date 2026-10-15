@@ -23,7 +23,7 @@ export function isAdminEmail(emailAddress: string): boolean {
   );
 }
 
-function isAdminUser(
+export function isAdminUser(
   user: Awaited<ReturnType<typeof clerkClient.users.getUser>>,
 ): boolean {
   return (

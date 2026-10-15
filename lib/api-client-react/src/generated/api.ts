@@ -1134,6 +1134,80 @@ export function useListAdminMembers<TData = Awaited<ReturnType<typeof listAdminM
 
 
 
+export const getDeleteAdminMemberUrl = (memberId: string,) => {
+
+
+
+
+  return `/api/admin/members/${memberId}`
+}
+
+/**
+ * @summary 회원 계정과 연결된 과정 및 개인 과제 삭제
+ */
+export const deleteAdminMember = async (memberId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminMemberUrl(memberId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminMemberMutationKey = () => ['deleteAdminMember'] as const;
+
+export const getDeleteAdminMemberMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminMember>>, TError,DeleteAdminMemberMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminMember>>, TError,DeleteAdminMemberMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAdminMemberMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminMember>>, DeleteAdminMemberMutationVariables> = (props) => {
+          const {memberId} = props ?? {};
+
+          return  deleteAdminMember(memberId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminMemberMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminMember>>>
+
+    export type DeleteAdminMemberMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteAdminMemberMutationVariables = {memberId: string}
+
+    /**
+ * @summary 회원 계정과 연결된 과정 및 개인 과제 삭제
+ */
+export const useDeleteAdminMember = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminMember>>, TError,DeleteAdminMemberMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminMember>>,
+        TError,
+        DeleteAdminMemberMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAdminMemberMutationOptions(options));
+    }
+
 export const getUpdateMemberCourseUrl = (memberId: string,) => {
 
 

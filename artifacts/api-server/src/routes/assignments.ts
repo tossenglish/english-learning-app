@@ -8,6 +8,7 @@ import {
   DeleteAssignmentParams,
   DeleteAdminLibraryMaterialParams,
   DeleteAdminLibraryMaterialResponse,
+  DeleteAdminMemberParams,
   ListAdminLibraryMaterialsResponse,
   ListAdminAssignmentFoldersResponse,
   ListAdminAssignmentsResponse,
@@ -29,7 +30,7 @@ import {
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
-import { getUserId, isAdmin, isAdminEmail } from "../lib/auth";
+import { getUserId, isAdmin, isAdminEmail, isAdminUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -416,6 +417,68 @@ router.post(
           : "계정을 만들지 못했습니다. 이메일 주소와 Clerk 계정 설정을 확인해 주세요.",
       });
     }
+  },
+);
+
+router.delete(
+  "/admin/members/:memberId",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const params = DeleteAdminMemberParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const { memberId } = params.data;
+    if (memberId === getUserId(req)) {
+      res.status(403).json({ error: "현재 로그인한 관리자 계정은 삭제할 수 없습니다." });
+      return;
+    }
+
+    let target;
+    try {
+      target = await clerkClient.users.getUser(memberId);
+    } catch {
+      res.status(404).json({ error: "회원 계정을 찾을 수 없습니다." });
+      return;
+    }
+
+    if (isAdminUser(target)) {
+      res.status(403).json({ error: "관리자 계정은 회원 관리에서 삭제할 수 없습니다." });
+      return;
+    }
+
+    try {
+      await clerkClient.users.deleteUser(memberId);
+    } catch (deleteError) {
+      req.log.error({ err: deleteError, memberId }, "Failed to delete member from Clerk");
+      res.status(500).json({ error: "회원 계정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+      return;
+    }
+
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(assignmentsTable)
+          .where(eq(assignmentsTable.assigneeUserId, memberId));
+        await tx
+          .delete(memberCoursesTable)
+          .where(eq(memberCoursesTable.memberId, memberId));
+      });
+    } catch (cleanupError) {
+      req.log.error(
+        { err: cleanupError, memberId },
+        "Member was deleted from Clerk, but related application data cleanup failed",
+      );
+      res.status(500).json({
+        error: "계정은 삭제됐지만 연결된 과정과 과제를 정리하지 못했습니다. 관리자에게 문의해 주세요.",
+      });
+      return;
+    }
+
+    res.status(204).end();
   },
 );
 
