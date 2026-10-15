@@ -801,7 +801,7 @@ export default function PassagePractice({
     }
   };
 
-  const checkAnswer = () => {
+  const checkAnswer = (answerOverride?: string) => {
     if (isWordAutoAdvancing) return;
     setAttempts((previous) => ({
       ...previous,
@@ -817,7 +817,7 @@ export default function PassagePractice({
       return;
     }
 
-    if (normalizeAnswer(currentAnswers[mode]) === normalizeAnswer(expectedAnswer)) {
+    if (normalizeAnswer(answerOverride ?? currentAnswers[mode]) === normalizeAnswer(expectedAnswer)) {
       markComplete();
       if (isWordMaterial) {
         setIsWordAutoAdvancing(true);
@@ -1330,6 +1330,10 @@ export default function PassagePractice({
                       key={`${current.id}-${option}`}
                       type="button"
                       onClick={() => updateAnswer(option)}
+                      onDoubleClick={() => {
+                        updateAnswer(option);
+                        checkAnswer(option);
+                      }}
                       disabled={isWordAutoAdvancing}
                       aria-pressed={selected}
                       data-testid={`button-word-meaning-option-${index + 1}`}
@@ -1343,6 +1347,7 @@ export default function PassagePractice({
                     </button>
                   );
                 })}
+                <p className="pt-1 text-[11px] text-[hsl(var(--sidebar-foreground)/.55)]">선택지를 두 번 누르면 바로 답을 확인해요.</p>
               </div>
             ) : mode !== 'shadowing' && (
               <div className="mt-5">
@@ -1448,7 +1453,7 @@ export default function PassagePractice({
                 {mode !== 'shadowing' && (
                   <button
                     type="button"
-                    onClick={checkAnswer}
+                    onClick={() => checkAnswer()}
                     disabled={isWordAutoAdvancing}
                     data-testid={`button-check-passage-${mode}`}
                     className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--sidebar))]"
@@ -1459,7 +1464,7 @@ export default function PassagePractice({
                 {mode === 'shadowing' && (
                   <button
                     type="button"
-                    onClick={checkAnswer}
+                    onClick={() => checkAnswer()}
                     data-testid="button-complete-shadowing"
                     className="button-pop inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--sidebar))]"
                   >
