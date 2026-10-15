@@ -26,7 +26,6 @@ import {
   Home as HomeIcon,
   Layers3,
   Lightbulb,
-  MessageCircle,
   RotateCcw,
   Sparkles,
   Target,
@@ -416,8 +415,6 @@ function Sidebar({ location }: { location: string }) {
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
           <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
-          <NavItem href="/learn" label="배우기" icon={BookOpen} active={location === '/learn'} />
-          <NavItem href="/passage" label="지문 연습" icon={MessageCircle} active={location === '/passage'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -443,8 +440,6 @@ function MobileNav({ location }: { location: string }) {
     <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.94)] px-2 py-2 shadow-[0_12px_32px_rgba(49,42,29,.15)] backdrop-blur-md md:hidden">
       {[
         { href: '/dashboard', label: '오늘', icon: HomeIcon },
-        { href: '/learn', label: '배우기', icon: BookOpen },
-          { href: '/passage', label: '지문', icon: MessageCircle },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
       ].map(({ href, label, icon: Icon }) => (
