@@ -24,7 +24,6 @@ import {
   Flame,
   Headphones,
   Home as HomeIcon,
-  Keyboard,
   Layers3,
   Lightbulb,
   RotateCcw,
@@ -44,7 +43,6 @@ import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
 import type { Assignment, LearningContent } from '@workspace/api-client-react';
 import { parseDirectMaterial, prepareAssignmentPractice } from '@/lib/practice-material';
-import TypingPractice from '@/components/typing-practice';
 import { apiFetch, setApiAuthTokenGetter } from '@/lib/api-fetch';
 import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import {
@@ -417,7 +415,6 @@ function Sidebar({ location }: { location: string }) {
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
           <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
-          <NavItem href="/typing" label="영어타자 익히기" icon={Keyboard} active={location === '/typing'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -443,7 +440,6 @@ function MobileNav({ location }: { location: string }) {
     <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.94)] px-2 py-2 shadow-[0_12px_32px_rgba(49,42,29,.15)] backdrop-blur-md md:hidden">
       {[
         { href: '/dashboard', label: '오늘', icon: HomeIcon },
-        { href: '/typing', label: '영어타자 익히기', icon: Keyboard },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
       ].map(({ href, label, icon: Icon }) => (
@@ -712,7 +708,6 @@ function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFl
 }) {
   return <Switch>
     <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} onStart={onStart} isAdmin={isAdmin} /></Route>
-    <Route path="/typing"><TypingPractice level={level} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={quizContent} quizPosition={quizPosition} quizTotal={quizTotal} hasNextWord={hasNextQuizWord} onNextWord={onNextQuizWord} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
