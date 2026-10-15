@@ -281,7 +281,7 @@ function PublicLanding() {
                 <span className="rounded-full border border-white/25 bg-black/10 px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[.14em]">Your storybook friends</span>
                 <CheckCircle2 size={18} className="text-[hsl(var(--sidebar-primary))]" />
               </div>
-              <img src={`${basePath}/english-mascot-trio.png`} alt="영어를 함께 배우는 여우, 곰, 토끼 친구들" className="mascot-art mascot-bob relative z-0 mx-auto mt-9 w-[88%] object-contain mix-blend-multiply sm:w-[78%]" />
+              <img src={`${basePath}/english-mascot-trio-transparent.png`} alt="영어를 함께 배우는 여우, 곰, 토끼 친구들" className="mascot-art mascot-bob relative z-0 mx-auto mt-9 w-[88%] object-contain sm:w-[78%]" />
             </div>
             <div className="px-2 pb-1 pt-5 sm:px-3">
               <div className="flex items-end justify-between gap-4">
@@ -520,7 +520,7 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
           <p className="mt-2 text-lg font-extrabold leading-snug sm:text-xl">오늘도 친구들과<br className="sm:hidden" /> 한 걸음씩 배워봐요.</p>
           <p className="mt-1 text-xs text-[hsl(var(--sidebar-foreground)/.72)]">짧게 연습하고, 크게 자라나요.</p>
         </div>
-        <img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art mascot-bob absolute -bottom-5 right-0 w-[46%] max-w-[290px] mix-blend-multiply sm:right-5 sm:w-[34%]" />
+        <img src={`${basePath}/english-mascot-trio-transparent.png`} alt="" aria-hidden="true" className="mascot-art mascot-bob absolute -bottom-5 right-0 w-[46%] max-w-[290px] sm:right-5 sm:w-[34%]" />
       </section>
 
       <LevelAssignments
@@ -634,7 +634,7 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
 function Vocabulary({ learned, onRemove, content }: { learned: boolean; onRemove: () => void; content: LearnContent }) {
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
-      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Your collection</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 단어장<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">배운 단어는 다시 만날수록 내 것이 돼요.</p></div><div className="flex items-end gap-3"><img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art hidden w-28 object-contain mix-blend-multiply sm:block" /><span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-2 font-mono text-xs font-bold text-[hsl(var(--secondary-foreground))]" data-testid="text-vocabulary-count">{learned ? '1 word' : '0 words'}</span></div></section>
+      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Your collection</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 단어장<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">배운 단어는 다시 만날수록 내 것이 돼요.</p></div><div className="flex items-end gap-3"><img src={`${basePath}/english-mascot-trio-transparent.png`} alt="" aria-hidden="true" className="mascot-art hidden w-28 object-contain sm:block" /><span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-2 font-mono text-xs font-bold text-[hsl(var(--secondary-foreground))]" data-testid="text-vocabulary-count">{learned ? '1 word' : '0 words'}</span></div></section>
       {learned ? <section className="rise-in stagger-1 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <article className="card-lift relative overflow-hidden rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6" data-testid="card-vocabulary-serendipity">
           <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[hsl(var(--secondary)/.6)]" />
@@ -652,7 +652,7 @@ function Progress({ learned }: { learned: boolean }) {
   const totalMinutes = weekData.reduce((sum, day) => sum + day.minutes, 0) + (learned ? 10 : 0);
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
-      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Keep the loop going</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 기록<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">완벽한 날보다, 다시 돌아온 날을 세어봐요.</p></div><img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art hidden w-32 object-contain mix-blend-multiply sm:block" /></section>
+      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Keep the loop going</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 기록<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">완벽한 날보다, 다시 돌아온 날을 세어봐요.</p></div><img src={`${basePath}/english-mascot-trio-transparent.png`} alt="" aria-hidden="true" className="mascot-art hidden w-32 object-contain sm:block" /></section>
       <section className="rise-in stagger-1 grid gap-4 sm:grid-cols-3">
         {[{ label: '현재 스트릭', value: '7일', detail: '꾸준히 이어가는 중', icon: Flame, accent: true }, { label: '이번 주 학습', value: `${totalMinutes}분`, detail: '목표 70분 중', icon: Clock3, accent: false }, { label: '완료한 레슨', value: learned ? '4개' : '3개', detail: '오늘의 목표 5개', icon: CheckCircle2, accent: false }].map(({ label, value, detail, icon: Icon, accent }) => <div key={label} className={`card-lift rounded-[22px] border p-5 ${accent ? 'border-[hsl(var(--accent)/.4)] bg-[hsl(var(--accent)/.1)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'}`}><div className="flex items-center justify-between"><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">{label}</span><Icon size={17} className={accent ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'} /></div><p className="mt-5 font-mono text-3xl font-bold tracking-[-.07em]" data-testid={`text-progress-${label}`}>{value}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{detail}</p></div>)}
       </section>

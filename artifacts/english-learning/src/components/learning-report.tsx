@@ -164,10 +164,10 @@ export default function LearningReport({
           <h1 className="mt-2 text-3xl font-bold tracking-[-.05em]">학습 평가 리포트</h1>
         </div>
         <img
-          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio.png`}
+          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio-transparent.png`}
           alt=""
           aria-hidden="true"
-          className="mascot-art hidden h-16 w-24 object-contain mix-blend-multiply sm:block"
+          className="mascot-art hidden h-16 w-24 object-contain sm:block"
         />
         <button
           type="button"

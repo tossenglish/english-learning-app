@@ -980,10 +980,10 @@ export default function PassagePractice({
           </div>
         </div>
         <img
-          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio.png`}
+          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio-transparent.png`}
           alt=""
           aria-hidden="true"
-          className="mascot-art hidden h-[72px] w-[100px] object-contain mix-blend-multiply sm:block"
+          className="mascot-art hidden h-[72px] w-[100px] object-contain sm:block"
         />
       </section>
 

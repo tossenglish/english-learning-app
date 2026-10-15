@@ -146,6 +146,9 @@
 .storybook-panel { background: linear-gradient(145deg, #315f55 0%, #3f7567 58%, #548773 100%); }
 .mascot-art { filter: drop-shadow(0 14px 18px rgba(49, 74, 59, .15)); }
 .mascot-bob { animation: float-soft 4.6s ease-in-out infinite; transform-origin: center bottom; }
+@media (prefers-reduced-motion: reduce) {
+  .mascot-bob { animation: none; }
+}
 .paper-card { box-shadow: 0 9px 24px rgba(82, 73, 46, .07), inset 0 1px rgba(255,255,255,.65); }
 .button-pop { transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
 .button-pop:hover { transform: translateY(-2px); box-shadow: 0 8px 18px hsl(var(--accent) / .18); }
