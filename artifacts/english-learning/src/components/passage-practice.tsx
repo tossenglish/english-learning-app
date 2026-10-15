@@ -979,6 +979,12 @@ export default function PassagePractice({
             />
           </div>
         </div>
+        <img
+          src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/english-mascot-trio.png`}
+          alt=""
+          aria-hidden="true"
+          className="mascot-art hidden h-[72px] w-[100px] object-contain mix-blend-multiply sm:block"
+        />
       </section>
 
       {!isWordMaterial && <section className="rise-in stagger-1 rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card)/.78)] p-5 sm:p-7" data-testid="section-passage-input">

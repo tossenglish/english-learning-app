@@ -246,7 +246,7 @@ function PublicLanding() {
             로그인
           </Link>
         </div>
-        <section className="mt-20 grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr]">
+        <section className="mt-14 grid items-center gap-10 lg:mt-20 lg:grid-cols-[1.1fr_.9fr]">
           <div className="rise-in">
             <p className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.17em] text-[hsl(var(--accent))]">
               <Sparkles size={14} /> 토스일곡아이들
@@ -275,22 +275,20 @@ function PublicLanding() {
               </Link>
             </div>
           </div>
-          <div className="rise-in stagger-1 relative overflow-hidden rounded-[30px] bg-[hsl(var(--sidebar))] p-7 text-[hsl(var(--sidebar-foreground))] shadow-[var(--shadow-md)] sm:p-9">
-            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full border-[30px] border-[hsl(var(--sidebar-primary)/.15)]" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-primary))]">A small daily loop</span>
-                <CheckCircle2 size={19} className="text-[hsl(var(--sidebar-primary))]" />
+          <div className="rise-in stagger-1 relative overflow-hidden rounded-[34px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 shadow-[var(--shadow-md)] sm:p-7">
+            <div className="storybook-panel relative flex min-h-[250px] items-end overflow-hidden rounded-[26px]">
+              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 pt-5 text-[hsl(var(--sidebar-foreground))]">
+                <span className="rounded-full border border-white/25 bg-black/10 px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[.14em]">Your storybook friends</span>
+                <CheckCircle2 size={18} className="text-[hsl(var(--sidebar-primary))]" />
               </div>
-              <p className="mt-16 text-4xl font-bold tracking-[-.06em]">serendipity</p>
-              <p className="mt-2 font-semibold text-[hsl(var(--sidebar-primary))]">뜻밖의 행운</p>
-              <p className="mt-8 border-l-2 border-[hsl(var(--accent))] pl-4 text-sm leading-relaxed text-[hsl(var(--sidebar-foreground)/.7)]">
-                “I stumbled upon a little café.”
-              </p>
-              <div className="mt-10 flex items-center justify-between border-t border-[hsl(var(--sidebar-foreground)/.14)] pt-5 text-xs text-[hsl(var(--sidebar-foreground)/.55)]">
-                <span className="flex items-center gap-2"><Headphones size={15} /> 듣고 따라 말하기</span>
-                <ArrowRight size={15} />
+              <img src={`${basePath}/english-mascot-trio.png`} alt="영어를 함께 배우는 여우, 곰, 토끼 친구들" className="mascot-art mascot-bob relative z-0 mx-auto mt-9 w-[88%] object-contain mix-blend-multiply sm:w-[78%]" />
+            </div>
+            <div className="px-2 pb-1 pt-5 sm:px-3">
+              <div className="flex items-end justify-between gap-4">
+                <div><p className="font-mono text-[9px] font-bold uppercase tracking-[.17em] text-[hsl(var(--accent))]">A little each day</p><p className="mt-1 text-2xl font-extrabold tracking-[-.05em]">serendipity</p><p className="mt-1 text-sm font-bold text-[hsl(var(--accent))]">뜻밖의 행운</p></div>
+                <span className="mb-1 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--secondary))] px-3 py-2 text-[11px] font-bold text-[hsl(var(--secondary-foreground))]"><Headphones size={14} /> 듣고 말해요</span>
               </div>
+              <p className="mt-4 border-l-2 border-[hsl(var(--accent))] pl-3 text-sm italic leading-relaxed text-[hsl(var(--muted-foreground))]">“I stumbled upon a little café.”</p>
             </div>
           </div>
         </section>
@@ -516,6 +514,15 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
         </div>
       </section>
 
+      <section className="storybook-panel relative isolate flex min-h-[150px] items-center overflow-hidden rounded-[28px] px-6 py-5 text-[hsl(var(--sidebar-foreground))] sm:px-8" aria-label="오늘의 영어 친구들">
+        <div className="relative z-10 max-w-[58%] sm:max-w-[62%]">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[.17em] text-[hsl(var(--sidebar-primary))]">Your little learning crew</p>
+          <p className="mt-2 text-lg font-extrabold leading-snug sm:text-xl">오늘도 친구들과<br className="sm:hidden" /> 한 걸음씩 배워봐요.</p>
+          <p className="mt-1 text-xs text-[hsl(var(--sidebar-foreground)/.72)]">짧게 연습하고, 크게 자라나요.</p>
+        </div>
+        <img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art mascot-bob absolute -bottom-5 right-0 w-[46%] max-w-[290px] mix-blend-multiply sm:right-5 sm:w-[34%]" />
+      </section>
+
       <LevelAssignments
         level={level}
         isAdmin={isAdmin}
@@ -627,7 +634,7 @@ function Learn({ level, onLevelChange, cardFlipped, setCardFlipped, quizAnswer, 
 function Vocabulary({ learned, onRemove, content }: { learned: boolean; onRemove: () => void; content: LearnContent }) {
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
-      <section className="rise-in flex items-end justify-between"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Your collection</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 단어장<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">배운 단어는 다시 만날수록 내 것이 돼요.</p></div><span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-2 font-mono text-xs font-bold text-[hsl(var(--secondary-foreground))]" data-testid="text-vocabulary-count">{learned ? '1 word' : '0 words'}</span></section>
+      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Your collection</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 단어장<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">배운 단어는 다시 만날수록 내 것이 돼요.</p></div><div className="flex items-end gap-3"><img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art hidden w-28 object-contain mix-blend-multiply sm:block" /><span className="rounded-full bg-[hsl(var(--secondary))] px-3 py-2 font-mono text-xs font-bold text-[hsl(var(--secondary-foreground))]" data-testid="text-vocabulary-count">{learned ? '1 word' : '0 words'}</span></div></section>
       {learned ? <section className="rise-in stagger-1 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <article className="card-lift relative overflow-hidden rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6" data-testid="card-vocabulary-serendipity">
           <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[hsl(var(--secondary)/.6)]" />
@@ -645,7 +652,7 @@ function Progress({ learned }: { learned: boolean }) {
   const totalMinutes = weekData.reduce((sum, day) => sum + day.minutes, 0) + (learned ? 10 : 0);
   return (
     <div className="mx-auto max-w-[1080px] space-y-8">
-      <section className="rise-in"><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Keep the loop going</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 기록<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">완벽한 날보다, 다시 돌아온 날을 세어봐요.</p></section>
+      <section className="rise-in flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Keep the loop going</p><h1 className="text-3xl font-bold tracking-[-.05em] sm:text-4xl">나의 기록<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">완벽한 날보다, 다시 돌아온 날을 세어봐요.</p></div><img src={`${basePath}/english-mascot-trio.png`} alt="" aria-hidden="true" className="mascot-art hidden w-32 object-contain mix-blend-multiply sm:block" /></section>
       <section className="rise-in stagger-1 grid gap-4 sm:grid-cols-3">
         {[{ label: '현재 스트릭', value: '7일', detail: '꾸준히 이어가는 중', icon: Flame, accent: true }, { label: '이번 주 학습', value: `${totalMinutes}분`, detail: '목표 70분 중', icon: Clock3, accent: false }, { label: '완료한 레슨', value: learned ? '4개' : '3개', detail: '오늘의 목표 5개', icon: CheckCircle2, accent: false }].map(({ label, value, detail, icon: Icon, accent }) => <div key={label} className={`card-lift rounded-[22px] border p-5 ${accent ? 'border-[hsl(var(--accent)/.4)] bg-[hsl(var(--accent)/.1)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'}`}><div className="flex items-center justify-between"><span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">{label}</span><Icon size={17} className={accent ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--muted-foreground))]'} /></div><p className="mt-5 font-mono text-3xl font-bold tracking-[-.07em]" data-testid={`text-progress-${label}`}>{value}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{detail}</p></div>)}
       </section>

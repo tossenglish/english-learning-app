@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 @layer theme, base, clerk, components, utilities;
 @import 'tailwindcss';
 @import '@clerk/themes/shadcn.css';
@@ -37,41 +37,41 @@
 }
 
 :root {
-  --background: 39 55% 95%;
-  --foreground: 222 30% 18%;
-  --border: 38 30% 86%;
-  --input: 38 30% 86%;
-  --ring: 15 76% 57%;
-  --card: 42 67% 98%;
-  --card-foreground: 222 30% 18%;
-  --card-border: 39 36% 87%;
-  --popover: 42 67% 98%;
-  --popover-foreground: 222 30% 18%;
-  --popover-border: 38 30% 86%;
-  --primary: 222 36% 22%;
-  --primary-foreground: 42 67% 98%;
-  --secondary: 167 31% 87%;
-  --secondary-foreground: 177 33% 22%;
-  --muted: 38 34% 91%;
-  --muted-foreground: 218 14% 45%;
-  --accent: 15 76% 57%;
-  --accent-foreground: 42 67% 98%;
+  --background: 44 61% 95%;
+  --foreground: 167 31% 20%;
+  --border: 40 36% 83%;
+  --input: 40 36% 83%;
+  --ring: 8 69% 59%;
+  --card: 47 74% 99%;
+  --card-foreground: 167 31% 20%;
+  --card-border: 40 36% 83%;
+  --popover: 47 74% 99%;
+  --popover-foreground: 167 31% 20%;
+  --popover-border: 40 36% 83%;
+  --primary: 167 35% 29%;
+  --primary-foreground: 47 74% 99%;
+  --secondary: 151 39% 86%;
+  --secondary-foreground: 167 38% 23%;
+  --muted: 42 42% 89%;
+  --muted-foreground: 164 13% 42%;
+  --accent: 9 69% 58%;
+  --accent-foreground: 47 74% 99%;
   --destructive: 3 65% 48%;
   --destructive-foreground: 42 67% 98%;
-  --sidebar: 222 36% 22%;
-  --sidebar-foreground: 39 55% 95%;
-  --sidebar-border: 220 28% 30%;
-  --sidebar-primary: 34 88% 67%;
-  --sidebar-primary-foreground: 222 36% 22%;
-  --sidebar-accent: 220 28% 30%;
-  --sidebar-accent-foreground: 39 55% 95%;
-  --sidebar-ring: 34 88% 67%;
-  --chart-1: 15 76% 57%;
-  --chart-2: 167 42% 48%;
-  --chart-3: 34 88% 67%;
-  --chart-4: 222 36% 40%;
-  --chart-5: 42 59% 56%;
-  --app-font-sans: 'DM Sans', 'Noto Sans KR', sans-serif;
+  --sidebar: 166 34% 26%;
+  --sidebar-foreground: 44 61% 95%;
+  --sidebar-border: 165 26% 34%;
+  --sidebar-primary: 43 83% 72%;
+  --sidebar-primary-foreground: 167 31% 20%;
+  --sidebar-accent: 164 27% 33%;
+  --sidebar-accent-foreground: 44 61% 95%;
+  --sidebar-ring: 43 83% 72%;
+  --chart-1: 9 69% 58%;
+  --chart-2: 151 39% 48%;
+  --chart-3: 43 83% 62%;
+  --chart-4: 167 35% 35%;
+  --chart-5: 26 67% 65%;
+  --app-font-sans: 'Nunito', 'Noto Sans KR', sans-serif;
   --app-font-mono: 'Space Mono', monospace;
   --radius: 1rem;
   --elevate-1: rgba(48, 42, 32, .06);
@@ -143,6 +143,10 @@
 }
 .card-lift { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
 .card-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: hsl(var(--accent) / .42); }
+.storybook-panel { background: linear-gradient(145deg, #315f55 0%, #3f7567 58%, #548773 100%); }
+.mascot-art { filter: drop-shadow(0 14px 18px rgba(49, 74, 59, .15)); }
+.mascot-bob { animation: float-soft 4.6s ease-in-out infinite; transform-origin: center bottom; }
+.paper-card { box-shadow: 0 9px 24px rgba(82, 73, 46, .07), inset 0 1px rgba(255,255,255,.65); }
 .button-pop { transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
 .button-pop:hover { transform: translateY(-2px); box-shadow: 0 8px 18px hsl(var(--accent) / .18); }
 .button-pop:active { transform: translateY(0); }
