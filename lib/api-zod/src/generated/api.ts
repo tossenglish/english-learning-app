@@ -102,6 +102,56 @@ export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem)
 
 
 /**
+ * @summary 현재 로그인 사용자의 과제별 진행률 조회
+ */
+export const listAssignmentProgressResponseCompletedStepsMin = 0;
+
+
+
+
+export const ListAssignmentProgressResponseItem = zod.object({
+  "assignmentId": zod.number().int(),
+  "completedSteps": zod.number().int().min(listAssignmentProgressResponseCompletedStepsMin),
+  "totalSteps": zod.number().int().min(1),
+  "updatedAt": zod.coerce.date()
+})
+export const ListAssignmentProgressResponse = zod.array(ListAssignmentProgressResponseItem)
+
+
+/**
+ * @summary 현재 과제의 진행률 저장
+ */
+
+
+
+export const UpsertAssignmentProgressParams = zod.object({
+  "assignmentId": zod.coerce.number().int().min(1)
+})
+
+export const upsertAssignmentProgressBodyCompletedStepsMin = 0;
+
+
+
+
+export const UpsertAssignmentProgressBody = zod.object({
+  "completedSteps": zod.number().int().min(upsertAssignmentProgressBodyCompletedStepsMin),
+  "totalSteps": zod.number().int().min(1)
+})
+
+export const upsertAssignmentProgressResponseCompletedStepsMin = 0;
+
+
+
+
+export const UpsertAssignmentProgressResponse = zod.object({
+  "assignmentId": zod.number().int(),
+  "completedSteps": zod.number().int().min(upsertAssignmentProgressResponseCompletedStepsMin),
+  "totalSteps": zod.number().int().min(1),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary 관리자가 전체 과제 조회
  */
 export const ListAdminAssignmentsResponseItem = zod.object({

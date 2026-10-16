@@ -15,6 +15,10 @@ import {
   ListAdminMembersResponse,
   ListAssignmentsQueryParams,
   ListAssignmentsResponse,
+  ListAssignmentProgressResponse,
+  UpsertAssignmentProgressBody,
+  UpsertAssignmentProgressParams,
+  UpsertAssignmentProgressResponse,
   UpdateMemberCourseBody,
   UpdateMemberCourseParams,
   UpdateMemberCourseResponse,
@@ -22,12 +26,13 @@ import {
 import { clerkClient } from "@clerk/express";
 import {
   assignmentFoldersTable,
+  assignmentProgressTable,
   assignmentsTable,
   db,
   libraryMaterialsTable,
   memberCoursesTable,
 } from "@workspace/db";
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
 import { getUserId, isAdmin, isAdminEmail, isAdminUser } from "../lib/auth";
@@ -94,6 +99,103 @@ router.get(
       .orderBy(desc(assignmentsTable.createdAt));
 
     res.json(ListAssignmentsResponse.parse(assignments));
+  },
+);
+
+router.get(
+  "/assignments/progress",
+  async (req: Request, res: Response): Promise<void> => {
+    const memberId = getUserId(req);
+    if (!memberId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const progress = await db
+      .select({
+        assignmentId: assignmentProgressTable.assignmentId,
+        completedSteps: assignmentProgressTable.completedSteps,
+        totalSteps: assignmentProgressTable.totalSteps,
+        updatedAt: assignmentProgressTable.updatedAt,
+      })
+      .from(assignmentProgressTable)
+      .where(eq(assignmentProgressTable.userId, memberId));
+    res.json(ListAssignmentProgressResponse.parse(progress));
+  },
+);
+
+router.put(
+  "/assignments/:assignmentId/progress",
+  async (req: Request, res: Response): Promise<void> => {
+    const memberId = getUserId(req);
+    if (!memberId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const params = UpsertAssignmentProgressParams.safeParse(req.params);
+    const body = UpsertAssignmentProgressBody.safeParse(req.body);
+    if (!params.success || !body.success || body.data.completedSteps > body.data.totalSteps) {
+      res.status(400).json({ error: "Invalid assignment progress" });
+      return;
+    }
+
+    const [assignment] = await db
+      .select({
+        id: assignmentsTable.id,
+        assigneeUserId: assignmentsTable.assigneeUserId,
+        level: assignmentsTable.level,
+        isPublished: assignmentsTable.isPublished,
+      })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, params.data.assignmentId));
+    if (!assignment) {
+      res.status(404).json({ error: "Assignment not found" });
+      return;
+    }
+
+    const [course] = await db
+      .select()
+      .from(memberCoursesTable)
+      .where(eq(memberCoursesTable.memberId, memberId));
+    const visibleLevels = course ? [course.courseLevel, "All"] : ["All"];
+    const canAccess = assignment.isPublished && (
+      assignment.assigneeUserId === memberId ||
+      (assignment.assigneeUserId === null && visibleLevels.includes(assignment.level))
+    );
+    if (!canAccess) {
+      res.status(403).json({ error: "Assignment is not available to this member" });
+      return;
+    }
+
+    const [saved] = await db
+      .insert(assignmentProgressTable)
+      .values({
+        userId: memberId,
+        assignmentId: assignment.id,
+        completedSteps: body.data.completedSteps,
+        totalSteps: body.data.totalSteps,
+      })
+      .onConflictDoUpdate({
+        target: [assignmentProgressTable.userId, assignmentProgressTable.assignmentId],
+        set: {
+          completedSteps: sql`case
+            when ${assignmentProgressTable.totalSteps} = ${body.data.totalSteps}
+              then greatest(${assignmentProgressTable.completedSteps}, ${body.data.completedSteps})
+            else ${body.data.completedSteps}
+          end`,
+          totalSteps: body.data.totalSteps,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({
+        assignmentId: assignmentProgressTable.assignmentId,
+        completedSteps: assignmentProgressTable.completedSteps,
+        totalSteps: assignmentProgressTable.totalSteps,
+        updatedAt: assignmentProgressTable.updatedAt,
+      });
+
+    res.json(UpsertAssignmentProgressResponse.parse(saved));
   },
 );
 

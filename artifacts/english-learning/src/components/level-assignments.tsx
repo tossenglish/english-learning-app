@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Assignment, LearningLevel } from '@workspace/api-client-react';
+import type { Assignment, AssignmentProgress, LearningLevel } from '@workspace/api-client-react';
 import { apiFetch, openApiFile } from '@/lib/api-fetch';
 import {
   ArrowRight,
@@ -29,6 +29,9 @@ export default function LevelAssignments({
   onStartPractice?: (assignment: Assignment) => Promise<void>;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [progressByAssignment, setProgressByAssignment] = useState<Record<number, AssignmentProgress>>({});
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressLoadError, setProgressLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<'word' | 'sentence'>('word');
   const [startingId, setStartingId] = useState<number | null>(null);
@@ -59,6 +62,35 @@ export default function LevelAssignments({
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [isAdmin, level]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setProgressLoading(true);
+    setProgressLoadError('');
+    apiFetch('/api/assignments/progress', {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('과제 진행률을 불러오지 못했습니다.');
+        return response.json() as Promise<AssignmentProgress[]>;
+      })
+      .then((progressItems) => {
+        if (controller.signal.aborted) return;
+        setProgressByAssignment(Object.fromEntries(
+          progressItems.map((progress) => [progress.assignmentId, progress]),
+        ));
+        setProgressLoading(false);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setProgressByAssignment({});
+        setProgressLoadError('과제 수행률을 불러오지 못했어요. 연결 상태를 확인해 주세요.');
+        setProgressLoading(false);
       });
 
     return () => controller.abort();
@@ -130,6 +162,42 @@ export default function LevelAssignments({
           <div className="grid gap-3 md:grid-cols-2">
             {selectedAssignments.map((assignment) => (
             <article key={assignment.id} className="flex flex-col rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.75)] p-5" data-testid={`card-assigned-${selectedType}-${assignment.id}`}>
+              {(() => {
+                const progress = progressByAssignment[assignment.id];
+                const completedSteps = progress?.completedSteps ?? 0;
+                const totalSteps = progress?.totalSteps ?? 0;
+                const isComplete = totalSteps > 0 && completedSteps >= totalSteps;
+                const percent = totalSteps > 0
+                  ? Math.min(100, (completedSteps / totalSteps) * 100)
+                  : 0;
+                const percentLabel = percent > 0 && percent < 1 ? '<1%' : `${Math.floor(percent)}%`;
+                return (
+                  <div className="mb-3 flex items-center justify-between gap-3" data-testid={`status-assigned-${assignment.id}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      isComplete
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : percent > 0
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+                    }`}>
+                    {progressLoading
+                      ? '진행률 확인 중'
+                      : progressLoadError
+                        ? '확인할 수 없음'
+                        : isComplete
+                          ? '다했음'
+                          : percent > 0
+                            ? `수행률 ${percentLabel}`
+                            : '아직 안했음'}
+                    </span>
+                    {!progressLoading && !progressLoadError && percent > 0 && !isComplete && (
+                      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[hsl(var(--muted))]" aria-label={`수행률 ${percent}%`}>
+                        <div className="h-full rounded-full bg-[hsl(var(--accent))]" style={{ width: `${percent}%` }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-[hsl(var(--secondary))] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]">
                   {levelLabels[assignment.level]}

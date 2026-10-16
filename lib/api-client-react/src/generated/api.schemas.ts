@@ -216,6 +216,22 @@ export interface Assignment {
   createdAt: string;
 }
 
+export interface AssignmentProgress {
+  assignmentId: number;
+  /** @minimum 0 */
+  completedSteps: number;
+  /** @minimum 1 */
+  totalSteps: number;
+  updatedAt: string;
+}
+
+export interface AssignmentProgressInput {
+  /** @minimum 0 */
+  completedSteps: number;
+  /** @minimum 1 */
+  totalSteps: number;
+}
+
 export interface LibraryMaterial {
   id: number;
   title: string;

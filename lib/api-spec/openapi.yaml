@@ -146,6 +146,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /assignments/progress:
+    get:
+      operationId: listAssignmentProgress
+      tags: [Assignments]
+      summary: 현재 로그인 사용자의 과제별 진행률 조회
+      responses:
+        "200":
+          description: 과제 진행률 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentProgress"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /assignments/{assignmentId}/progress:
+    put:
+      operationId: upsertAssignmentProgress
+      tags: [Assignments]
+      summary: 현재 과제의 진행률 저장
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentProgressInput"
+      responses:
+        "200":
+          description: 진행률 저장 결과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentProgress"
+        "400":
+          description: 올바르지 않은 진행률
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: 해당 과제에 접근할 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: 과제를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/assignments:
     get:
       operationId: listAdminAssignments
@@ -996,6 +1065,31 @@ components:
         createdAt:
           type: string
           format: date-time
+    AssignmentProgress:
+      type: object
+      required: [assignmentId, completedSteps, totalSteps, updatedAt]
+      properties:
+        assignmentId:
+          type: integer
+        completedSteps:
+          type: integer
+          minimum: 0
+        totalSteps:
+          type: integer
+          minimum: 1
+        updatedAt:
+          type: string
+          format: date-time
+    AssignmentProgressInput:
+      type: object
+      required: [completedSteps, totalSteps]
+      properties:
+        completedSteps:
+          type: integer
+          minimum: 0
+        totalSteps:
+          type: integer
+          minimum: 1
     LibraryMaterial:
       type: object
       required: [id, title, materialType, folderId, materialContent, level, resourcePath, resourceName, createdAt, updatedAt]

@@ -11,6 +11,8 @@ export * from './assignment';
 export * from './assignmentFolder';
 export * from './assignmentFolderInput';
 export * from './assignmentMember';
+export * from './assignmentProgress';
+export * from './assignmentProgressInput';
 export * from './courseLevel';
 export * from './createAssignmentRequest';
 export * from './errorEnvelope';

@@ -25,6 +25,8 @@ import type {
   AssignmentFolder,
   AssignmentFolderInput,
   AssignmentMember,
+  AssignmentProgress,
+  AssignmentProgressInput,
   CreateAssignmentRequest,
   ErrorEnvelope,
   GetLearningContentParams,
@@ -487,6 +489,172 @@ export function useListAssignments<TData = Awaited<ReturnType<typeof listAssignm
 
 
 
+
+export const getListAssignmentProgressUrl = () => {
+
+
+
+
+  return `/api/assignments/progress`
+}
+
+/**
+ * @summary 현재 로그인 사용자의 과제별 진행률 조회
+ */
+export const listAssignmentProgress = async ( options?: Parameters<typeof customFetch>[1]): Promise<AssignmentProgress[]> => {
+
+  return customFetch<AssignmentProgress[]>(getListAssignmentProgressUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssignmentProgressQueryKey = () => {
+    return [
+    `/api/assignments/progress`
+    ] as const;
+    }
+
+
+export const getListAssignmentProgressQueryOptions = <TData = Awaited<ReturnType<typeof listAssignmentProgress>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignmentProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssignmentProgressQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssignmentProgress>>> = ({ signal }) => listAssignmentProgress({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssignmentProgress>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssignmentProgressQueryResult = NonNullable<Awaited<ReturnType<typeof listAssignmentProgress>>>
+export type ListAssignmentProgressQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary 현재 로그인 사용자의 과제별 진행률 조회
+ */
+
+export function useListAssignmentProgress<TData = Awaited<ReturnType<typeof listAssignmentProgress>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignmentProgress>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssignmentProgressQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpsertAssignmentProgressUrl = (assignmentId: number,) => {
+
+
+
+
+  return `/api/assignments/${assignmentId}/progress`
+}
+
+/**
+ * @summary 현재 과제의 진행률 저장
+ */
+export const upsertAssignmentProgress = async (assignmentId: number,
+    assignmentProgressInput: AssignmentProgressInput, options?: Parameters<typeof customFetch>[1]): Promise<AssignmentProgress> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AssignmentProgress>(getUpsertAssignmentProgressUrl(assignmentId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(assignmentProgressInput)
+  }
+);}
+
+
+
+
+
+export const getUpsertAssignmentProgressMutationKey = () => ['upsertAssignmentProgress'] as const;
+
+export const getUpsertAssignmentProgressMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAssignmentProgress>>, TError,UpsertAssignmentProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertAssignmentProgress>>, TError,UpsertAssignmentProgressMutationVariables, TContext> => {
+
+const mutationKey = getUpsertAssignmentProgressMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertAssignmentProgress>>, UpsertAssignmentProgressMutationVariables> = (props) => {
+          const {assignmentId,data} = props ?? {};
+
+          return  upsertAssignmentProgress(assignmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertAssignmentProgressMutationResult = NonNullable<Awaited<ReturnType<typeof upsertAssignmentProgress>>>
+    export type UpsertAssignmentProgressMutationBody = BodyType<AssignmentProgressInput>
+    export type UpsertAssignmentProgressMutationError = ErrorType<ErrorEnvelope>
+    export type UpsertAssignmentProgressMutationVariables = {assignmentId: number;data: BodyType<AssignmentProgressInput>}
+
+    /**
+ * @summary 현재 과제의 진행률 저장
+ */
+export const useUpsertAssignmentProgress = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertAssignmentProgress>>, TError,UpsertAssignmentProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertAssignmentProgress>>,
+        TError,
+        UpsertAssignmentProgressMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpsertAssignmentProgressMutationOptions(options));
+    }
 
 export const getListAdminAssignmentsUrl = () => {
 

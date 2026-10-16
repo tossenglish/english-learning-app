@@ -18,6 +18,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { apiFetch } from '@/lib/api-fetch';
 import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
 import PersianCatFriends from '@/components/persian-cat-friends';
@@ -476,6 +477,7 @@ export default function PassagePractice({
   const [isWordAutoAdvancing, setIsWordAutoAdvancing] = useState(false);
   const [passageListening, setPassageListening] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const [assignmentProgressSaveError, setAssignmentProgressSaveError] = useState('');
   const passageFileInputRef = useRef<HTMLInputElement>(null);
   const wordAnswerInputRef = useRef<HTMLInputElement>(null);
   const focusWordAnswerAfterAdvanceRef = useRef(false);
@@ -639,6 +641,24 @@ export default function PassagePractice({
       ),
     });
   }, [attempts, completed, completedSteps, onProgressChange, passageSentences, totalProgressSteps]);
+
+  useEffect(() => {
+    if (!activeMaterial) return;
+    apiFetch(`/api/assignments/${activeMaterial.assignmentId}/progress`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completedSteps, totalSteps: totalProgressSteps }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('과제 진행률 저장에 실패했습니다.');
+        setAssignmentProgressSaveError('');
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setAssignmentProgressSaveError('과제 수행률을 저장하지 못했어요. 연결 상태를 확인해 주세요.');
+      });
+  }, [activeMaterial, completedSteps, totalProgressSteps]);
 
   useEffect(() => {
     try {
@@ -985,6 +1005,11 @@ export default function PassagePractice({
               data-testid="progress-passage"
             />
           </div>
+          {assignmentProgressSaveError && (
+            <p className="mt-2 max-w-44 text-[10px] leading-relaxed text-[hsl(var(--destructive))]" role="alert">
+              {assignmentProgressSaveError}
+            </p>
+          )}
         </div>
         <PersianCatFriends variant="practice" />
       </section>
