@@ -271,10 +271,18 @@ function Logo({ inverse = false }: { inverse?: boolean }) {
   );
 }
 
+function SiteFooter() {
+  return (
+    <footer className="w-full py-3 text-center text-xs font-medium tracking-wide text-[hsl(var(--muted-foreground))]">
+      토스일곡아이들
+    </footer>
+  );
+}
+
 function PublicLanding() {
   return (
-    <main className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-5 py-12">
-      <div className="w-full max-w-[1060px]">
+    <main className="grain flex min-h-[100dvh] flex-col items-center bg-[hsl(var(--background))] px-5 py-8 sm:py-12">
+      <div className="flex w-full max-w-[1060px] flex-1 flex-col justify-center">
         <div className="flex items-center justify-between">
           <Logo />
           <Link
@@ -338,22 +346,29 @@ function PublicLanding() {
           <span>나만의 단어장</span>
         </div>
       </div>
+      <SiteFooter />
     </main>
   );
 }
 
 function SignInPage() {
   return (
-    <div className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4 py-10">
-      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    <div className="grain flex min-h-[100dvh] flex-col items-center bg-[hsl(var(--background))] px-4 py-6 sm:py-10">
+      <div className="flex w-full flex-1 items-center justify-center">
+        <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+      </div>
+      <SiteFooter />
     </div>
   );
 }
 
 function SignUpPage() {
   return (
-    <div className="grain flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] px-4 py-10">
-      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+    <div className="grain flex min-h-[100dvh] flex-col items-center bg-[hsl(var(--background))] px-4 py-6 sm:py-10">
+      <div className="flex w-full flex-1 items-center justify-center">
+        <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+      </div>
+      <SiteFooter />
     </div>
   );
 }
@@ -466,7 +481,7 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
   return (
     <div className="grain flex min-h-[100dvh] bg-[hsl(var(--background))]">
       <Sidebar location={location} />
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-[hsl(var(--border)/.75)] bg-[hsl(var(--background)/.88)] px-5 backdrop-blur-md sm:px-8 lg:px-12">
           <div className="md:hidden"><Logo /></div>
           <div className="hidden items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] md:flex">
@@ -506,7 +521,8 @@ function Shell({ children, level, onLevelChange }: { children: ReactNode; level:
             <AccountControl />
           </div>
         </header>
-        <main className="mx-auto max-w-[1320px] px-5 pb-28 pt-8 sm:px-8 lg:px-12 lg:pb-12">{children}</main>
+        <main className="mx-auto w-full max-w-[1320px] flex-1 px-5 pb-28 pt-8 sm:px-8 lg:px-12 lg:pb-12">{children}</main>
+        <SiteFooter />
       </div>
       <MobileNav location={location} />
     </div>
