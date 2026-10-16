@@ -178,7 +178,9 @@ export default function LevelAssignments({
                         ? 'bg-emerald-100 text-emerald-800'
                         : percent > 0
                           ? 'bg-amber-100 text-amber-800'
-                          : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+                          : !progressLoading && !progressLoadError
+                            ? 'bg-red-600 text-white'
+                            : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
                     }`}>
                     {progressLoading
                       ? '진행률 확인 중'
