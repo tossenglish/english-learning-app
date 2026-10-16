@@ -469,6 +469,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/member-classes:
+    get:
+      operationId: listAdminMemberClasses
+      tags: [Assignments]
+      summary: 과정별 반 폴더 목록
+      responses:
+        "200":
+          description: 반 폴더 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberClass"
+    post:
+      operationId: createAdminMemberClass
+      tags: [Assignments]
+      summary: 과정 안에 반 폴더 만들기
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberClassInput"
+      responses:
+        "201":
+          description: 반 폴더 생성
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberClass"
+        "400":
+          description: 잘못된 과정 또는 상위 폴더
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/members/{memberId}/class:
+    put:
+      operationId: updateMemberClass
+      tags: [Assignments]
+      summary: 회원을 반 폴더에 배치하거나 다른 반으로 이동
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberClassAssignmentInput"
+      responses:
+        "200":
+          description: 회원 배치 갱신
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberClassAssignment"
+        "400":
+          description: 과정이 다른 반 폴더
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /admin/members/{memberId}:
     delete:
       operationId: deleteAdminMember
@@ -1212,7 +1279,7 @@ components:
       enum: [sentence, word]
     AssignmentMember:
       type: object
-      required: [id, displayName, course]
+      required: [id, displayName, course, classId]
       properties:
         id:
           type: string
@@ -1224,6 +1291,50 @@ components:
           oneOf:
             - $ref: "#/components/schemas/CourseLevel"
             - type: "null"
+        classId:
+          type: [integer, "null"]
+    MemberClass:
+      type: object
+      required: [id, courseLevel, name, parentClassId]
+      properties:
+        id:
+          type: integer
+        courseLevel:
+          $ref: "#/components/schemas/CourseLevel"
+        name:
+          type: string
+        parentClassId:
+          type: [integer, "null"]
+    MemberClassInput:
+      type: object
+      required: [courseLevel, name, parentClassId]
+      properties:
+        courseLevel:
+          $ref: "#/components/schemas/CourseLevel"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        parentClassId:
+          type: [integer, "null"]
+    MemberClassAssignmentInput:
+      type: object
+      required: [classId]
+      properties:
+        classId:
+          type: [integer, "null"]
+    MemberClassAssignment:
+      type: object
+      required: [memberId, course, classId]
+      properties:
+        memberId:
+          type: string
+        course:
+          oneOf:
+            - $ref: "#/components/schemas/CourseLevel"
+            - type: "null"
+        classId:
+          type: [integer, "null"]
     CourseLevel:
       type: string
       enum: [Beginner, Intermediate, Advanced]

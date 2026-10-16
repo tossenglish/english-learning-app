@@ -327,9 +327,61 @@ export const ListAdminMembersResponseItem = zod.object({
   "id": zod.string(),
   "displayName": zod.string(),
   "email": zod.string().nullish(),
-  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()])
+  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()]),
+  "classId": zod.number().int().nullable()
 })
 export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
+
+
+/**
+ * @summary 과정별 반 폴더 목록
+ */
+export const ListAdminMemberClassesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "courseLevel": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "name": zod.string(),
+  "parentClassId": zod.number().int().nullable()
+})
+export const ListAdminMemberClassesResponse = zod.array(ListAdminMemberClassesResponseItem)
+
+
+/**
+ * @summary 과정 안에 반 폴더 만들기
+ */
+export const createAdminMemberClassBodyNameMax = 80;
+
+
+
+export const CreateAdminMemberClassBody = zod.object({
+  "courseLevel": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "name": zod.string().min(1).max(createAdminMemberClassBodyNameMax),
+  "parentClassId": zod.number().int().nullable()
+})
+
+export const CreateAdminMemberClassResponse = zod.object({
+  "id": zod.number().int(),
+  "courseLevel": zod.enum(['Beginner', 'Intermediate', 'Advanced']),
+  "name": zod.string(),
+  "parentClassId": zod.number().int().nullable()
+})
+
+
+/**
+ * @summary 회원을 반 폴더에 배치하거나 다른 반으로 이동
+ */
+export const UpdateMemberClassParams = zod.object({
+  "memberId": zod.coerce.string()
+})
+
+export const UpdateMemberClassBody = zod.object({
+  "classId": zod.number().int().nullable()
+})
+
+export const UpdateMemberClassResponse = zod.object({
+  "memberId": zod.string(),
+  "course": zod.union([zod.enum(['Beginner', 'Intermediate', 'Advanced']),zod.null()]),
+  "classId": zod.number().int().nullable()
+})
 
 
 /**

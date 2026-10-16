@@ -345,6 +345,39 @@ export interface AssignmentMember {
   /** @nullable */
   email?: string | null;
   course: CourseLevel | null;
+  /** @nullable */
+  classId: number | null;
+}
+
+export interface MemberClass {
+  id: number;
+  courseLevel: CourseLevel;
+  name: string;
+  /** @nullable */
+  parentClassId: number | null;
+}
+
+export interface MemberClassInput {
+  courseLevel: CourseLevel;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  /** @nullable */
+  parentClassId: number | null;
+}
+
+export interface MemberClassAssignmentInput {
+  /** @nullable */
+  classId: number | null;
+}
+
+export interface MemberClassAssignment {
+  memberId: string;
+  course: CourseLevel | null;
+  /** @nullable */
+  classId: number | null;
 }
 
 export interface MemberCourseInput {

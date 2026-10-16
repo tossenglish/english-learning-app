@@ -3,6 +3,7 @@ import type {
   Assignment,
   AssignmentFolder,
   AssignmentMember,
+  MemberClass,
   LibraryMaterial,
   LearningContent,
   LearningLevel,
@@ -220,6 +221,11 @@ export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
+  const [memberClasses, setMemberClasses] = useState<MemberClass[]>([]);
+  const [newClassCourse, setNewClassCourse] = useState<Exclude<LearningLevel, 'All'>>('Intermediate');
+  const [newClassParentId, setNewClassParentId] = useState('');
+  const [newClassName, setNewClassName] = useState('');
+  const [creatingMemberClass, setCreatingMemberClass] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPassword, setNewMemberPassword] = useState('');
   const [newMemberPasswordConfirm, setNewMemberPasswordConfirm] = useState('');
@@ -342,6 +348,13 @@ export default function AdminAssignments() {
       })
       .then(setMembers)
       .catch(() => setMembers([]));
+    apiFetch('/api/admin/member-classes', { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('반 목록을 불러오지 못했습니다.');
+        return response.json() as Promise<MemberClass[]>;
+      })
+      .then(setMemberClasses)
+      .catch(() => setMemberClasses([]));
     loadLearningContents();
     const refreshSavedContent = () => {
       loadLearningContents();
@@ -350,6 +363,63 @@ export default function AdminAssignments() {
     window.addEventListener(LEARNING_CONTENT_UPDATED_EVENT, refreshSavedContent);
     return () => window.removeEventListener(LEARNING_CONTENT_UPDATED_EVENT, refreshSavedContent);
   }, []);
+
+  const getMemberClassPath = (classId: number): string => {
+    const current = memberClasses.find((item) => item.id === classId);
+    if (!current) return '';
+    return current.parentClassId == null
+      ? current.name
+      : `${getMemberClassPath(current.parentClassId)} / ${current.name}`;
+  };
+
+  const createMemberClass = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = newClassName.trim();
+    if (!name || creatingMemberClass) return;
+    setCreatingMemberClass(true);
+    try {
+      const response = await apiFetch('/api/admin/member-classes', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseLevel: newClassCourse,
+          name,
+          parentClassId: newClassParentId ? Number(newClassParentId) : null,
+        }),
+      });
+      if (!response.ok) throw new Error('반 폴더를 만들지 못했습니다.');
+      const created = await response.json() as MemberClass;
+      setMemberClasses((current) => [...current, created]);
+      setNewClassName('');
+      setNewClassParentId('');
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : '반 폴더 생성 오류');
+    } finally {
+      setCreatingMemberClass(false);
+    }
+  };
+
+  const updateMemberClass = async (memberId: string, classId: number | null) => {
+    setUpdatingMemberIds((current) => [...current, memberId]);
+    try {
+      const response = await apiFetch(`/api/admin/members/${encodeURIComponent(memberId)}/class`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classId }),
+      });
+      if (!response.ok) throw new Error('회원의 반 배정을 변경하지 못했습니다.');
+      const updated = await response.json() as { memberId: string; course: AssignmentMember['course']; classId: number | null };
+      setMembers((current) => current.map((member) => member.id === updated.memberId
+        ? { ...member, course: updated.course, classId: updated.classId }
+        : member));
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : '반 이동 오류');
+    } finally {
+      setUpdatingMemberIds((current) => current.filter((id) => id !== memberId));
+    }
+  };
 
   const toggleLearningContentSource = () => {
     const shouldLoad = !libraryHomeContentSelected;
@@ -547,7 +617,7 @@ export default function AdminAssignments() {
       }
       const updated = await response.json() as { memberId: string; course: AssignmentMember['course'] };
       setMembers((current) => current.map((member) => (
-        member.id === updated.memberId ? { ...member, course: updated.course } : member
+        member.id === updated.memberId ? { ...member, course: updated.course, classId: null } : member
       )));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : '과정 배정 오류');
@@ -1272,6 +1342,23 @@ export default function AdminAssignments() {
             {memberDeleteNotice}
           </p>
         )}
+        <form onSubmit={(event) => void createMemberClass(event)} className="mt-5 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.45)] p-4">
+          <h4 className="text-sm font-bold">과정별 반 폴더</h4>
+          <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">과정 안에 상위 폴더와 하위 반을 만들고, 회원을 원하는 반에 배치하거나 이동할 수 있어요.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1.2fr_auto]">
+            <select aria-label="반 폴더 과정" value={newClassCourse} onChange={(event) => { setNewClassCourse(event.target.value as Exclude<LearningLevel, 'All'>); setNewClassParentId(''); }} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm">
+              {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <select aria-label="상위 반 폴더" value={newClassParentId} onChange={(event) => setNewClassParentId(event.target.value)} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm">
+              <option value="">과정 바로 아래에 만들기</option>
+              {memberClasses.filter((item) => item.courseLevel === newClassCourse).map((item) => <option key={item.id} value={item.id}>{getMemberClassPath(item.id)}</option>)}
+            </select>
+            <input aria-label="새 반 폴더 이름" value={newClassName} onChange={(event) => setNewClassName(event.target.value)} placeholder="예: 1반" maxLength={80} className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm" />
+            <button type="submit" disabled={creatingMemberClass || !newClassName.trim()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-50">
+              {creatingMemberClass ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />} 폴더 만들기
+            </button>
+          </div>
+        </form>
         {members.length === 0 ? (
           <p className="mt-5 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-6 text-center text-sm text-[hsl(var(--muted-foreground))]">
             배정할 회원이 없습니다.
@@ -1302,6 +1389,20 @@ export default function AdminAssignments() {
                         <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
+                    {member.course && (
+                      <select
+                        aria-label={`${member.displayName} 반 폴더`}
+                        value={member.classId ?? ''}
+                        disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id}
+                        onChange={(event) => void updateMemberClass(member.id, event.target.value ? Number(event.target.value) : null)}
+                        className="min-w-36 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                      >
+                        <option value="">반 미배정</option>
+                        {memberClasses.filter((item) => item.courseLevel === member.course).map((item) => (
+                          <option key={item.id} value={item.id}>{getMemberClassPath(item.id)}</option>
+                        ))}
+                      </select>
+                    )}
                     {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
                   </label>
                   <button

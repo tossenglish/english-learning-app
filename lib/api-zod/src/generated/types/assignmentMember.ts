@@ -13,4 +13,6 @@ export interface AssignmentMember {
   /** @nullable */
   email?: string | null;
   course: CourseLevel | null;
+  /** @nullable */
+  classId: number | null;
 }

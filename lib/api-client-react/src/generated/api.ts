@@ -41,6 +41,10 @@ import type {
   LibraryMaterial,
   LibraryMaterialInput,
   ListAssignmentsParams,
+  MemberClass,
+  MemberClassAssignment,
+  MemberClassAssignmentInput,
+  MemberClassInput,
   MemberCourseAssignment,
   MemberCourseInput,
   TranslatePracticeSentencesRequest,
@@ -1301,6 +1305,260 @@ export function useListAdminMembers<TData = Awaited<ReturnType<typeof listAdminM
 
 
 
+
+export const getListAdminMemberClassesUrl = () => {
+
+
+
+
+  return `/api/admin/member-classes`
+}
+
+/**
+ * @summary 과정별 반 폴더 목록
+ */
+export const listAdminMemberClasses = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberClass[]> => {
+
+  return customFetch<MemberClass[]>(getListAdminMemberClassesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminMemberClassesQueryKey = () => {
+    return [
+    `/api/admin/member-classes`
+    ] as const;
+    }
+
+
+export const getListAdminMemberClassesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminMemberClasses>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMemberClasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminMemberClassesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminMemberClasses>>> = ({ signal }) => listAdminMemberClasses({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminMemberClasses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminMemberClassesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminMemberClasses>>>
+export type ListAdminMemberClassesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary 과정별 반 폴더 목록
+ */
+
+export function useListAdminMemberClasses<TData = Awaited<ReturnType<typeof listAdminMemberClasses>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminMemberClasses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminMemberClassesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminMemberClassUrl = () => {
+
+
+
+
+  return `/api/admin/member-classes`
+}
+
+/**
+ * @summary 과정 안에 반 폴더 만들기
+ */
+export const createAdminMemberClass = async (memberClassInput: MemberClassInput, options?: Parameters<typeof customFetch>[1]): Promise<MemberClass> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MemberClass>(getCreateAdminMemberClassUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memberClassInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminMemberClassMutationKey = () => ['createAdminMemberClass'] as const;
+
+export const getCreateAdminMemberClassMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminMemberClass>>, TError,CreateAdminMemberClassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminMemberClass>>, TError,CreateAdminMemberClassMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminMemberClassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminMemberClass>>, CreateAdminMemberClassMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminMemberClass(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminMemberClassMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminMemberClass>>>
+    export type CreateAdminMemberClassMutationBody = BodyType<MemberClassInput>
+    export type CreateAdminMemberClassMutationError = ErrorType<ErrorEnvelope>
+    export type CreateAdminMemberClassMutationVariables = {data: BodyType<MemberClassInput>}
+
+    /**
+ * @summary 과정 안에 반 폴더 만들기
+ */
+export const useCreateAdminMemberClass = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminMemberClass>>, TError,CreateAdminMemberClassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminMemberClass>>,
+        TError,
+        CreateAdminMemberClassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminMemberClassMutationOptions(options));
+    }
+
+export const getUpdateMemberClassUrl = (memberId: string,) => {
+
+
+
+
+  return `/api/admin/members/${memberId}/class`
+}
+
+/**
+ * @summary 회원을 반 폴더에 배치하거나 다른 반으로 이동
+ */
+export const updateMemberClass = async (memberId: string,
+    memberClassAssignmentInput: MemberClassAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<MemberClassAssignment> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MemberClassAssignment>(getUpdateMemberClassUrl(memberId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memberClassAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateMemberClassMutationKey = () => ['updateMemberClass'] as const;
+
+export const getUpdateMemberClassMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMemberClass>>, TError,UpdateMemberClassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMemberClass>>, TError,UpdateMemberClassMutationVariables, TContext> => {
+
+const mutationKey = getUpdateMemberClassMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMemberClass>>, UpdateMemberClassMutationVariables> = (props) => {
+          const {memberId,data} = props ?? {};
+
+          return  updateMemberClass(memberId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMemberClassMutationResult = NonNullable<Awaited<ReturnType<typeof updateMemberClass>>>
+    export type UpdateMemberClassMutationBody = BodyType<MemberClassAssignmentInput>
+    export type UpdateMemberClassMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateMemberClassMutationVariables = {memberId: string;data: BodyType<MemberClassAssignmentInput>}
+
+    /**
+ * @summary 회원을 반 폴더에 배치하거나 다른 반으로 이동
+ */
+export const useUpdateMemberClass = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMemberClass>>, TError,UpdateMemberClassMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMemberClass>>,
+        TError,
+        UpdateMemberClassMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateMemberClassMutationOptions(options));
+    }
 
 export const getDeleteAdminMemberUrl = (memberId: string,) => {
 

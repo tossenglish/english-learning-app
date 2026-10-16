@@ -1,6 +1,8 @@
 import {
   CreateAssignmentFolderBody,
   CreateAssignmentFolderResponse,
+  CreateAdminMemberClassBody,
+  CreateAdminMemberClassResponse,
   CreateAssignmentBody,
   CreateAssignmentResponse,
   CreateAdminLibraryMaterialBody,
@@ -13,6 +15,7 @@ import {
   ListAdminAssignmentFoldersResponse,
   ListAdminAssignmentsResponse,
   ListAdminMembersResponse,
+  ListAdminMemberClassesResponse,
   ListAssignmentsQueryParams,
   ListAssignmentsResponse,
   ListAssignmentProgressResponse,
@@ -22,6 +25,9 @@ import {
   UpdateMemberCourseBody,
   UpdateMemberCourseParams,
   UpdateMemberCourseResponse,
+  UpdateMemberClassBody,
+  UpdateMemberClassParams,
+  UpdateMemberClassResponse,
 } from "@workspace/api-zod";
 import { clerkClient } from "@clerk/express";
 import {
@@ -31,6 +37,7 @@ import {
   db,
   libraryMaterialsTable,
   memberCoursesTable,
+  memberClassesTable,
 } from "@workspace/db";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -431,7 +438,7 @@ router.get(
         .where(inArray(memberCoursesTable.memberId, userIds))
       : [];
     const courseByMember = new Map(
-      courseAssignments.map(({ memberId, courseLevel }) => [memberId, courseLevel]),
+      courseAssignments.map(({ memberId, courseLevel, classId }) => [memberId, { courseLevel, classId }]),
     );
     const members = users.data
       .filter(
@@ -444,7 +451,8 @@ router.get(
         id: user.id,
         displayName: getDisplayName(user),
         email: user.primaryEmailAddress?.emailAddress ?? null,
-        course: courseByMember.get(user.id) ?? null,
+        course: courseByMember.get(user.id)?.courseLevel ?? null,
+        classId: courseByMember.get(user.id)?.classId ?? null,
       }));
 
     res.json(ListAdminMembersResponse.parse(members));
@@ -483,6 +491,7 @@ router.post(
         displayName: getDisplayName(user),
         email: user.primaryEmailAddress?.emailAddress ?? email,
         course: null,
+        classId: null,
       });
     } catch (createError) {
       const clerkErrors = (createError as {
@@ -623,6 +632,7 @@ router.put(
           target: memberCoursesTable.memberId,
           set: {
             courseLevel: parsed.data.course,
+            classId: null,
             updatedAt: new Date(),
           },
         });
@@ -636,6 +646,79 @@ router.put(
     );
   },
 );
+
+router.get("/admin/member-classes", async (req: Request, res: Response): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const classes = await db.select().from(memberClassesTable).orderBy(memberClassesTable.courseLevel, memberClassesTable.name);
+  res.json(ListAdminMemberClassesResponse.parse(classes));
+});
+
+router.post("/admin/member-classes", async (req: Request, res: Response): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const parsed = CreateAdminMemberClassBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const name = parsed.data.name.trim();
+  if (!name) {
+    res.status(400).json({ error: "반 이름을 입력해 주세요." });
+    return;
+  }
+  if (parsed.data.parentClassId !== null) {
+    const [parent] = await db.select().from(memberClassesTable).where(eq(memberClassesTable.id, parsed.data.parentClassId));
+    if (!parent || parent.courseLevel !== parsed.data.courseLevel) {
+      res.status(400).json({ error: "같은 과정 안의 상위 반 폴더를 선택해 주세요." });
+      return;
+    }
+  }
+  const [created] = await db.insert(memberClassesTable).values({ ...parsed.data, name }).returning();
+  res.status(201).json(CreateAdminMemberClassResponse.parse(created));
+});
+
+router.put("/admin/members/:memberId/class", async (req: Request, res: Response): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const params = UpdateMemberClassParams.safeParse(req.params);
+  const parsed = UpdateMemberClassBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({ error: "회원 또는 반 정보가 올바르지 않습니다." });
+    return;
+  }
+  try {
+    const user = await clerkClient.users.getUser(params.data.memberId);
+    if (isAdminUser(user)) {
+      res.status(403).json({ error: "관리자 계정은 반에 배정할 수 없습니다." });
+      return;
+    }
+  } catch {
+    res.status(404).json({ error: "회원을 찾을 수 없습니다." });
+    return;
+  }
+  let course: "Beginner" | "Intermediate" | "Advanced" | null = null;
+  if (parsed.data.classId !== null) {
+    const [classRow] = await db.select().from(memberClassesTable).where(eq(memberClassesTable.id, parsed.data.classId));
+    if (!classRow) {
+      res.status(404).json({ error: "반 폴더를 찾을 수 없습니다." });
+      return;
+    }
+    course = classRow.courseLevel as "Beginner" | "Intermediate" | "Advanced";
+    await db.insert(memberCoursesTable).values({
+      memberId: params.data.memberId,
+      courseLevel: classRow.courseLevel,
+      classId: classRow.id,
+    }).onConflictDoUpdate({
+      target: memberCoursesTable.memberId,
+      set: { courseLevel: classRow.courseLevel, classId: classRow.id, updatedAt: new Date() },
+    });
+  } else {
+    const [existing] = await db.select().from(memberCoursesTable).where(eq(memberCoursesTable.memberId, params.data.memberId));
+    course = existing
+      ? existing.courseLevel as "Beginner" | "Intermediate" | "Advanced"
+      : null;
+    await db.update(memberCoursesTable).set({ classId: null, updatedAt: new Date() }).where(eq(memberCoursesTable.memberId, params.data.memberId));
+  }
+  res.json(UpdateMemberClassResponse.parse({ memberId: params.data.memberId, course, classId: parsed.data.classId }));
+});
 
 router.post(
   "/admin/assignments",
