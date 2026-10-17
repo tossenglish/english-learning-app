@@ -23,8 +23,7 @@ export const ListReadingPassagesResponseItem = zod.object({
   "questions": zod.array(zod.object({
   "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
   "prompt": zod.string(),
-  "options": zod.array(zod.string()),
-  "answer": zod.string()
+  "options": zod.array(zod.string())
 })),
   "createdAt": zod.coerce.date()
 })
@@ -43,7 +42,8 @@ export const ListAdminReadingPassagesResponseItem = zod.object({
   "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
   "prompt": zod.string(),
   "options": zod.array(zod.string()),
-  "answer": zod.string()
+  "answer": zod.string(),
+  "explanationNote": zod.string().optional()
 })),
   "createdAt": zod.coerce.date()
 })
@@ -58,8 +58,6 @@ export const saveReadingPassageBodyTitleMax = 160;
 export const saveReadingPassageBodyPassageMin = 30;
 export const saveReadingPassageBodyPassageMax = 3000;
 
-export const saveReadingPassageBodyQuestionsMin = 3;
-export const saveReadingPassageBodyQuestionsMax = 3;
 
 
 
@@ -71,8 +69,9 @@ export const SaveReadingPassageBody = zod.object({
   "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
   "prompt": zod.string(),
   "options": zod.array(zod.string()),
-  "answer": zod.string()
-})).min(saveReadingPassageBodyQuestionsMin).max(saveReadingPassageBodyQuestionsMax)
+  "answer": zod.string(),
+  "explanationNote": zod.string().optional()
+})).min(1)
 })
 
 export const SaveReadingPassageResponse = zod.object({
@@ -84,32 +83,57 @@ export const SaveReadingPassageResponse = zod.object({
   "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
   "prompt": zod.string(),
   "options": zod.array(zod.string()),
-  "answer": zod.string()
+  "answer": zod.string(),
+  "explanationNote": zod.string().optional()
 })),
   "createdAt": zod.coerce.date()
 })
 
 
 /**
- * @summary 지문 기반 읽기 이해 문제 생성
+ * @summary 저장된 정답으로 O/X·객관식 채점
  */
-export const generateReadingQuestionsBodyPassageMin = 30;
-export const generateReadingQuestionsBodyPassageMax = 3000;
-
-
-
-export const GenerateReadingQuestionsBody = zod.object({
-  "grade": zod.literal(6),
-  "passage": zod.string().min(generateReadingQuestionsBodyPassageMin).max(generateReadingQuestionsBodyPassageMax)
+export const CheckReadingObjectiveAnswerParams = zod.object({
+  "passageId": zod.coerce.number().int()
 })
 
-export const GenerateReadingQuestionsResponseItem = zod.object({
-  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
-  "prompt": zod.string(),
-  "options": zod.array(zod.string()),
-  "answer": zod.string()
+export const checkReadingObjectiveAnswerBodyQuestionIndexMin = 0;
+
+export const checkReadingObjectiveAnswerBodyAnswerMax = 240;
+
+
+
+export const CheckReadingObjectiveAnswerBody = zod.object({
+  "questionIndex": zod.number().int().min(checkReadingObjectiveAnswerBodyQuestionIndexMin),
+  "answer": zod.string().min(1).max(checkReadingObjectiveAnswerBodyAnswerMax)
 })
-export const GenerateReadingQuestionsResponse = zod.array(GenerateReadingQuestionsResponseItem)
+
+export const CheckReadingObjectiveAnswerResponse = zod.object({
+  "correct": zod.boolean()
+})
+
+
+/**
+ * @summary 저장된 답과 해설 메모를 바탕으로 답 설명
+ */
+export const ExplainReadingAnswerParams = zod.object({
+  "passageId": zod.coerce.number().int()
+})
+
+export const explainReadingAnswerBodyQuestionIndexMin = 0;
+
+export const explainReadingAnswerBodyAnswerMax = 240;
+
+
+
+export const ExplainReadingAnswerBody = zod.object({
+  "questionIndex": zod.number().int().min(explainReadingAnswerBodyQuestionIndexMin),
+  "answer": zod.string().min(1).max(explainReadingAnswerBodyAnswerMax)
+})
+
+export const ExplainReadingAnswerResponse = zod.object({
+  "feedback": zod.string()
+})
 
 
 /**
@@ -120,14 +144,13 @@ export const GradeReadingShortAnswerParams = zod.object({
 })
 
 export const gradeReadingShortAnswerBodyQuestionIndexMin = 0;
-export const gradeReadingShortAnswerBodyQuestionIndexMax = 2;
 
 export const gradeReadingShortAnswerBodyAnswerMax = 240;
 
 
 
 export const GradeReadingShortAnswerBody = zod.object({
-  "questionIndex": zod.number().int().min(gradeReadingShortAnswerBodyQuestionIndexMin).max(gradeReadingShortAnswerBodyQuestionIndexMax),
+  "questionIndex": zod.number().int().min(gradeReadingShortAnswerBodyQuestionIndexMin),
   "answer": zod.string().min(1).max(gradeReadingShortAnswerBodyAnswerMax)
 })
 

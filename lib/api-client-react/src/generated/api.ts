@@ -27,9 +27,10 @@ import type {
   AssignmentMember,
   AssignmentProgress,
   AssignmentProgressInput,
+  CheckReadingObjectiveAnswerInput,
   CreateAssignmentRequest,
   ErrorEnvelope,
-  GenerateReadingQuestionsInput,
+  ExplainReadingAnswerInput,
   GetLearningContentParams,
   GradeReadingShortAnswerInput,
   GradeReadingShortAnswerResult,
@@ -51,9 +52,11 @@ import type {
   MemberClassInput,
   MemberCourseAssignment,
   MemberCourseInput,
+  ReadingAnswerResult,
+  ReadingExplanationResult,
   ReadingPassage,
-  ReadingQuestion,
   SaveReadingPassageInput,
+  StudentReadingPassage,
   TranslatePracticeSentencesRequest,
   UploadUrlRequest,
   UploadUrlResponse
@@ -104,9 +107,9 @@ export const getListReadingPassagesUrl = (params: ListReadingPassagesParams,) =>
 /**
  * @summary 저장된 읽기 이해 지문 조회
  */
-export const listReadingPassages = async (params: ListReadingPassagesParams, options?: Parameters<typeof customFetch>[1]): Promise<ReadingPassage[]> => {
+export const listReadingPassages = async (params: ListReadingPassagesParams, options?: Parameters<typeof customFetch>[1]): Promise<StudentReadingPassage[]> => {
 
-  return customFetch<ReadingPassage[]>(getListReadingPassagesUrl(params),
+  return customFetch<StudentReadingPassage[]>(getListReadingPassagesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -335,18 +338,19 @@ export const useSaveReadingPassage = <TError = ErrorType<unknown>,
       return useMutation(getSaveReadingPassageMutationOptions(options));
     }
 
-export const getGenerateReadingQuestionsUrl = () => {
+export const getCheckReadingObjectiveAnswerUrl = (passageId: number,) => {
 
 
 
 
-  return `/api/admin/reading/passages/generate`
+  return `/api/reading/passages/${passageId}/objective-answer`
 }
 
 /**
- * @summary 지문 기반 읽기 이해 문제 생성
+ * @summary 저장된 정답으로 O/X·객관식 채점
  */
-export const generateReadingQuestions = async (generateReadingQuestionsInput: GenerateReadingQuestionsInput, options?: Parameters<typeof customFetch>[1]): Promise<ReadingQuestion[]> => {
+export const checkReadingObjectiveAnswer = async (passageId: number,
+    checkReadingObjectiveAnswerInput: CheckReadingObjectiveAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<ReadingAnswerResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -362,12 +366,12 @@ export const generateReadingQuestions = async (generateReadingQuestionsInput: Ge
     }
     return headers;
   };
-return customFetch<ReadingQuestion[]>(getGenerateReadingQuestionsUrl(),
+return customFetch<ReadingAnswerResult>(getCheckReadingObjectiveAnswerUrl(passageId),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(generateReadingQuestionsInput)
+    body: JSON.stringify(checkReadingObjectiveAnswerInput)
   }
 );}
 
@@ -375,13 +379,13 @@ return customFetch<ReadingQuestion[]>(getGenerateReadingQuestionsUrl(),
 
 
 
-export const getGenerateReadingQuestionsMutationKey = () => ['generateReadingQuestions'] as const;
+export const getCheckReadingObjectiveAnswerMutationKey = () => ['checkReadingObjectiveAnswer'] as const;
 
-export const getGenerateReadingQuestionsMutationOptions = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateReadingQuestions>>, TError,GenerateReadingQuestionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateReadingQuestions>>, TError,GenerateReadingQuestionsMutationVariables, TContext> => {
+export const getCheckReadingObjectiveAnswerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>, TError,CheckReadingObjectiveAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>, TError,CheckReadingObjectiveAnswerMutationVariables, TContext> => {
 
-const mutationKey = getGenerateReadingQuestionsMutationKey();
+const mutationKey = getCheckReadingObjectiveAnswerMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -391,10 +395,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateReadingQuestions>>, GenerateReadingQuestionsMutationVariables> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>, CheckReadingObjectiveAnswerMutationVariables> = (props) => {
+          const {passageId,data} = props ?? {};
 
-          return  generateReadingQuestions(data,requestOptions)
+          return  checkReadingObjectiveAnswer(passageId,data,requestOptions)
         }
 
 
@@ -404,23 +408,112 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type GenerateReadingQuestionsMutationResult = NonNullable<Awaited<ReturnType<typeof generateReadingQuestions>>>
-    export type GenerateReadingQuestionsMutationBody = BodyType<GenerateReadingQuestionsInput>
-    export type GenerateReadingQuestionsMutationError = ErrorType<ErrorEnvelope>
-    export type GenerateReadingQuestionsMutationVariables = {data: BodyType<GenerateReadingQuestionsInput>}
+    export type CheckReadingObjectiveAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>>
+    export type CheckReadingObjectiveAnswerMutationBody = BodyType<CheckReadingObjectiveAnswerInput>
+    export type CheckReadingObjectiveAnswerMutationError = ErrorType<unknown>
+    export type CheckReadingObjectiveAnswerMutationVariables = {passageId: number;data: BodyType<CheckReadingObjectiveAnswerInput>}
 
     /**
- * @summary 지문 기반 읽기 이해 문제 생성
+ * @summary 저장된 정답으로 O/X·객관식 채점
  */
-export const useGenerateReadingQuestions = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateReadingQuestions>>, TError,GenerateReadingQuestionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useCheckReadingObjectiveAnswer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>, TError,CheckReadingObjectiveAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof generateReadingQuestions>>,
+        Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>,
         TError,
-        GenerateReadingQuestionsMutationVariables,
+        CheckReadingObjectiveAnswerMutationVariables,
         TContext
       > => {
-      return useMutation(getGenerateReadingQuestionsMutationOptions(options));
+      return useMutation(getCheckReadingObjectiveAnswerMutationOptions(options));
+    }
+
+export const getExplainReadingAnswerUrl = (passageId: number,) => {
+
+
+
+
+  return `/api/reading/passages/${passageId}/explanation`
+}
+
+/**
+ * @summary 저장된 답과 해설 메모를 바탕으로 답 설명
+ */
+export const explainReadingAnswer = async (passageId: number,
+    explainReadingAnswerInput: ExplainReadingAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<ReadingExplanationResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReadingExplanationResult>(getExplainReadingAnswerUrl(passageId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(explainReadingAnswerInput)
+  }
+);}
+
+
+
+
+
+export const getExplainReadingAnswerMutationKey = () => ['explainReadingAnswer'] as const;
+
+export const getExplainReadingAnswerMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof explainReadingAnswer>>, TError,ExplainReadingAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof explainReadingAnswer>>, TError,ExplainReadingAnswerMutationVariables, TContext> => {
+
+const mutationKey = getExplainReadingAnswerMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof explainReadingAnswer>>, ExplainReadingAnswerMutationVariables> = (props) => {
+          const {passageId,data} = props ?? {};
+
+          return  explainReadingAnswer(passageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExplainReadingAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof explainReadingAnswer>>>
+    export type ExplainReadingAnswerMutationBody = BodyType<ExplainReadingAnswerInput>
+    export type ExplainReadingAnswerMutationError = ErrorType<ErrorEnvelope>
+    export type ExplainReadingAnswerMutationVariables = {passageId: number;data: BodyType<ExplainReadingAnswerInput>}
+
+    /**
+ * @summary 저장된 답과 해설 메모를 바탕으로 답 설명
+ */
+export const useExplainReadingAnswer = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof explainReadingAnswer>>, TError,ExplainReadingAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof explainReadingAnswer>>,
+        TError,
+        ExplainReadingAnswerMutationVariables,
+        TContext
+      > => {
+      return useMutation(getExplainReadingAnswerMutationOptions(options));
     }
 
 export const getGradeReadingShortAnswerUrl = (passageId: number,) => {

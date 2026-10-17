@@ -39,7 +39,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ReadingPassage"
+                  $ref: "#/components/schemas/StudentReadingPassage"
         "401":
           description: 로그인이 필요함
           content:
@@ -77,26 +77,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadingPassage"
-  /admin/reading/passages/generate:
+  /reading/passages/{passageId}/objective-answer:
     post:
-      operationId: generateReadingQuestions
+      operationId: checkReadingObjectiveAnswer
       tags: [Reading]
-      summary: 지문 기반 읽기 이해 문제 생성
+      summary: 저장된 정답으로 O/X·객관식 채점
+      parameters:
+        - in: path
+          name: passageId
+          required: true
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GenerateReadingQuestionsInput"
+              $ref: "#/components/schemas/CheckReadingObjectiveAnswerInput"
       responses:
         "200":
-          description: 검토용 문제
+          description: 채점 결과
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ReadingQuestion"
+                $ref: "#/components/schemas/ReadingAnswerResult"
+  /reading/passages/{passageId}/explanation:
+    post:
+      operationId: explainReadingAnswer
+      tags: [Reading]
+      summary: 저장된 답과 해설 메모를 바탕으로 답 설명
+      parameters:
+        - in: path
+          name: passageId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExplainReadingAnswerInput"
+      responses:
+        "200":
+          description: 설명 결과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadingExplanationResult"
+        "429":
+          description: 하루 AI 사용량 초과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "503":
           description: AI 서비스 오류
           content:
@@ -127,6 +161,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GradeReadingShortAnswerResult"
+        "429":
+          description: 하루 AI 사용량 초과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "503":
           description: AI 서비스 오류
           content:
@@ -1021,6 +1061,21 @@ components:
             type: string
         answer:
           type: string
+        explanationNote:
+          type: string
+    StudentReadingQuestion:
+      type: object
+      required: [type, prompt, options]
+      properties:
+        type:
+          type: string
+          enum: [true_false, multiple_choice, short_answer]
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
     ReadingPassage:
       type: object
       required: [id, grade, title, passage, questions, createdAt]
@@ -1040,17 +1095,59 @@ components:
         createdAt:
           type: string
           format: date-time
-    GenerateReadingQuestionsInput:
+    StudentReadingPassage:
       type: object
-      required: [grade, passage]
+      required: [id, grade, title, passage, questions, createdAt]
       properties:
+        id:
+          type: integer
         grade:
           type: integer
-          enum: [6]
+        title:
+          type: string
         passage:
           type: string
-          minLength: 30
-          maxLength: 3000
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentReadingQuestion"
+        createdAt:
+          type: string
+          format: date-time
+    CheckReadingObjectiveAnswerInput:
+      type: object
+      required: [questionIndex, answer]
+      properties:
+        questionIndex:
+          type: integer
+          minimum: 0
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 240
+    ReadingAnswerResult:
+      type: object
+      required: [correct]
+      properties:
+        correct:
+          type: boolean
+    ExplainReadingAnswerInput:
+      type: object
+      required: [questionIndex, answer]
+      properties:
+        questionIndex:
+          type: integer
+          minimum: 0
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 240
+    ReadingExplanationResult:
+      type: object
+      required: [feedback]
+      properties:
+        feedback:
+          type: string
     SaveReadingPassageInput:
       type: object
       required: [grade, title, passage, questions]
@@ -1068,8 +1165,7 @@ components:
           maxLength: 3000
         questions:
           type: array
-          minItems: 3
-          maxItems: 3
+          minItems: 1
           items:
             $ref: "#/components/schemas/ReadingQuestion"
     GradeReadingShortAnswerInput:
@@ -1079,7 +1175,6 @@ components:
         questionIndex:
           type: integer
           minimum: 0
-          maximum: 2
         answer:
           type: string
           minLength: 1

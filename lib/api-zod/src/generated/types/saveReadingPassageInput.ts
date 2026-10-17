@@ -20,9 +20,6 @@ export interface SaveReadingPassageInput {
      * @maxLength 3000
      */
   passage: string;
-  /**
-     * @minItems 3
-     * @maxItems 3
-     */
+  /** @minItems 1 */
   questions: ReadingQuestion[];
 }

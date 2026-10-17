@@ -12,4 +12,5 @@ export interface ReadingQuestion {
   prompt: string;
   options: string[];
   answer: string;
+  explanationNote?: string;
 }

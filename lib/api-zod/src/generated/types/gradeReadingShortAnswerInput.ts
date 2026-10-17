@@ -7,10 +7,7 @@
  */
 
 export interface GradeReadingShortAnswerInput {
-  /**
-     * @minimum 0
-     * @maximum 2
-     */
+  /** @minimum 0 */
   questionIndex: number;
   /**
      * @minLength 1

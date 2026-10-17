@@ -1,6 +1,10 @@
 import {
-  GenerateReadingQuestionsBody,
-  GenerateReadingQuestionsResponse,
+  CheckReadingObjectiveAnswerBody,
+  CheckReadingObjectiveAnswerParams,
+  CheckReadingObjectiveAnswerResponse,
+  ExplainReadingAnswerBody,
+  ExplainReadingAnswerParams,
+  ExplainReadingAnswerResponse,
   GradeReadingShortAnswerBody,
   GradeReadingShortAnswerParams,
   GradeReadingShortAnswerResponse,
@@ -10,14 +14,21 @@ import {
   SaveReadingPassageBody,
   SaveReadingPassageResponse,
 } from "@workspace/api-zod";
-import { db, readingPassagesTable, type ReadingQuestion } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import {
+  db,
+  readingAiExplanationsTable,
+  readingAiUsageTable,
+  readingPassagesTable,
+  type ReadingQuestion,
+} from "@workspace/db";
+import { createHash } from "node:crypto";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getUserId, isAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
 const gradeLevel = 6;
-const questionTypes: ReadingQuestion["type"][] = ["true_false", "multiple_choice", "short_answer"];
+const dailyAiLimit = 20;
 
 async function requireAdmin(req: Request, res: Response): Promise<boolean> {
   if (!getUserId(req)) {
@@ -63,30 +74,96 @@ async function askClaude(system: string, user: string): Promise<string> {
   return text;
 }
 
-function validateQuestions(value: unknown): value is ReadingQuestion[] {
-  if (!Array.isArray(value) || value.length !== 3) return false;
-  const questions = value as ReadingQuestion[];
-  const typeSet = new Set(questions.map((item) => item?.type));
-  if (questionTypes.some((type) => !typeSet.has(type)) || typeSet.size !== 3) return false;
-  return questions.every((item) =>
-    typeof item.prompt === "string"
-    && item.prompt.trim().length > 0
-    && typeof item.answer === "string"
-    && item.answer.trim().length > 0
-    && Array.isArray(item.options)
-    && (item.type !== "multiple_choice" || (
-      item.options.length === 3 && item.options.every((option) => typeof option === "string")
-      && item.options.includes(item.answer)
-    ))
-    && (item.type !== "true_false" || ["true", "false"].includes(item.answer.toLowerCase()))
-    && (item.type !== "short_answer" || item.options.length === 0),
-  );
-}
-
 function validPassage(passage: string): boolean {
   const count = (passage.match(/[.!?](?:["')\]]*)?(?:\s|$)/g) ?? []).length;
   return count >= 3 && count <= 5;
 }
+
+function validQuestions(value: unknown): value is ReadingQuestion[] {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  return value.every((q) =>
+    q && ["true_false", "multiple_choice", "short_answer"].includes(q.type)
+    && typeof q.prompt === "string" && q.prompt.trim().length > 0
+    && typeof q.answer === "string" && q.answer.trim().length > 0
+    && Array.isArray(q.options)
+    && q.options.every((option: unknown) => typeof option === "string" && option.trim().length > 0)
+    && (q.type !== "multiple_choice" || (q.options.length === 3 && q.options.includes(q.answer)))
+    && (q.type !== "true_false" || ["true", "false"].includes(q.answer.toLowerCase()))
+    && (q.type === "multiple_choice" || q.options.length === 0)
+    && (q.explanationNote === undefined || typeof q.explanationNote === "string"),
+  );
+}
+
+function todayInSeoul(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+async function reserveAiCall(userId: string): Promise<boolean> {
+  const [reserved] = await db.insert(readingAiUsageTable)
+    .values({ userId, usageDate: todayInSeoul(), calls: 1 })
+    .onConflictDoUpdate({
+      target: [readingAiUsageTable.userId, readingAiUsageTable.usageDate],
+      set: { calls: sql`${readingAiUsageTable.calls} + 1` },
+      setWhere: lt(readingAiUsageTable.calls, dailyAiLimit),
+    })
+    .returning({ calls: readingAiUsageTable.calls });
+  return Boolean(reserved);
+}
+
+function normalizeAnswer(answer: string): string {
+  return answer.trim().toLocaleLowerCase("en").replace(/\s+/g, " ");
+}
+
+function answerIsCorrect(question: ReadingQuestion, answer: string): boolean {
+  if (question.type === "true_false") {
+    const normalized = normalizeAnswer(answer);
+    const boolAnswer = normalized === "o" ? "true" : normalized === "x" ? "false" : normalized;
+    return boolAnswer === normalizeAnswer(question.answer);
+  }
+  return normalizeAnswer(answer) === normalizeAnswer(question.answer);
+}
+
+function makeCacheKey(passageId: number, questionIndex: number, question: ReadingQuestion, passage: string, answer: string) {
+  return createHash("sha256").update(JSON.stringify({
+    passageId,
+    questionIndex,
+    passage,
+    question: question.prompt,
+    options: question.options,
+    expectedAnswer: question.answer,
+    explanationNote: question.explanationNote ?? "",
+    studentAnswer: normalizeAnswer(answer),
+  })).digest("hex");
+}
+
+async function getQuestion(req: Request, passageId: number, questionIndex: number) {
+  const [passage] = await db.select().from(readingPassagesTable)
+    .where(eq(readingPassagesTable.id, passageId));
+  const question = passage?.questions[questionIndex];
+  return passage && question ? { passage, question } : null;
+}
+
+function aiSystemPrompt(responseShape: "feedback" | "grade"): string {
+  const base = `너는 초등학교 6학년 영어 선생님이다.
+정답은 선생님이 정한 것이 기준이며, 절대 바꾸지 않는다.
+설명은 한국어로 2~3문장, 쉽고 따뜻한 말투로 한다.
+지문에서 근거가 되는 문장을 영어로 짚어 주고, 틀린 답은 비난하지 말고 어디서 헷갈렸는지 알려 준다.
+지문에 없는 내용은 추측해서 말하지 않는다.
+문제와 관련 없는 질문이나 대화에는 답하지 않고 '지문을 다시 읽어 볼까?'라고 안내한다.`;
+  return responseShape === "feedback"
+    ? `${base}\nJSON 객체로 {"feedback":"..."}만 반환한다.`
+    : `${base}\n짧은 답은 선생님 정답과 해설 메모를 기준으로 채점한다. 의미가 같으면 정답으로 인정하고, 철자 실수 한두 개는 너그럽게 인정한다. 정답 자체는 바꾸지 않는다. JSON 객체로 {"correct":true,"feedback":"..."} 또는 correct:false를 반환한다.`;
+}
+
+const rateLimitMessage = "오늘은 여기까지! 내일 또 만나요";
+const apiErrorMessage = "잠깐 쉬고 있어요, 다시 해 볼까요?";
 
 router.get("/reading/passages", async (req: Request, res: Response): Promise<void> => {
   if (!getUserId(req)) {
@@ -101,7 +178,11 @@ router.get("/reading/passages", async (req: Request, res: Response): Promise<voi
   const rows = await db.select().from(readingPassagesTable)
     .where(eq(readingPassagesTable.grade, query.data.grade))
     .orderBy(desc(readingPassagesTable.createdAt));
-  res.json(ListReadingPassagesResponse.parse(rows));
+  const studentRows = rows.map((row) => ({
+    ...row,
+    questions: row.questions.map(({ type, prompt, options }) => ({ type, prompt, options })),
+  }));
+  res.json(ListReadingPassagesResponse.parse(studentRows));
 });
 
 router.get("/admin/reading/passages", async (req: Request, res: Response): Promise<void> => {
@@ -110,45 +191,100 @@ router.get("/admin/reading/passages", async (req: Request, res: Response): Promi
   res.json(ListAdminReadingPassagesResponse.parse(rows));
 });
 
-router.post("/admin/reading/passages/generate", async (req: Request, res: Response): Promise<void> => {
-  if (!(await requireAdmin(req, res))) return;
-  const parsed = GenerateReadingQuestionsBody.safeParse(req.body);
-  if (!parsed.success || !validPassage(parsed.data.passage)) {
-    res.status(400).json({ error: "영어 지문은 3~5문장으로 입력해 주세요." });
-    return;
-  }
-  try {
-    const content = await askClaude(
-      "You write reading-comprehension questions for Korean elementary school grade 6. Use only facts explicitly stated in the passage. Every correct answer must be directly supported by the passage. Use easy English and short sentences. Return only valid JSON.",
-      `Create exactly three questions from this passage and return {"questions":[...]} with one of each type: true_false (answer is "true" or "false"), multiple_choice (exactly 3 short English options and answer equals one option), and short_answer (answer is a short English phrase). Every question and option must be answerable from the passage. Passage:\n${parsed.data.passage}`,
-    );
-    const output = parseJsonObject(content);
-    if (!validateQuestions(output.questions)) throw new Error("Invalid question set");
-    res.json(GenerateReadingQuestionsResponse.parse(output.questions));
-  } catch (error) {
-    req.log.error({ err: error }, "Reading question generation failed");
-    res.status(503).json({ error: "AI question generation failed" });
-  }
-});
-
 router.post("/admin/reading/passages", async (req: Request, res: Response): Promise<void> => {
   if (!(await requireAdmin(req, res))) return;
   const parsed = SaveReadingPassageBody.safeParse(req.body);
-  if (!parsed.success || !validPassage(parsed.data.passage) || !validateQuestions(parsed.data.questions)) {
-    res.status(400).json({ error: "지문은 3~5문장, 문제는 O/X·객관식·짧은 답 각 1개로 저장해 주세요." });
+  if (!parsed.success || !validPassage(parsed.data.passage) || !validQuestions(parsed.data.questions)) {
+    res.status(400).json({ error: "지문은 3~5문장으로 입력하고, 문제마다 질문·정답과 객관식 보기 3개를 확인해 주세요." });
     return;
   }
   const [saved] = await db.insert(readingPassagesTable).values({
     grade: gradeLevel,
     title: parsed.data.title.trim(),
     passage: parsed.data.passage.trim(),
-    questions: parsed.data.questions,
+    questions: parsed.data.questions.map((question) => ({
+      ...question,
+      explanationNote: question.explanationNote?.trim() || undefined,
+    })),
   }).returning();
   res.status(201).json(SaveReadingPassageResponse.parse(saved));
 });
 
-router.post("/reading/passages/:passageId/short-answer", async (req: Request, res: Response): Promise<void> => {
+router.post("/reading/passages/:passageId/objective-answer", async (req: Request, res: Response): Promise<void> => {
   if (!getUserId(req)) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const params = CheckReadingObjectiveAnswerParams.safeParse(req.params);
+  const parsed = CheckReadingObjectiveAnswerBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({ error: "Invalid answer" });
+    return;
+  }
+  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
+  if (!found || found.question.type === "short_answer") {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+  res.json(CheckReadingObjectiveAnswerResponse.parse({
+    correct: answerIsCorrect(found.question, parsed.data.answer),
+  }));
+});
+
+router.post("/reading/passages/:passageId/explanation", async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const params = ExplainReadingAnswerParams.safeParse(req.params);
+  const parsed = ExplainReadingAnswerBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({ error: "Invalid answer" });
+    return;
+  }
+  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
+  if (!found || found.question.type === "short_answer") {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+  const cacheKey = makeCacheKey(params.data.passageId, parsed.data.questionIndex, found.question, found.passage.passage, parsed.data.answer);
+  const [cached] = await db.select().from(readingAiExplanationsTable)
+    .where(eq(readingAiExplanationsTable.cacheKey, cacheKey));
+  if (cached) {
+    res.json(ExplainReadingAnswerResponse.parse({ feedback: cached.feedback }));
+    return;
+  }
+  if (!(await reserveAiCall(userId))) {
+    res.status(429).json({ error: rateLimitMessage });
+    return;
+  }
+  try {
+    const content = await askClaude(aiSystemPrompt("feedback"), JSON.stringify({
+      passage: found.passage.passage,
+      question: found.question.prompt,
+      options: found.question.options,
+      teacherAnswer: found.question.answer,
+      teacherExplanationNote: found.question.explanationNote ?? "",
+      studentAnswer: parsed.data.answer,
+      isCorrect: answerIsCorrect(found.question, parsed.data.answer),
+    }));
+    const result = parseJsonObject(content);
+    if (typeof result.feedback !== "string") throw new Error("Invalid explanation response");
+    const feedback = result.feedback.slice(0, 500);
+    await db.insert(readingAiExplanationsTable).values({ cacheKey, feedback }).onConflictDoNothing();
+    const [saved] = await db.select().from(readingAiExplanationsTable)
+      .where(eq(readingAiExplanationsTable.cacheKey, cacheKey));
+    res.json(ExplainReadingAnswerResponse.parse({ feedback: saved?.feedback ?? feedback }));
+  } catch (error) {
+    req.log.error({ err: error, passageId: found.passage.id }, "Reading explanation failed");
+    res.status(503).json({ error: apiErrorMessage });
+  }
+});
+
+router.post("/reading/passages/:passageId/short-answer", async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -158,34 +294,35 @@ router.post("/reading/passages/:passageId/short-answer", async (req: Request, re
     res.status(400).json({ error: "Invalid answer" });
     return;
   }
-  const [passage] = await db.select().from(readingPassagesTable)
-    .where(eq(readingPassagesTable.id, params.data.passageId));
-  const question = passage?.questions[parsed.data.questionIndex];
-  if (!passage || !question || question.type !== "short_answer") {
-    res.status(404).json({ error: "Passage or question not found" });
+  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
+  if (!found || found.question.type !== "short_answer") {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+  if (!(await reserveAiCall(userId))) {
+    res.status(429).json({ error: rateLimitMessage });
     return;
   }
   try {
-    const content = await askClaude(
-      "Grade a grade-6 student's short English answer. Compare only with the passage and expected answer. Accept one or two spelling mistakes when meaning is clear. Mark correct if the meaning matches. Give kind feedback in Korean, only one or two short sentences. Return only JSON with boolean correct and string feedback.",
-      JSON.stringify({
-        passage: passage.passage,
-        question: question.prompt,
-        expectedAnswer: question.answer,
-        studentAnswer: parsed.data.answer,
-      }),
-    );
+    const content = await askClaude(aiSystemPrompt("grade"), JSON.stringify({
+      passage: found.passage.passage,
+      question: found.question.prompt,
+      options: found.question.options,
+      teacherAnswer: found.question.answer,
+      teacherExplanationNote: found.question.explanationNote ?? "",
+      studentAnswer: parsed.data.answer,
+    }));
     const result = parseJsonObject(content);
     if (typeof result.correct !== "boolean" || typeof result.feedback !== "string") {
       throw new Error("Invalid grading response");
     }
     res.json(GradeReadingShortAnswerResponse.parse({
       correct: result.correct,
-      feedback: result.feedback.slice(0, 220),
+      feedback: result.feedback.slice(0, 500),
     }));
   } catch (error) {
-    req.log.error({ err: error, passageId: passage.id }, "Reading short answer grading failed");
-    res.status(503).json({ error: "잠깐 쉬고 있어요, 다시 해 볼까요?" });
+    req.log.error({ err: error, passageId: found.passage.id }, "Reading short answer grading failed");
+    res.status(503).json({ error: apiErrorMessage });
   }
 });
 

@@ -19,6 +19,22 @@ export interface ReadingQuestion {
   prompt: string;
   options: string[];
   answer: string;
+  explanationNote?: string;
+}
+
+export type StudentReadingQuestionType = typeof StudentReadingQuestionType[keyof typeof StudentReadingQuestionType];
+
+
+export const StudentReadingQuestionType = {
+  true_false: 'true_false',
+  multiple_choice: 'multiple_choice',
+  short_answer: 'short_answer',
+} as const;
+
+export interface StudentReadingQuestion {
+  type: StudentReadingQuestionType;
+  prompt: string;
+  options: string[];
 }
 
 export interface ReadingPassage {
@@ -30,20 +46,41 @@ export interface ReadingPassage {
   createdAt: string;
 }
 
-export type GenerateReadingQuestionsInputGrade = typeof GenerateReadingQuestionsInputGrade[keyof typeof GenerateReadingQuestionsInputGrade];
-
-
-export const GenerateReadingQuestionsInputGrade = {
-  NUMBER_6: 6,
-} as const;
-
-export interface GenerateReadingQuestionsInput {
-  grade: GenerateReadingQuestionsInputGrade;
-  /**
-     * @minLength 30
-     * @maxLength 3000
-     */
+export interface StudentReadingPassage {
+  id: number;
+  grade: number;
+  title: string;
   passage: string;
+  questions: StudentReadingQuestion[];
+  createdAt: string;
+}
+
+export interface CheckReadingObjectiveAnswerInput {
+  /** @minimum 0 */
+  questionIndex: number;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  answer: string;
+}
+
+export interface ReadingAnswerResult {
+  correct: boolean;
+}
+
+export interface ExplainReadingAnswerInput {
+  /** @minimum 0 */
+  questionIndex: number;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  answer: string;
+}
+
+export interface ReadingExplanationResult {
+  feedback: string;
 }
 
 export type SaveReadingPassageInputGrade = typeof SaveReadingPassageInputGrade[keyof typeof SaveReadingPassageInputGrade];
@@ -65,18 +102,12 @@ export interface SaveReadingPassageInput {
      * @maxLength 3000
      */
   passage: string;
-  /**
-     * @minItems 3
-     * @maxItems 3
-     */
+  /** @minItems 1 */
   questions: ReadingQuestion[];
 }
 
 export interface GradeReadingShortAnswerInput {
-  /**
-     * @minimum 0
-     * @maximum 2
-     */
+  /** @minimum 0 */
   questionIndex: number;
   /**
      * @minLength 1
