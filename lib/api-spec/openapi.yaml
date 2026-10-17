@@ -16,7 +16,123 @@ tags:
     description: 레벨별 학습 과제 등록과 조회
   - name: OpenAI
     description: AI 기반 학습 지원
+  - name: Reading
+    description: 읽기 이해 지문과 문제
 paths:
+  /reading/passages:
+    get:
+      operationId: listReadingPassages
+      tags: [Reading]
+      summary: 저장된 읽기 이해 지문 조회
+      parameters:
+        - in: query
+          name: grade
+          required: true
+          schema:
+            type: integer
+            enum: [6]
+      responses:
+        "200":
+          description: 저장된 지문 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadingPassage"
+        "401":
+          description: 로그인이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/reading/passages:
+    get:
+      operationId: listAdminReadingPassages
+      tags: [Reading]
+      summary: 관리자용 읽기 지문 목록
+      responses:
+        "200":
+          description: 저장된 지문 목록
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadingPassage"
+    post:
+      operationId: saveReadingPassage
+      tags: [Reading]
+      summary: 검토한 지문과 문제 저장
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveReadingPassageInput"
+      responses:
+        "201":
+          description: 저장 완료
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadingPassage"
+  /admin/reading/passages/generate:
+    post:
+      operationId: generateReadingQuestions
+      tags: [Reading]
+      summary: 지문 기반 읽기 이해 문제 생성
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReadingQuestionsInput"
+      responses:
+        "200":
+          description: 검토용 문제
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadingQuestion"
+        "503":
+          description: AI 서비스 오류
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /reading/passages/{passageId}/short-answer:
+    post:
+      operationId: gradeReadingShortAnswer
+      tags: [Reading]
+      summary: 저장된 지문과 정답을 기준으로 짧은 답 채점
+      parameters:
+        - in: path
+          name: passageId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GradeReadingShortAnswerInput"
+      responses:
+        "200":
+          description: 채점 결과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GradeReadingShortAnswerResult"
+        "503":
+          description: AI 서비스 오류
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /healthz:
     get:
       operationId: healthCheck
@@ -890,6 +1006,92 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
 components:
   schemas:
+    ReadingQuestion:
+      type: object
+      required: [type, prompt, options, answer]
+      properties:
+        type:
+          type: string
+          enum: [true_false, multiple_choice, short_answer]
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        answer:
+          type: string
+    ReadingPassage:
+      type: object
+      required: [id, grade, title, passage, questions, createdAt]
+      properties:
+        id:
+          type: integer
+        grade:
+          type: integer
+        title:
+          type: string
+        passage:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReadingQuestion"
+        createdAt:
+          type: string
+          format: date-time
+    GenerateReadingQuestionsInput:
+      type: object
+      required: [grade, passage]
+      properties:
+        grade:
+          type: integer
+          enum: [6]
+        passage:
+          type: string
+          minLength: 30
+          maxLength: 3000
+    SaveReadingPassageInput:
+      type: object
+      required: [grade, title, passage, questions]
+      properties:
+        grade:
+          type: integer
+          enum: [6]
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        passage:
+          type: string
+          minLength: 30
+          maxLength: 3000
+        questions:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/ReadingQuestion"
+    GradeReadingShortAnswerInput:
+      type: object
+      required: [questionIndex, answer]
+      properties:
+        questionIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 240
+    GradeReadingShortAnswerResult:
+      type: object
+      required: [correct, feedback]
+      properties:
+        correct:
+          type: boolean
+        feedback:
+          type: string
     HealthStatus:
       type: object
       properties:

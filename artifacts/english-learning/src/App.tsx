@@ -17,6 +17,7 @@ import {
   ArrowRight,
   BarChart3,
   BookOpen,
+  BookOpenCheck,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -36,6 +37,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
+import ReadingComprehensionPractice from '@/components/reading-comprehension';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
@@ -431,6 +433,7 @@ function Sidebar({ location }: { location: string }) {
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
           <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
+          <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -456,6 +459,7 @@ function MobileNav({ location }: { location: string }) {
     <nav className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.94)] px-2 py-2 shadow-[0_12px_32px_rgba(49,42,29,.15)] backdrop-blur-md md:hidden">
       {[
         { href: '/dashboard', label: '오늘', icon: HomeIcon },
+        { href: '/reading', label: '읽기', icon: BookOpenCheck },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
       ].map(({ href, label, icon: Icon }) => (
@@ -727,6 +731,7 @@ function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFl
     <Route path="/dashboard"><Home level={level} onLevelChange={onLevelChange} onStart={onStart} isAdmin={isAdmin} /></Route>
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={quizContent} quizPosition={quizPosition} quizTotal={quizTotal} hasNextWord={hasNextQuizWord} onNextWord={onNextQuizWord} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
+    <Route path="/reading"><ReadingComprehensionPractice /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
     <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>

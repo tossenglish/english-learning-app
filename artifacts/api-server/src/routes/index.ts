@@ -5,6 +5,7 @@ import assignmentsRouter from "./assignments";
 import learningContentRouter from "./learning-content";
 import homeVideoRouter from "./home-video";
 import translationsRouter from "./translations";
+import readingComprehensionRouter from "./reading-comprehension";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(assignmentsRouter);
 router.use(learningContentRouter);
 router.use(homeVideoRouter);
 router.use(translationsRouter);
+router.use(readingComprehensionRouter);
 
 export default router;

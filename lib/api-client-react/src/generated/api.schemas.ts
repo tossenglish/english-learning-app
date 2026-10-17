@@ -5,6 +5,91 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type ReadingQuestionType = typeof ReadingQuestionType[keyof typeof ReadingQuestionType];
+
+
+export const ReadingQuestionType = {
+  true_false: 'true_false',
+  multiple_choice: 'multiple_choice',
+  short_answer: 'short_answer',
+} as const;
+
+export interface ReadingQuestion {
+  type: ReadingQuestionType;
+  prompt: string;
+  options: string[];
+  answer: string;
+}
+
+export interface ReadingPassage {
+  id: number;
+  grade: number;
+  title: string;
+  passage: string;
+  questions: ReadingQuestion[];
+  createdAt: string;
+}
+
+export type GenerateReadingQuestionsInputGrade = typeof GenerateReadingQuestionsInputGrade[keyof typeof GenerateReadingQuestionsInputGrade];
+
+
+export const GenerateReadingQuestionsInputGrade = {
+  NUMBER_6: 6,
+} as const;
+
+export interface GenerateReadingQuestionsInput {
+  grade: GenerateReadingQuestionsInputGrade;
+  /**
+     * @minLength 30
+     * @maxLength 3000
+     */
+  passage: string;
+}
+
+export type SaveReadingPassageInputGrade = typeof SaveReadingPassageInputGrade[keyof typeof SaveReadingPassageInputGrade];
+
+
+export const SaveReadingPassageInputGrade = {
+  NUMBER_6: 6,
+} as const;
+
+export interface SaveReadingPassageInput {
+  grade: SaveReadingPassageInputGrade;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 30
+     * @maxLength 3000
+     */
+  passage: string;
+  /**
+     * @minItems 3
+     * @maxItems 3
+     */
+  questions: ReadingQuestion[];
+}
+
+export interface GradeReadingShortAnswerInput {
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  questionIndex: number;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  answer: string;
+}
+
+export interface GradeReadingShortAnswerResult {
+  correct: boolean;
+  feedback: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -388,6 +473,17 @@ export interface MemberCourseAssignment {
   memberId: string;
   course: CourseLevel | null;
 }
+
+export type ListReadingPassagesParams = {
+grade: ListReadingPassagesGrade;
+};
+
+export type ListReadingPassagesGrade = typeof ListReadingPassagesGrade[keyof typeof ListReadingPassagesGrade];
+
+
+export const ListReadingPassagesGrade = {
+  NUMBER_6: 6,
+} as const;
 
 export type ListAssignmentsParams = {
 level: LearningLevel;

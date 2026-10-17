@@ -9,6 +9,135 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary 저장된 읽기 이해 지문 조회
+ */
+export const ListReadingPassagesQueryParams = zod.object({
+  "grade": zod.literal(6)
+})
+
+export const ListReadingPassagesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "passage": zod.string(),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListReadingPassagesResponse = zod.array(ListReadingPassagesResponseItem)
+
+
+/**
+ * @summary 관리자용 읽기 지문 목록
+ */
+export const ListAdminReadingPassagesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "passage": zod.string(),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminReadingPassagesResponse = zod.array(ListAdminReadingPassagesResponseItem)
+
+
+/**
+ * @summary 검토한 지문과 문제 저장
+ */
+export const saveReadingPassageBodyTitleMax = 160;
+
+export const saveReadingPassageBodyPassageMin = 30;
+export const saveReadingPassageBodyPassageMax = 3000;
+
+export const saveReadingPassageBodyQuestionsMin = 3;
+export const saveReadingPassageBodyQuestionsMax = 3;
+
+
+
+export const SaveReadingPassageBody = zod.object({
+  "grade": zod.literal(6),
+  "title": zod.string().min(1).max(saveReadingPassageBodyTitleMax),
+  "passage": zod.string().min(saveReadingPassageBodyPassageMin).max(saveReadingPassageBodyPassageMax),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string()
+})).min(saveReadingPassageBodyQuestionsMin).max(saveReadingPassageBodyQuestionsMax)
+})
+
+export const SaveReadingPassageResponse = zod.object({
+  "id": zod.number().int(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "passage": zod.string(),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary 지문 기반 읽기 이해 문제 생성
+ */
+export const generateReadingQuestionsBodyPassageMin = 30;
+export const generateReadingQuestionsBodyPassageMax = 3000;
+
+
+
+export const GenerateReadingQuestionsBody = zod.object({
+  "grade": zod.literal(6),
+  "passage": zod.string().min(generateReadingQuestionsBodyPassageMin).max(generateReadingQuestionsBodyPassageMax)
+})
+
+export const GenerateReadingQuestionsResponseItem = zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string()
+})
+export const GenerateReadingQuestionsResponse = zod.array(GenerateReadingQuestionsResponseItem)
+
+
+/**
+ * @summary 저장된 지문과 정답을 기준으로 짧은 답 채점
+ */
+export const GradeReadingShortAnswerParams = zod.object({
+  "passageId": zod.coerce.number().int()
+})
+
+export const gradeReadingShortAnswerBodyQuestionIndexMin = 0;
+export const gradeReadingShortAnswerBodyQuestionIndexMax = 2;
+
+export const gradeReadingShortAnswerBodyAnswerMax = 240;
+
+
+
+export const GradeReadingShortAnswerBody = zod.object({
+  "questionIndex": zod.number().int().min(gradeReadingShortAnswerBodyQuestionIndexMin).max(gradeReadingShortAnswerBodyQuestionIndexMax),
+  "answer": zod.string().min(1).max(gradeReadingShortAnswerBodyAnswerMax)
+})
+
+export const GradeReadingShortAnswerResponse = zod.object({
+  "correct": zod.boolean(),
+  "feedback": zod.string()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
