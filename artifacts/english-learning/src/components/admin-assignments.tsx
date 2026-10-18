@@ -221,6 +221,8 @@ export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [folders, setFolders] = useState<AssignmentFolder[]>([]);
   const [members, setMembers] = useState<AssignmentMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersLoadError, setMembersLoadError] = useState('');
   const [memberClasses, setMemberClasses] = useState<MemberClass[]>([]);
   const [newClassCourse, setNewClassCourse] = useState<Exclude<LearningLevel, 'All'>>('Intermediate');
   const [newClassParentId, setNewClassParentId] = useState('');
@@ -330,6 +332,25 @@ export default function AdminAssignments() {
     }
   };
 
+  const loadMembers = async () => {
+    setMembersLoading(true);
+    setMembersLoadError('');
+    try {
+      const response = await apiFetch('/api/admin/members', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('회원 목록을 불러오지 못했습니다.');
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new Error('회원 목록 응답을 확인할 수 없습니다.');
+      setMembers(data as AssignmentMember[]);
+    } catch {
+      setMembersLoadError('회원 목록을 불러오지 못했습니다. 로그인 상태를 확인한 뒤 다시 시도해 주세요.');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadAssignments();
     apiFetch('/api/admin/assignment-folders', { credentials: 'include' })
@@ -341,15 +362,7 @@ export default function AdminAssignments() {
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : '자료 폴더 오류');
       });
-    apiFetch('/api/admin/members', { credentials: 'include', cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('회원 목록을 불러오지 못했습니다.');
-        return response.json() as Promise<AssignmentMember[]>;
-      })
-      .then(setMembers)
-      .catch(() => {
-        // A transient refresh failure must not erase accounts already shown in the list.
-      });
+    void loadMembers();
     apiFetch('/api/admin/member-classes', { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) throw new Error('반 목록을 불러오지 못했습니다.');
@@ -1176,26 +1189,37 @@ export default function AdminAssignments() {
           )}
         </section>
 
-        <details className="rounded-2xl border border-[hsl(var(--border))] px-4 py-3">
-          <summary className="cursor-pointer text-xs font-bold">
-            개별 회원 배정 또는 마감일 설정
-            <span className="ml-2 font-normal text-[hsl(var(--muted-foreground))]">선택 사항</span>
-          </summary>
+        <section className="rounded-2xl border border-[hsl(var(--border))] px-4 py-4">
+          <div className="mb-4">
+            <h3 className="text-xs font-bold">개별 회원 배정 또는 마감일 설정</h3>
+            <p className="mt-1 text-[11px] text-[hsl(var(--muted-foreground))]">회원 목록을 바로 확인하고 선택할 수 있습니다. 선택하지 않으면 지정한 과정에 배정됩니다.</p>
+          </div>
           <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
           <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">배정 대상</span>
             <select
               value={assigneeUserId}
               onChange={(event) => setAssigneeUserId(event.target.value)}
+              disabled={membersLoading}
               className="h-12 w-full min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))]"
             >
-              <option value="">레벨 전체에 배정</option>
+              <option value="">선택한 과정의 회원 전체에 배정</option>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.displayName}{member.course ? ` · ${levelLabels[member.course]}` : ''}{member.email ? ` · ${member.email}` : ''}
                 </option>
               ))}
             </select>
+            {membersLoading && <span className="text-[11px] text-[hsl(var(--muted-foreground))]">회원 목록을 불러오는 중입니다…</span>}
+            {membersLoadError && (
+              <span className="flex flex-wrap items-center gap-2 text-[11px] text-[hsl(var(--destructive))]">
+                {membersLoadError}
+                <button type="button" onClick={() => void loadMembers()} className="font-bold underline underline-offset-2">다시 불러오기</button>
+              </span>
+            )}
+            {!membersLoading && !membersLoadError && members.length === 0 && (
+              <span className="text-[11px] text-[hsl(var(--muted-foreground))]">등록된 회원이 없습니다. 회원 관리에서 회원을 만들거나 배정한 뒤 다시 불러와 주세요.</span>
+            )}
           </label>
           <label className="grid min-w-0 content-start gap-2">
             <span className="text-xs font-bold">마감일</span>
@@ -1212,7 +1236,7 @@ export default function AdminAssignments() {
             ? `모든 회원에게 표시 · 과정 배정 회원 ${members.filter((member) => member.course !== null).length}명`
             : `${members.filter((member) => member.course === level).length}명의 배정 회원에게 표시`}
         </p>
-        </details>
+        </section>
 
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <label className="flex items-center gap-2 text-xs font-bold">
