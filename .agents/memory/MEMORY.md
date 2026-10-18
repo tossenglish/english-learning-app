@@ -5,3 +5,4 @@
 - [Course folder organization](course-folder-organization.md) — keep courses separate, browse nested folders one level at a time, and only delete empty folders.
 - [Word settings save behavior](word-settings-save.md) — saving home word content should not depend on a manual folder selection.
 - [Admin home practice](admin-home-practice.md) — administrators should be able to practice assignments they issued from the learner home screen.
+- [Render production database](render-production.md) — Render production uses its own DATABASE_URL; Replit database publishing does not migrate it.
