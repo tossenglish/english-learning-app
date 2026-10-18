@@ -426,6 +426,7 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     if (!(await requireAdmin(req, res))) return;
 
+    res.setHeader("Cache-Control", "private, no-store");
     const users = await clerkClient.users.getUserList({
       limit: 100,
       orderBy: "-created_at",

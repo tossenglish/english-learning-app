@@ -341,13 +341,15 @@ export default function AdminAssignments() {
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : '자료 폴더 오류');
       });
-    apiFetch('/api/admin/members', { credentials: 'include' })
+    apiFetch('/api/admin/members', { credentials: 'include', cache: 'no-store' })
       .then(async (response) => {
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error('회원 목록을 불러오지 못했습니다.');
         return response.json() as Promise<AssignmentMember[]>;
       })
       .then(setMembers)
-      .catch(() => setMembers([]));
+      .catch(() => {
+        // A transient refresh failure must not erase accounts already shown in the list.
+      });
     apiFetch('/api/admin/member-classes', { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) throw new Error('반 목록을 불러오지 못했습니다.');
