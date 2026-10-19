@@ -484,6 +484,7 @@ export default function PassagePractice({
   const [dictationRepeating, setDictationRepeating] = useState(false);
   const [isWordAutoAdvancing, setIsWordAutoAdvancing] = useState(false);
   const [passageListening, setPassageListening] = useState(false);
+  const [passageListeningIndex, setPassageListeningIndex] = useState<number | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [assignmentProgressSaveError, setAssignmentProgressSaveError] = useState('');
   const passageFileInputRef = useRef<HTMLInputElement>(null);
@@ -569,7 +570,7 @@ export default function PassagePractice({
     : mode === 'writing' ? current.english : currentCloze.answer;
   const hidePassageText = isWordMaterial
     ? mode === 'writing' && !showAnswer
-    : isAnswerMode && !showPassageEditor;
+    : isAnswerMode && !showPassageEditor && !passageListening;
   const isWordLearningMode = isWordMaterial && mode === 'learning';
   const shouldShowMeaning = !isWordMaterial || mode === 'writing' || feedback === 'correct' || showAnswer;
 
@@ -595,6 +596,7 @@ export default function PassagePractice({
     setSpeaking(false);
     setDictationRepeating(false);
     setPassageListening(false);
+    setPassageListeningIndex(null);
   };
 
   const startDictationRepeat = (sentence: string) => {
@@ -930,6 +932,7 @@ export default function PassagePractice({
     const generation = speechGenerationRef.current;
     let sentenceIndex = 0;
     setPassageListening(true);
+    setPassageListeningIndex(0);
 
     const playNextSentence = () => {
       if (speechGenerationRef.current !== generation) return;
@@ -937,9 +940,11 @@ export default function PassagePractice({
       if (!sentence) {
         setSpeaking(false);
         setPassageListening(false);
+        setPassageListeningIndex(null);
         return;
       }
 
+      setPassageListeningIndex(sentenceIndex);
       speakSentence(
         sentence.english,
         () => setSpeaking(true),
@@ -949,6 +954,7 @@ export default function PassagePractice({
           sentenceIndex += 1;
           if (sentenceIndex >= passageSentences.length) {
             setPassageListening(false);
+            setPassageListeningIndex(null);
             return;
           }
           speechTimerRef.current = window.setTimeout(() => {
@@ -1228,12 +1234,15 @@ export default function PassagePractice({
             {passageSentences.map((sentence, index) => {
               const progress = completed[sentence.id] ?? blankCompletion();
               const count = Object.values(progress).filter(Boolean).length;
-              const active = index === safeCurrentIndex;
+              const active = passageListeningIndex !== null
+                ? index === passageListeningIndex
+                : index === safeCurrentIndex;
               return (
                 <button
                   key={sentence.id}
                   type="button"
                   onClick={() => selectSentence(index)}
+                  aria-current={passageListeningIndex === index ? 'true' : undefined}
                   data-testid={`button-passage-sentence-${sentence.id}`}
                   className={`w-full rounded-2xl border p-3 text-left transition-all ${
                     active
@@ -1253,7 +1262,7 @@ export default function PassagePractice({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-xs font-semibold ${active ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]'}`}>
-                        {hidePassageText
+                        {hidePassageText && !passageListening
                           ? `${isWordMaterial ? '단어' : '문장'} ${index + 1} · 원문 숨김`
                           : sentence.english}
                       </span>
