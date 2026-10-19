@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Check,
   CheckCircle2,
   ClipboardPaste,
@@ -23,7 +24,8 @@ import { playAnswerFeedbackSound } from '@/lib/feedback-sound';
 import { readActivePracticeMaterial, type PracticeSentence } from '@/lib/practice-material';
 import PersianCatFriends from '@/components/persian-cat-friends';
 
-type ExerciseMode = 'dictation' | 'writing' | 'shadowing';
+type ExerciseMode = 'learning' | 'dictation' | 'writing' | 'shadowing';
+type SentenceExerciseMode = Exclude<ExerciseMode, 'learning'>;
 
 type Completion = Record<ExerciseMode, boolean>;
 type AttemptCounts = Record<ExerciseMode, number>;
@@ -65,7 +67,7 @@ const defaultPassageSentences: PracticeSentence[] = [
 ];
 
 const modes: Array<{
-  id: ExerciseMode;
+  id: SentenceExerciseMode;
   label: string;
   description: string;
   icon: typeof Headphones;
@@ -96,23 +98,27 @@ const wordModes: Array<{
   description: string;
   icon: typeof Headphones;
 }> = [
+  { id: 'learning', label: '단어 배우기', description: '단어와 뜻을 먼저 익혀요', icon: BookOpen },
   { id: 'dictation', label: '영어 퀴즈', description: '영어 단어의 뜻을 맞혀요', icon: CheckCircle2 },
   { id: 'writing', label: '단어 쓰기', description: '뜻을 보고 답하기', icon: PenLine },
 ];
 
 const blankCompletion = (): Completion => ({
+  learning: false,
   dictation: false,
   writing: false,
   shadowing: false,
 });
 
 const blankAnswers = (): Record<ExerciseMode, string> => ({
+  learning: '',
   dictation: '',
   writing: '',
   shadowing: '',
 });
 
 const blankAttempts = (): AttemptCounts => ({
+  learning: 0,
   dictation: 0,
   writing: 0,
   shadowing: 0,
@@ -459,7 +465,9 @@ export default function PassagePractice({
   const [currentIndex, setCurrentIndex] = useState(
     () => activeMaterial ? 0 : (hasSavedCustomPassage ? initialState.currentIndex : 0),
   );
-  const [mode, setMode] = useState<ExerciseMode>('dictation');
+  const [mode, setMode] = useState<ExerciseMode>(
+    () => activeMaterial?.materialType === 'word' ? 'learning' : 'dictation',
+  );
   const [answers, setAnswers] = useState<Record<number, Record<ExerciseMode, string>>>(
     () => activeMaterial ? {} : (hasSavedCustomPassage ? initialState.answers : {}),
   );
@@ -551,6 +559,7 @@ export default function PassagePractice({
   const hidePassageText = isWordMaterial
     ? mode === 'writing' && !showAnswer
     : isAnswerMode && !showPassageEditor;
+  const isWordLearningMode = isWordMaterial && mode === 'learning';
   const shouldShowMeaning = !isWordMaterial || mode === 'writing' || feedback === 'correct' || showAnswer;
 
   useEffect(() => {
@@ -613,7 +622,7 @@ export default function PassagePractice({
   }, []);
 
   useEffect(() => {
-    const byMode = {
+    const byMode: Record<SentenceExerciseMode, number> = {
       dictation: 0,
       writing: 0,
       shadowing: 0,
@@ -768,6 +777,31 @@ export default function PassagePractice({
       },
     }));
     setFeedback('correct');
+  };
+
+  const completeWordLearning = () => {
+    if (!isWordMaterial || !showAnswer || currentCompletion.learning || isWordAutoAdvancing) return;
+    stopSpeech();
+    setCompleted((previous) => ({
+      ...previous,
+      [current.id]: {
+        ...(previous[current.id] ?? blankCompletion()),
+        learning: true,
+      },
+    }));
+    setFeedback('correct');
+    if (hasNextWord) {
+      setIsWordAutoAdvancing(true);
+      if (wordAdvanceTimerRef.current !== null) window.clearTimeout(wordAdvanceTimerRef.current);
+      wordAdvanceTimerRef.current = window.setTimeout(() => {
+        wordAdvanceTimerRef.current = null;
+        setCurrentIndex((index) => Math.min(index + 1, passageSentences.length - 1));
+        setFeedback(null);
+        setShowAnswer(false);
+        setIsWordAutoAdvancing(false);
+      }, 650);
+    }
+    void playAnswerFeedbackSound(true);
   };
 
   const advanceToNextSentenceMode = () => {
@@ -987,7 +1021,7 @@ export default function PassagePractice({
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
             {isWordMaterial
-              ? '영어 퀴즈와 단어 쓰기를 각각 처음부터 끝까지 완료해요.'
+              ? '단어와 뜻을 먼저 익힌 뒤, 영어 퀴즈와 단어 쓰기를 끝까지 완료해요.'
               : '한 문장씩 듣고, 적고, 말해보세요. 세 가지 연습을 모두 끝내면 다음 문장이 열려요.'}
           </p>
         </div>
@@ -1269,7 +1303,9 @@ export default function PassagePractice({
                   {isWordMaterial ? 'Word' : 'Sentence'} {current.id} / {passageSentences.length}
                 </p>
                 <h2 className="mt-4 max-w-none break-words text-3xl font-bold leading-tight tracking-[-.04em] sm:text-4xl lg:text-[2.75rem]" data-testid="text-current-passage-sentence">
-                  {hidePassageText ? (
+                  {isWordLearningMode
+                    ? '단어를 먼저 익혀봐요.'
+                    : hidePassageText ? (
                     <span className="flex items-center gap-3 text-[hsl(var(--sidebar-foreground)/.72)]">
                       <EyeOff className="shrink-0 text-[hsl(var(--sidebar-primary))]" size={24} />
                       <span>
@@ -1278,9 +1314,9 @@ export default function PassagePractice({
                           : mode === 'dictation' ? '소리를 듣고 문장을 적어보세요.' : '한글 뜻만 보고 영어로 써보세요.'}
                       </span>
                     </span>
-                  ) : current.english}
+                    ) : current.english}
                 </h2>
-                {shouldShowMeaning && <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
+                {shouldShowMeaning && !isWordLearningMode && <div className="mt-4 border-l-2 border-[hsl(var(--sidebar-primary))] pl-3" data-testid="text-current-passage-meaning">
                   <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[hsl(var(--sidebar-primary))]">{isWordMaterial ? '단어 뜻' : '한글 해석'}</p>
                   <p className="mt-1.5 text-lg font-semibold leading-relaxed text-[hsl(var(--sidebar-foreground)/.9)] sm:text-xl">
                     {current.korean}
@@ -1293,7 +1329,50 @@ export default function PassagePractice({
             </div>
 
             <div className="mt-8 rounded-2xl border border-[hsl(var(--sidebar-foreground)/.12)] bg-[hsl(var(--sidebar-accent)/.5)] p-4">
-              {mode === 'dictation' && (
+              {isWordLearningMode ? (
+                <div className="space-y-4" data-testid="section-word-learning">
+                  <p className="text-xs leading-relaxed text-[hsl(var(--sidebar-foreground)/.7)]">
+                    영어 단어를 읽고 발음을 들어보세요. 뜻을 확인한 뒤 배웠다고 표시해요.
+                  </p>
+                  <div className="rounded-2xl border border-[hsl(var(--sidebar-foreground)/.16)] bg-[hsl(var(--sidebar))] p-5 text-center sm:p-7">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[.16em] text-[hsl(var(--sidebar-primary))]">Word card</p>
+                    <p className="mt-3 break-words text-3xl font-bold tracking-[-.04em] sm:text-4xl" data-testid="text-word-learning-card">{current.english}</p>
+                    <p className={`mt-4 min-h-7 text-lg font-semibold ${showAnswer ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/.45)]'}`} data-testid="text-word-learning-meaning">
+                      {showAnswer ? current.korean : '뜻을 확인해보세요'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={listen}
+                      data-testid="button-listen-word-learning"
+                      className="inline-flex items-center gap-2 rounded-xl border border-[hsl(var(--sidebar-foreground)/.18)] px-4 py-3 text-xs font-bold"
+                    >
+                      <Headphones size={15} /> {speaking ? '발음 재생 중...' : '발음 듣기'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnswer((visible) => !visible)}
+                      aria-expanded={showAnswer}
+                      data-testid="button-reveal-word-meaning"
+                      className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--sidebar-primary))] px-4 py-3 text-xs font-bold text-[hsl(var(--sidebar))]"
+                    >
+                      {showAnswer ? '뜻 숨기기' : '뜻 확인하기'}
+                    </button>
+                    {showAnswer && (
+                      <button
+                        type="button"
+                        onClick={completeWordLearning}
+                        disabled={currentCompletion.learning || isWordAutoAdvancing}
+                        data-testid="button-complete-word-learning"
+                        className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--secondary))] px-4 py-3 text-xs font-bold text-[hsl(var(--secondary-foreground))] disabled:cursor-default disabled:opacity-70"
+                      >
+                        <CheckCircle2 size={15} /> {currentCompletion.learning ? '배운 단어예요' : '배웠어요'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : mode === 'dictation' && (
                 <div>
                   <p className="text-xs text-[hsl(var(--sidebar-foreground)/.65)]">
                     {isWordMaterial
@@ -1342,7 +1421,7 @@ export default function PassagePractice({
               )}
             </div>
 
-            {isWordMaterial && mode === 'dictation' && wordQuizOptions.length > 1 ? (
+            {isWordLearningMode ? null : isWordMaterial && mode === 'dictation' && wordQuizOptions.length > 1 ? (
               <div className="mt-5 space-y-2.5" data-testid="group-word-meaning-options">
                 {wordQuizOptions.map((option, index) => {
                   const selected = currentAnswers[mode] === option;
@@ -1451,8 +1530,12 @@ export default function PassagePractice({
                 {feedback === 'correct' && <CheckCircle2 size={15} className="shrink-0" />}
                 {feedback === 'wrong' && <RotateCcw size={15} className="shrink-0" />}
                 <span>
-                  {feedback === 'correct' && (isWordMaterial
-                    ? isWordAutoAdvancing
+                {feedback === 'correct' && (isWordMaterial
+                    ? mode === 'learning'
+                      ? hasNextWord
+                        ? '좋아요. 다음 단어도 먼저 익혀봐요.'
+                        : '모든 단어를 익혔어요. 다음은 영어 퀴즈예요.'
+                      : isWordAutoAdvancing
                       ? speaking
                         ? '정답이에요. 단어 발음을 듣고 있어요.'
                         : hasNextWord ? '정답이에요. 발음을 재생한 뒤 다음 단어로 넘어가요.' : '정답이에요. 마지막 단어 발음을 들어보세요.'
@@ -1471,7 +1554,7 @@ export default function PassagePractice({
                 <Lightbulb size={13} /> {isWordMaterial ? '막히면 단어 뜻을 다시 떠올려보세요.' : '막히면 문장을 소리 내어 천천히 읽어보세요.'}
               </p>
               <div className="flex gap-2">
-                {mode !== 'shadowing' && (
+                {mode !== 'shadowing' && !isWordLearningMode && (
                   <button
                     type="button"
                     onClick={() => checkAnswer()}
@@ -1499,7 +1582,7 @@ export default function PassagePractice({
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[hsl(var(--muted-foreground))]">
               {sentenceCompleted
-                ? (isWordMaterial ? '이 단어의 두 가지 연습을 모두 마쳤어요.' : '이 문장의 모든 연습을 완료했어요.')
+                ? (isWordMaterial ? '이 단어의 모든 학습 단계를 마쳤어요.' : '이 문장의 모든 연습을 완료했어요.')
                 : `${currentMode.label}을 완료해보세요.`}
             </p>
             <button
@@ -1526,7 +1609,7 @@ export default function PassagePractice({
           <CheckCircle2 className="mx-auto text-[hsl(var(--accent))]" size={28} />
           <h2 className="mt-3 text-xl font-bold">{isWordMaterial ? '단어 과제를 모두 마쳤어요.' : '지문의 모든 문장을 완주했어요.'}</h2>
           <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
-            {isWordMaterial ? '영어 퀴즈와 단어 쓰기를 모든 단어에서 마쳤어요.' : '이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.'}
+            {isWordMaterial ? '단어 배우기, 영어 퀴즈, 단어 쓰기를 모든 단어에서 마쳤어요.' : '이제 문장들이 눈으로만 아는 영어가 아니라, 꺼내 쓸 수 있는 영어가 됐어요.'}
           </p>
         </section>
       )}
