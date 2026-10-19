@@ -515,19 +515,30 @@ export default function PassagePractice({
   const currentAnswers = answers[current.id] ?? blankAnswers();
   const currentCompletion = completed[current.id] ?? blankCompletion();
   const wordQuizOptions = useMemo(() => {
-    const meanings = [...new Set(passageSentences.map((sentence) => sentence.korean.trim()).filter(Boolean))];
-    const options = [current?.korean, ...meanings.filter((meaning) => meaning !== current?.korean)]
-      .filter((meaning): meaning is string => Boolean(meaning))
-      .slice(0, 4);
+    const correctMeaning = current?.korean.trim();
+    if (!correctMeaning) return [];
+
+    const distractors = [...new Set(
+      passageSentences
+        .map((sentence) => sentence.korean.trim())
+        .filter((meaning) => Boolean(meaning) && meaning !== correctMeaning),
+    )];
+    const rotatingDistractors = distractors.length === 0
+      ? []
+      : Array.from(
+        { length: Math.min(3, distractors.length) },
+        (_, offset) => distractors[(safeCurrentIndex + offset) % distractors.length],
+      );
+    const options = [correctMeaning, ...rotatingDistractors];
     if (options.length > 1 && current?.id) {
       const correctIndex = current.id % options.length;
-      const answerIndex = options.indexOf(current.korean);
+      const answerIndex = options.indexOf(correctMeaning);
       if (answerIndex !== correctIndex) {
         [options[answerIndex], options[correctIndex]] = [options[correctIndex], options[answerIndex]];
       }
     }
     return options;
-  }, [current?.id, current?.korean, passageSentences]);
+  }, [current?.id, current?.korean, passageSentences, safeCurrentIndex]);
   const totalProgressSteps = passageSentences.length * (isWordMaterial ? wordModes.length : modes.length);
   const completedSteps = passageSentences.reduce((total, sentence) => {
     const sentenceProgress = completed[sentence.id] ?? blankCompletion();
