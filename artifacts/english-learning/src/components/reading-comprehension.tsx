@@ -26,13 +26,24 @@ export function AdminReadingBuilder() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saved, setSaved] = useState<AdminPassage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [savedLoading, setSavedLoading] = useState(true);
+  const [savedError, setSavedError] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const loadSaved = async () => {
+    setSavedLoading(true);
+    setSavedError('');
     try {
       const r = await apiFetch('/api/admin/reading/passages', { credentials: 'include', cache: 'no-store' });
-      if (r.ok) setSaved(await r.json() as AdminPassage[]);
-    } catch { /* Keep the current list if refresh fails. */ }
+      if (!r.ok) throw new Error(r.status === 401 || r.status === 403
+        ? '관리자 계정 로그인 상태를 확인해 주세요.'
+        : '저장된 지문을 불러오지 못했습니다.');
+      setSaved(await r.json() as AdminPassage[]);
+    } catch (e) {
+      setSavedError(e instanceof Error ? e.message : '저장된 지문을 불러오지 못했습니다.');
+    } finally {
+      setSavedLoading(false);
+    }
   };
   useEffect(() => { void loadSaved(); }, []);
   const updateQuestion = (index: number, updates: Partial<Question>) =>
@@ -65,7 +76,16 @@ export function AdminReadingBuilder() {
     </article>)}
     {questions.length > 0 && <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />} 저장</button>}
     {message && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm">{message}</p>}{error && <p role="alert" className="mt-3 text-sm font-bold text-rose-600">{error}</p>}
-    <div className="mt-6 border-t pt-4"><h3 className="font-bold">저장된 지문 ({saved.length})</h3>{saved.map((item) => <div key={item.id} className="mt-2 rounded-xl bg-[hsl(var(--muted)/.4)] p-3 text-sm"><b>{item.title}</b><p className="mt-1 line-clamp-2 text-xs">{item.passage}</p></div>)}</div>
+    <div className="mt-6 border-t pt-4">
+      <h3 className="font-bold">저장된 지문 ({saved.length})</h3>
+      {savedLoading && <p role="status" className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">저장된 지문을 불러오는 중이에요…</p>}
+      {savedError && <div role="alert" className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+        <p>{savedError}</p>
+        <button type="button" onClick={() => void loadSaved()} className="mt-2 font-bold underline">다시 불러오기</button>
+      </div>}
+      {!savedLoading && !savedError && saved.length === 0 && <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">저장된 지문이 없습니다.</p>}
+      {saved.map((item) => <div key={item.id} className="mt-2 rounded-xl bg-[hsl(var(--muted)/.4)] p-3 text-sm"><b>{item.title}</b><p className="mt-1 line-clamp-2 text-xs">{item.passage}</p></div>)}
+    </div>
   </section>;
 }
 
@@ -79,12 +99,23 @@ export default function ReadingComprehensionPractice() {
   const [shortAnswers, setShortAnswers] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<Record<number, boolean>>({});
   const [failed, setFailed] = useState('');
+  const [passagesLoading, setPassagesLoading] = useState(true);
+  const [passagesError, setPassagesError] = useState(false);
   const [loading, setLoading] = useState<Record<number, boolean>>({});
-  useEffect(() => {
-    apiFetch('/api/reading/passages?grade=6', { credentials: 'include' })
-      .then(async (r) => { if (!r.ok) throw new Error(); return r.json() as Promise<Passage[]>; })
-      .then(setPassages).catch(() => setFailed(genericError));
-  }, []);
+  const loadPassages = async () => {
+    setPassagesLoading(true);
+    setPassagesError(false);
+    try {
+      const r = await apiFetch('/api/reading/passages?grade=6', { credentials: 'include', cache: 'no-store' });
+      if (!r.ok) throw new Error('Reading passages request failed');
+      setPassages(await r.json() as Passage[]);
+    } catch {
+      setPassagesError(true);
+    } finally {
+      setPassagesLoading(false);
+    }
+  };
+  useEffect(() => { void loadPassages(); }, []);
   const explain = async (index: number, answer: string) => {
     if (!selected) return;
     setLoading((x) => ({ ...x, [index]: true })); setFailed('');
@@ -120,7 +151,15 @@ export default function ReadingComprehensionPractice() {
   return <main className="mx-auto max-w-4xl space-y-6 pb-24">
     <header><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Reading · Grade 6</p><h1 className="mt-2 text-3xl font-bold">읽기 이해<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">지문을 읽고 문제를 풀어 보세요.</p></header>
     {failed && <p role="alert" className="rounded-xl bg-amber-100 p-4 text-sm font-bold text-amber-900">{failed}</p>}
-    {!selected ? <section className="grid gap-3 sm:grid-cols-2">{passages.map((item) => <button key={item.id} onClick={() => { setSelected(item); setAnswers({}); setResults({}); setExplanations({}); setShortAnswers({}); setShortResults({}); }} className="rounded-2xl border bg-[hsl(var(--card))] p-5 text-left"><h2 className="font-bold">{item.title}</h2><p className="mt-2 line-clamp-2 text-sm">{item.passage}</p><span className="mt-3 inline-block text-xs font-bold">지문 읽기 →</span></button>)}{!passages.length && !failed && <p className="col-span-full rounded-2xl bg-[hsl(var(--card))] p-6 text-center text-sm">아직 저장된 읽기 지문이 없어요.</p>}</section> : <section className="space-y-5">
+    {!selected ? <section className="grid gap-3 sm:grid-cols-2">
+      {passagesLoading && <p role="status" className="col-span-full rounded-2xl bg-[hsl(var(--card))] p-6 text-center text-sm">읽기 지문을 불러오는 중이에요…</p>}
+      {passagesError && <div role="alert" className="col-span-full rounded-2xl bg-amber-100 p-6 text-center text-sm font-semibold text-amber-900">
+        <p>{genericError}</p>
+        <button type="button" onClick={() => void loadPassages()} className="mt-3 rounded-lg border border-amber-900/30 px-3 py-2 font-bold">다시 시도</button>
+      </div>}
+      {!passagesLoading && !passagesError && passages.map((item) => <button key={item.id} onClick={() => { setSelected(item); setAnswers({}); setResults({}); setExplanations({}); setShortAnswers({}); setShortResults({}); }} className="rounded-2xl border bg-[hsl(var(--card))] p-5 text-left"><h2 className="font-bold">{item.title}</h2><p className="mt-2 line-clamp-2 text-sm">{item.passage}</p><span className="mt-3 inline-block text-xs font-bold">지문 읽기 →</span></button>)}
+      {!passagesLoading && !passagesError && !passages.length && <p className="col-span-full rounded-2xl bg-[hsl(var(--card))] p-6 text-center text-sm">아직 저장된 읽기 지문이 없어요. 선생님이 지문을 저장하면 여기에 표시됩니다.</p>}
+    </section> : <section className="space-y-5">
       <button onClick={() => setSelected(null)} className="text-sm font-bold">← 지문 목록</button>
       <article className="rounded-3xl bg-[hsl(var(--sidebar))] p-6 text-white sm:p-8"><p className="font-mono text-xs uppercase tracking-widest text-white/60">Read the passage</p><h2 className="mt-3 text-2xl font-bold">{selected.title}</h2><p className="mt-5 whitespace-pre-line text-lg leading-relaxed">{selected.passage}</p></article>
       {selected.questions.map((q, i) => <article key={i} className="rounded-2xl border bg-[hsl(var(--card))] p-5"><p className="text-xs font-bold">{i + 1}. {labels[q.type]}</p><h3 className="mt-2 font-bold">{q.prompt}</h3>
