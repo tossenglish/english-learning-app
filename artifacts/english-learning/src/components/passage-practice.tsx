@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useUser } from '@clerk/react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -126,6 +127,7 @@ const blankAttempts = (): AttemptCounts => ({
 
 const DEFAULT_PASSAGE_TEXT = defaultPassageSentences.map((sentence) => sentence.english).join(' ');
 const PASSAGE_STORAGE_KEY = 'lingoloop-passage-practice-v1';
+const ASSIGNMENT_PRACTICE_STORAGE_PREFIX = 'english-learning:assignment-practice:v1';
 
 type PersistedPassageState = {
   draftText: string;
@@ -134,6 +136,17 @@ type PersistedPassageState = {
   completed: Record<number, Completion>;
   attempts: Record<number, AttemptCounts>;
   currentIndex: number;
+};
+
+type PersistedAssignmentPracticeState = {
+  contentSignature: string;
+  answers: Record<number, Record<ExerciseMode, string>>;
+  completed: Record<number, Completion>;
+  attempts: Record<number, AttemptCounts>;
+  currentIndex: number;
+  mode: ExerciseMode;
+  feedback: 'correct' | 'wrong' | 'hint' | null;
+  showAnswer: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -200,6 +213,57 @@ function readStoredPassageState(): PersistedPassageState {
     };
   } catch {
     return fallback;
+  }
+}
+
+function getAssignmentPracticeStorageKey(userId: string, assignmentId: number) {
+  return `${ASSIGNMENT_PRACTICE_STORAGE_PREFIX}:${encodeURIComponent(userId)}:${assignmentId}`;
+}
+
+function getMaterialSignature(sentences: PracticeSentence[]) {
+  return JSON.stringify(sentences.map(({ id, english, korean }) => [id, english, korean]));
+}
+
+function readStoredAssignmentPracticeState(
+  storageKey: string,
+  contentSignature: string,
+  materialType: 'word' | 'sentence',
+  sentenceCount: number,
+): PersistedAssignmentPracticeState | null {
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return null;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!isRecord(parsed) || parsed.contentSignature !== contentSignature) return null;
+
+    const validModes = materialType === 'word'
+      ? wordModes.map(({ id }) => id)
+      : modes.map(({ id }) => id);
+    const mode = typeof parsed.mode === 'string' && validModes.includes(parsed.mode as ExerciseMode)
+      ? parsed.mode as ExerciseMode
+      : validModes[0];
+    const feedback = parsed.feedback === 'correct'
+      || parsed.feedback === 'wrong'
+      || parsed.feedback === 'hint'
+      ? parsed.feedback
+      : null;
+    const currentIndex = typeof parsed.currentIndex === 'number' && Number.isInteger(parsed.currentIndex)
+      ? Math.min(Math.max(0, parsed.currentIndex), Math.max(0, sentenceCount - 1))
+      : 0;
+
+    return {
+      contentSignature,
+      answers: readStoredMap(parsed.answers, blankAnswers),
+      completed: readStoredMap(parsed.completed, blankCompletion),
+      attempts: readStoredMap(parsed.attempts, blankAttempts),
+      currentIndex,
+      mode,
+      feedback,
+      showAnswer: parsed.showAnswer === true,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -444,8 +508,16 @@ export default function PassagePractice({
 }: {
   onProgressChange?: (evaluation: PassageEvaluation) => void;
 }) {
+  const { user } = useUser();
   const [initialState] = useState(readStoredPassageState);
   const activeMaterial = useMemo(() => readActivePracticeMaterial(), []);
+  const assignmentStorageKey = activeMaterial && user?.id
+    ? getAssignmentPracticeStorageKey(user.id, activeMaterial.assignmentId)
+    : null;
+  const activeMaterialSignature = activeMaterial
+    ? getMaterialSignature(activeMaterial.sentences)
+    : '';
+  const [hydratedAssignmentKey, setHydratedAssignmentKey] = useState<string | null>(null);
   const displayedActiveMaterialTitle = activeMaterial?.title
     .replace(/^\s*1(?:\s*[.):\-]\s*|\s+|$)/, '')
     .trim() ?? '';
@@ -575,6 +647,39 @@ export default function PassagePractice({
   const shouldShowMeaning = !isWordMaterial || mode === 'writing' || feedback === 'correct' || showAnswer;
 
   useEffect(() => {
+    if (!activeMaterial) {
+      setHydratedAssignmentKey(null);
+      return;
+    }
+    if (!assignmentStorageKey) {
+      setCurrentIndex(0);
+      setMode(activeMaterial.materialType === 'word' ? 'learning' : 'dictation');
+      setAnswers({});
+      setCompleted({});
+      setAttempts({});
+      setFeedback(null);
+      setShowAnswer(false);
+      setHydratedAssignmentKey(null);
+      return;
+    }
+
+    const saved = readStoredAssignmentPracticeState(
+      assignmentStorageKey,
+      activeMaterialSignature,
+      activeMaterial.materialType,
+      activeMaterial.sentences.length,
+    );
+    setCurrentIndex(saved?.currentIndex ?? 0);
+    setMode(saved?.mode ?? (activeMaterial.materialType === 'word' ? 'learning' : 'dictation'));
+    setAnswers(saved?.answers ?? {});
+    setCompleted(saved?.completed ?? {});
+    setAttempts(saved?.attempts ?? {});
+    setFeedback(saved?.feedback ?? null);
+    setShowAnswer(saved?.showAnswer ?? false);
+    setHydratedAssignmentKey(assignmentStorageKey);
+  }, [activeMaterial, activeMaterialSignature, assignmentStorageKey]);
+
+  useEffect(() => {
     if (
       isWordAutoAdvancing
       || !focusWordAnswerAfterAdvanceRef.current
@@ -665,7 +770,11 @@ export default function PassagePractice({
   }, [attempts, completed, completedSteps, onProgressChange, passageSentences, totalProgressSteps]);
 
   useEffect(() => {
-    if (!activeMaterial) return;
+    if (
+      !activeMaterial
+      || !assignmentStorageKey
+      || hydratedAssignmentKey !== assignmentStorageKey
+    ) return;
     apiFetch(`/api/assignments/${activeMaterial.assignmentId}/progress`, {
       method: 'PUT',
       credentials: 'include',
@@ -680,7 +789,43 @@ export default function PassagePractice({
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setAssignmentProgressSaveError('과제 수행률을 저장하지 못했어요. 연결 상태를 확인해 주세요.');
       });
-  }, [activeMaterial, completedSteps, totalProgressSteps]);
+  }, [activeMaterial, assignmentStorageKey, completedSteps, hydratedAssignmentKey, totalProgressSteps]);
+
+  useEffect(() => {
+    if (
+      !activeMaterial
+      || !assignmentStorageKey
+      || hydratedAssignmentKey !== assignmentStorageKey
+      || !usingActiveMaterial
+    ) return;
+    try {
+      window.localStorage.setItem(assignmentStorageKey, JSON.stringify({
+        contentSignature: activeMaterialSignature,
+        answers,
+        completed,
+        attempts,
+        currentIndex: safeCurrentIndex,
+        mode,
+        feedback,
+        showAnswer,
+      } satisfies PersistedAssignmentPracticeState));
+    } catch {
+      // Learning still works if browser storage is unavailable.
+    }
+  }, [
+    activeMaterial,
+    activeMaterialSignature,
+    answers,
+    attempts,
+    assignmentStorageKey,
+    completed,
+    feedback,
+    hydratedAssignmentKey,
+    mode,
+    safeCurrentIndex,
+    showAnswer,
+    usingActiveMaterial,
+  ]);
 
   useEffect(() => {
     try {

@@ -166,6 +166,7 @@ export default function LevelAssignments({
                 const progress = progressByAssignment[assignment.id];
                 const completedSteps = progress?.completedSteps ?? 0;
                 const totalSteps = progress?.totalSteps ?? 0;
+                const hasStarted = Boolean(progress);
                 const isComplete = totalSteps > 0 && completedSteps >= totalSteps;
                 const percent = totalSteps > 0
                   ? Math.min(100, (completedSteps / totalSteps) * 100)
@@ -190,7 +191,9 @@ export default function LevelAssignments({
                           ? '다했음'
                           : percent > 0
                             ? `수행률 ${percentLabel}`
-                            : '아직 안했음'}
+                            : hasStarted
+                              ? '진행 중'
+                              : '아직 안했음'}
                     </span>
                     {!progressLoading && !progressLoadError && percent > 0 && !isComplete && (
                       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-[hsl(var(--muted))]" aria-label={`수행률 ${percent}%`}>
@@ -245,7 +248,14 @@ export default function LevelAssignments({
                 data-testid={`button-start-assigned-${selectedType}-${assignment.id}`}
               >
                 {startingId === assignment.id ? <LoaderCircle className="animate-spin" size={14} /> : <ClipboardCheck size={14} />}
-                {startingId === assignment.id ? '자료를 준비하고 있어요' : '이 과제 연습하기'} <ArrowRight size={14} />
+                {startingId === assignment.id
+                  ? '자료를 준비하고 있어요'
+                  : progressByAssignment[assignment.id]
+                    ? progressByAssignment[assignment.id].totalSteps > 0
+                      && progressByAssignment[assignment.id].completedSteps >= progressByAssignment[assignment.id].totalSteps
+                      ? '완료한 과제 다시 보기'
+                      : '이어서 연습하기'
+                    : '이 과제 연습하기'} <ArrowRight size={14} />
               </button>
             </article>
           ))}

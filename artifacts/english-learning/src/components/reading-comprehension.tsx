@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/react';
 import { BookOpenCheck, Check, LoaderCircle, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-fetch';
 
@@ -8,10 +9,83 @@ type StoredQuestion = { type: 'true_false' | 'multiple_choice' | 'short_answer';
 type StudentQuestion = Pick<Question, 'type' | 'prompt' | 'options'>;
 type Passage = { id: number; grade: number; title: string; passage: string; questions: StudentQuestion[]; createdAt: string };
 type AdminPassage = Omit<Passage, 'questions'> & { questions: StoredQuestion[] };
+type StoredReadingProgress = {
+  signature: string;
+  answers: Record<number, string>;
+  results: Record<number, boolean>;
+  explanations: Record<number, string>;
+};
 const labels: Record<QuestionType, string> = { true_false: 'O/X' };
 const genericError = '잠깐 쉬고 있어요, 다시 해 볼까요?';
 const limitError = '오늘은 여기까지! 내일 또 만나요';
 const emptyQuestion = (): Question => ({ type: 'true_false', prompt: '', options: [], answer: 'true' });
+const READING_SELECTION_STORAGE_PREFIX = 'english-learning:reading-selection:v1';
+const READING_PROGRESS_STORAGE_PREFIX = 'english-learning:reading-progress:v1';
+
+function getReadingSelectionKey(userId: string) {
+  return `${READING_SELECTION_STORAGE_PREFIX}:${encodeURIComponent(userId)}`;
+}
+
+function getReadingProgressKey(userId: string, passageId: number) {
+  return `${READING_PROGRESS_STORAGE_PREFIX}:${encodeURIComponent(userId)}:${passageId}`;
+}
+
+function getReadingPassageSignature(passage: Passage) {
+  return JSON.stringify({
+    title: passage.title,
+    passage: passage.passage,
+    questions: passage.questions,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readStoredStringMap(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.entries(value).reduce<Record<number, string>>((result, [key, item]) => {
+    const index = Number(key);
+    if (Number.isInteger(index) && index >= 0 && typeof item === 'string') result[index] = item;
+    return result;
+  }, {});
+}
+
+function readStoredBooleanMap(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.entries(value).reduce<Record<number, boolean>>((result, [key, item]) => {
+    const index = Number(key);
+    if (Number.isInteger(index) && index >= 0 && typeof item === 'boolean') result[index] = item;
+    return result;
+  }, {});
+}
+
+function readStoredReadingProgress(userId: string, passage: Passage): StoredReadingProgress | null {
+  try {
+    const stored = localStorage.getItem(getReadingProgressKey(userId, passage.id));
+    if (!stored) return null;
+    const parsed: unknown = JSON.parse(stored);
+    const signature = getReadingPassageSignature(passage);
+    if (!isRecord(parsed) || parsed.signature !== signature) return null;
+    return {
+      signature,
+      answers: readStoredStringMap(parsed.answers),
+      results: readStoredBooleanMap(parsed.results),
+      explanations: readStoredStringMap(parsed.explanations),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readLastReadingPassageId(userId: string) {
+  try {
+    const id = Number(localStorage.getItem(getReadingSelectionKey(userId)));
+    return Number.isInteger(id) && id > 0 ? id : null;
+  } catch {
+    return null;
+  }
+}
 
 async function responseError(response: Response) {
   if (response.status === 429) return limitError;
@@ -87,6 +161,8 @@ export function AdminReadingBuilder() {
 }
 
 export default function ReadingComprehensionPractice() {
+  const { user } = useUser();
+  const [readingStateOwnerId, setReadingStateOwnerId] = useState<string | null>(null);
   const [passages, setPassages] = useState<Passage[]>([]);
   const [selected, setSelected] = useState<Passage | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -102,14 +178,56 @@ export default function ReadingComprehensionPractice() {
     try {
       const r = await apiFetch('/api/reading/passages?grade=6', { credentials: 'include', cache: 'no-store' });
       if (!r.ok) throw new Error('Reading passages request failed');
-      setPassages(await r.json() as Passage[]);
+      const loaded = await r.json() as Passage[];
+      setPassages(loaded);
+      if (user?.id) {
+        const lastPassageId = readLastReadingPassageId(user.id);
+        const lastPassage = loaded.find((item) => item.id === lastPassageId);
+        if (lastPassage) {
+          const saved = readStoredReadingProgress(user.id, lastPassage);
+          setSelected(lastPassage);
+          setAnswers(saved?.answers ?? {});
+          setResults(saved?.results ?? {});
+          setExplanations(saved?.explanations ?? {});
+        } else {
+          setSelected(null);
+          setAnswers({});
+          setResults({});
+          setExplanations({});
+        }
+      }
+      setReadingStateOwnerId(user?.id ?? null);
     } catch {
       setPassagesError(true);
     } finally {
       setPassagesLoading(false);
     }
   };
-  useEffect(() => { void loadPassages(); }, []);
+  useEffect(() => { void loadPassages(); }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id || readingStateOwnerId !== user.id || !selected) return;
+    try {
+      localStorage.setItem(getReadingSelectionKey(user.id), String(selected.id));
+      localStorage.setItem(
+        getReadingProgressKey(user.id, selected.id),
+        JSON.stringify({
+          signature: getReadingPassageSignature(selected),
+          answers,
+          results,
+          explanations,
+        } satisfies StoredReadingProgress),
+      );
+    } catch {
+      // Reading can continue if browser storage is unavailable.
+    }
+  }, [answers, explanations, readingStateOwnerId, results, selected, user?.id]);
+  const choosePassage = (passage: Passage) => {
+    const saved = user?.id ? readStoredReadingProgress(user.id, passage) : null;
+    setSelected(passage);
+    setAnswers(saved?.answers ?? {});
+    setResults(saved?.results ?? {});
+    setExplanations(saved?.explanations ?? {});
+  };
   const explain = async (index: number, answer: string) => {
     if (!selected) return;
     setLoading((x) => ({ ...x, [index]: true })); setFailed('');
@@ -134,16 +252,21 @@ export default function ReadingComprehensionPractice() {
   return <main className="mx-auto max-w-4xl space-y-6 pb-24">
     <header><p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Reading · Grade 6</p><h1 className="mt-2 text-3xl font-bold">읽기 이해<span className="text-[hsl(var(--accent))]">.</span></h1><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">지문을 읽고 문제를 풀어 보세요.</p></header>
     {failed && <p role="alert" className="rounded-xl bg-amber-100 p-4 text-sm font-bold text-amber-900">{failed}</p>}
-    {!selected ? <section className="grid gap-3 sm:grid-cols-2">
+      {!selected ? <section className="grid gap-3 sm:grid-cols-2">
       {passagesLoading && <p role="status" className="col-span-full rounded-2xl bg-[hsl(var(--card))] p-6 text-center text-sm">읽기 지문을 불러오는 중이에요…</p>}
       {passagesError && <div role="alert" className="col-span-full rounded-2xl bg-amber-100 p-6 text-center text-sm font-semibold text-amber-900">
         <p>{genericError}</p>
         <button type="button" onClick={() => void loadPassages()} className="mt-3 rounded-lg border border-amber-900/30 px-3 py-2 font-bold">다시 시도</button>
       </div>}
-      {!passagesLoading && !passagesError && passages.map((item) => <button key={item.id} onClick={() => { setSelected(item); setAnswers({}); setResults({}); setExplanations({}); }} className="rounded-2xl border bg-[hsl(var(--card))] p-5 text-left"><h2 className="font-bold">{item.title}</h2><p className="mt-2 line-clamp-2 text-sm">{item.passage}</p><span className="mt-3 inline-block text-xs font-bold">지문 읽기 →</span></button>)}
+      {!passagesLoading && !passagesError && passages.map((item) => <button key={item.id} onClick={() => choosePassage(item)} className="rounded-2xl border bg-[hsl(var(--card))] p-5 text-left"><h2 className="font-bold">{item.title}</h2><p className="mt-2 line-clamp-2 text-sm">{item.passage}</p><span className="mt-3 inline-block text-xs font-bold">지문 읽기 →</span></button>)}
       {!passagesLoading && !passagesError && !passages.length && <p className="col-span-full rounded-2xl bg-[hsl(var(--card))] p-6 text-center text-sm">아직 저장된 읽기 지문이 없어요. 선생님이 지문을 저장하면 여기에 표시됩니다.</p>}
     </section> : <section className="space-y-5">
-      <button onClick={() => setSelected(null)} className="text-sm font-bold">← 지문 목록</button>
+       <button onClick={() => {
+         setSelected(null); setAnswers({}); setResults({}); setExplanations({});
+         if (user?.id) {
+           try { localStorage.removeItem(getReadingSelectionKey(user.id)); } catch { /* Ignore unavailable storage. */ }
+         }
+       }} className="text-sm font-bold">← 지문 목록</button>
       <article className="rounded-3xl bg-[hsl(var(--sidebar))] p-6 text-white sm:p-8"><p className="font-mono text-xs uppercase tracking-widest text-white/60">Read the passage</p><h2 className="mt-3 text-2xl font-bold">{selected.title}</h2><p className="mt-5 whitespace-pre-line text-lg leading-relaxed">{selected.passage}</p></article>
       {selected.questions.map((q, i) => <article key={i} className="rounded-2xl border bg-[hsl(var(--card))] p-5"><p className="text-xs font-bold">{i + 1}. {labels[q.type]}</p><h3 className="mt-2 font-bold">{q.prompt}</h3>
         <div className="mt-4 flex gap-3">{[['true', 'O · 맞아요'], ['false', 'X · 아니에요']].map(([v, label]) => <button key={v} onClick={() => void answerObjective(i, v)} className="rounded-xl border px-5 py-3 font-bold">{label}</button>)}</div>
