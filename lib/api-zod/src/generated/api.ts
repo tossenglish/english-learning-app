@@ -21,7 +21,7 @@ export const ListReadingPassagesResponseItem = zod.object({
   "title": zod.string(),
   "passage": zod.string(),
   "questions": zod.array(zod.object({
-  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "type": zod.enum(['true_false']),
   "prompt": zod.string(),
   "options": zod.array(zod.string())
 })),
@@ -59,6 +59,9 @@ export const saveReadingPassageBodyPassageMin = 30;
 export const saveReadingPassageBodyPassageMax = 3000;
 
 
+export const saveReadingPassageBodyQuestionsItemOptionsMax = 0;
+
+
 
 
 export const SaveReadingPassageBody = zod.object({
@@ -66,10 +69,10 @@ export const SaveReadingPassageBody = zod.object({
   "title": zod.string().min(1).max(saveReadingPassageBodyTitleMax),
   "passage": zod.string().min(saveReadingPassageBodyPassageMin).max(saveReadingPassageBodyPassageMax),
   "questions": zod.array(zod.object({
-  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
-  "prompt": zod.string(),
-  "options": zod.array(zod.string()),
-  "answer": zod.string(),
+  "type": zod.enum(['true_false']),
+  "prompt": zod.string().min(1),
+  "options": zod.array(zod.string()).max(saveReadingPassageBodyQuestionsItemOptionsMax),
+  "answer": zod.enum(['true', 'false']),
   "explanationNote": zod.string().optional()
 })).min(1)
 })
@@ -91,7 +94,7 @@ export const SaveReadingPassageResponse = zod.object({
 
 
 /**
- * @summary 저장된 정답으로 O/X·객관식 채점
+ * @summary 저장된 정답으로 O/X 채점
  */
 export const CheckReadingObjectiveAnswerParams = zod.object({
   "passageId": zod.coerce.number().int()
@@ -132,30 +135,6 @@ export const ExplainReadingAnswerBody = zod.object({
 })
 
 export const ExplainReadingAnswerResponse = zod.object({
-  "feedback": zod.string()
-})
-
-
-/**
- * @summary 저장된 지문과 정답을 기준으로 짧은 답 채점
- */
-export const GradeReadingShortAnswerParams = zod.object({
-  "passageId": zod.coerce.number().int()
-})
-
-export const gradeReadingShortAnswerBodyQuestionIndexMin = 0;
-
-export const gradeReadingShortAnswerBodyAnswerMax = 240;
-
-
-
-export const GradeReadingShortAnswerBody = zod.object({
-  "questionIndex": zod.number().int().min(gradeReadingShortAnswerBodyQuestionIndexMin),
-  "answer": zod.string().min(1).max(gradeReadingShortAnswerBodyAnswerMax)
-})
-
-export const GradeReadingShortAnswerResponse = zod.object({
-  "correct": zod.boolean(),
   "feedback": zod.string()
 })
 

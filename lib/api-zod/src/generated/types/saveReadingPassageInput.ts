@@ -5,8 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { ReadingQuestion } from './readingQuestion';
 import type { SaveReadingPassageInputGrade } from './saveReadingPassageInputGrade';
+import type { TrueFalseReadingQuestionInput } from './trueFalseReadingQuestionInput';
 
 export interface SaveReadingPassageInput {
   grade: SaveReadingPassageInputGrade;
@@ -21,5 +21,5 @@ export interface SaveReadingPassageInput {
      */
   passage: string;
   /** @minItems 1 */
-  questions: ReadingQuestion[];
+  questions: TrueFalseReadingQuestionInput[];
 }

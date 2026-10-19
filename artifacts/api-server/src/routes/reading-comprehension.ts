@@ -5,9 +5,6 @@ import {
   ExplainReadingAnswerBody,
   ExplainReadingAnswerParams,
   ExplainReadingAnswerResponse,
-  GradeReadingShortAnswerBody,
-  GradeReadingShortAnswerParams,
-  GradeReadingShortAnswerResponse,
   ListAdminReadingPassagesResponse,
   ListReadingPassagesQueryParams,
   ListReadingPassagesResponse,
@@ -22,7 +19,7 @@ import {
   type ReadingQuestion,
 } from "@workspace/db";
 import { createHash } from "node:crypto";
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { desc, eq, lt, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getUserId, isAdmin } from "../lib/auth";
 
@@ -82,14 +79,10 @@ function validPassage(passage: string): boolean {
 function validQuestions(value: unknown): value is ReadingQuestion[] {
   if (!Array.isArray(value) || value.length === 0) return false;
   return value.every((q) =>
-    q && ["true_false", "multiple_choice", "short_answer"].includes(q.type)
+    q && q.type === "true_false"
     && typeof q.prompt === "string" && q.prompt.trim().length > 0
-    && typeof q.answer === "string" && q.answer.trim().length > 0
-    && Array.isArray(q.options)
-    && q.options.every((option: unknown) => typeof option === "string" && option.trim().length > 0)
-    && (q.type !== "multiple_choice" || (q.options.length === 3 && q.options.includes(q.answer)))
-    && (q.type !== "true_false" || ["true", "false"].includes(q.answer.toLowerCase()))
-    && (q.type === "multiple_choice" || q.options.length === 0)
+    && typeof q.answer === "string" && ["true", "false"].includes(q.answer.toLowerCase())
+    && Array.isArray(q.options) && q.options.length === 0
     && (q.explanationNote === undefined || typeof q.explanationNote === "string"),
   );
 }
@@ -122,12 +115,10 @@ function normalizeAnswer(answer: string): string {
 }
 
 function answerIsCorrect(question: ReadingQuestion, answer: string): boolean {
-  if (question.type === "true_false") {
-    const normalized = normalizeAnswer(answer);
-    const boolAnswer = normalized === "o" ? "true" : normalized === "x" ? "false" : normalized;
-    return boolAnswer === normalizeAnswer(question.answer);
-  }
-  return normalizeAnswer(answer) === normalizeAnswer(question.answer);
+  if (question.type !== "true_false") return false;
+  const normalized = normalizeAnswer(answer);
+  const boolAnswer = normalized === "o" ? "true" : normalized === "x" ? "false" : normalized;
+  return boolAnswer === normalizeAnswer(question.answer);
 }
 
 function makeCacheKey(passageId: number, questionIndex: number, question: ReadingQuestion, passage: string, answer: string) {
@@ -143,23 +134,21 @@ function makeCacheKey(passageId: number, questionIndex: number, question: Readin
   })).digest("hex");
 }
 
-async function getQuestion(req: Request, passageId: number, questionIndex: number) {
+async function getObjectiveQuestion(req: Request, passageId: number, questionIndex: number) {
   const [passage] = await db.select().from(readingPassagesTable)
     .where(eq(readingPassagesTable.id, passageId));
-  const question = passage?.questions[questionIndex];
+  const question = passage?.questions.filter((item) => item.type === "true_false")[questionIndex];
   return passage && question ? { passage, question } : null;
 }
 
-function aiSystemPrompt(responseShape: "feedback" | "grade"): string {
-  const base = `너는 초등학교 6학년 영어 선생님이다.
+function aiSystemPrompt(): string {
+  return `너는 초등학교 6학년 영어 선생님이다.
 정답은 선생님이 정한 것이 기준이며, 절대 바꾸지 않는다.
 설명은 한국어로 2~3문장, 쉽고 따뜻한 말투로 한다.
 지문에서 근거가 되는 문장을 영어로 짚어 주고, 틀린 답은 비난하지 말고 어디서 헷갈렸는지 알려 준다.
 지문에 없는 내용은 추측해서 말하지 않는다.
-문제와 관련 없는 질문이나 대화에는 답하지 않고 '지문을 다시 읽어 볼까?'라고 안내한다.`;
-  return responseShape === "feedback"
-    ? `${base}\nJSON 객체로 {"feedback":"..."}만 반환한다.`
-    : `${base}\n짧은 답은 선생님 정답과 해설 메모를 기준으로 채점한다. 의미가 같으면 정답으로 인정하고, 철자 실수 한두 개는 너그럽게 인정한다. 정답 자체는 바꾸지 않는다. JSON 객체로 {"correct":true,"feedback":"..."} 또는 correct:false를 반환한다.`;
+문제와 관련 없는 질문이나 대화에는 답하지 않고 '지문을 다시 읽어 볼까?'라고 안내한다.
+JSON 객체로 {"feedback":"..."}만 반환한다.`;
 }
 
 const rateLimitMessage = "오늘은 여기까지! 내일 또 만나요";
@@ -178,10 +167,14 @@ router.get("/reading/passages", async (req: Request, res: Response): Promise<voi
   const rows = await db.select().from(readingPassagesTable)
     .where(eq(readingPassagesTable.grade, query.data.grade))
     .orderBy(desc(readingPassagesTable.createdAt));
-  const studentRows = rows.map((row) => ({
-    ...row,
-    questions: row.questions.map(({ type, prompt, options }) => ({ type, prompt, options })),
-  }));
+  const studentRows = rows
+    .map((row) => ({
+      ...row,
+      questions: row.questions
+        .filter((question) => question.type === "true_false")
+        .map(({ type, prompt, options }) => ({ type, prompt, options })),
+    }))
+    .filter((row) => row.questions.length > 0);
   res.json(ListReadingPassagesResponse.parse(studentRows));
 });
 
@@ -195,7 +188,7 @@ router.post("/admin/reading/passages", async (req: Request, res: Response): Prom
   if (!(await requireAdmin(req, res))) return;
   const parsed = SaveReadingPassageBody.safeParse(req.body);
   if (!parsed.success || !validPassage(parsed.data.passage) || !validQuestions(parsed.data.questions)) {
-    res.status(400).json({ error: "지문은 3~5문장으로 입력하고, 문제마다 질문·정답과 객관식 보기 3개를 확인해 주세요." });
+    res.status(400).json({ error: "제목을 입력하고, 지문은 3~5문장으로 작성해 주세요. O/X 문제마다 질문과 정답도 확인해 주세요." });
     return;
   }
   const [saved] = await db.insert(readingPassagesTable).values({
@@ -221,8 +214,8 @@ router.post("/reading/passages/:passageId/objective-answer", async (req: Request
     res.status(400).json({ error: "Invalid answer" });
     return;
   }
-  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
-  if (!found || found.question.type === "short_answer") {
+  const found = await getObjectiveQuestion(req, params.data.passageId, parsed.data.questionIndex);
+  if (!found) {
     res.status(404).json({ error: "Question not found" });
     return;
   }
@@ -243,8 +236,8 @@ router.post("/reading/passages/:passageId/explanation", async (req: Request, res
     res.status(400).json({ error: "Invalid answer" });
     return;
   }
-  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
-  if (!found || found.question.type === "short_answer") {
+  const found = await getObjectiveQuestion(req, params.data.passageId, parsed.data.questionIndex);
+  if (!found) {
     res.status(404).json({ error: "Question not found" });
     return;
   }
@@ -260,7 +253,7 @@ router.post("/reading/passages/:passageId/explanation", async (req: Request, res
     return;
   }
   try {
-    const content = await askClaude(aiSystemPrompt("feedback"), JSON.stringify({
+    const content = await askClaude(aiSystemPrompt(), JSON.stringify({
       passage: found.passage.passage,
       question: found.question.prompt,
       options: found.question.options,
@@ -278,50 +271,6 @@ router.post("/reading/passages/:passageId/explanation", async (req: Request, res
     res.json(ExplainReadingAnswerResponse.parse({ feedback: saved?.feedback ?? feedback }));
   } catch (error) {
     req.log.error({ err: error, passageId: found.passage.id }, "Reading explanation failed");
-    res.status(503).json({ error: apiErrorMessage });
-  }
-});
-
-router.post("/reading/passages/:passageId/short-answer", async (req: Request, res: Response): Promise<void> => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  const params = GradeReadingShortAnswerParams.safeParse(req.params);
-  const parsed = GradeReadingShortAnswerBody.safeParse(req.body);
-  if (!params.success || !parsed.success) {
-    res.status(400).json({ error: "Invalid answer" });
-    return;
-  }
-  const found = await getQuestion(req, params.data.passageId, parsed.data.questionIndex);
-  if (!found || found.question.type !== "short_answer") {
-    res.status(404).json({ error: "Question not found" });
-    return;
-  }
-  if (!(await reserveAiCall(userId))) {
-    res.status(429).json({ error: rateLimitMessage });
-    return;
-  }
-  try {
-    const content = await askClaude(aiSystemPrompt("grade"), JSON.stringify({
-      passage: found.passage.passage,
-      question: found.question.prompt,
-      options: found.question.options,
-      teacherAnswer: found.question.answer,
-      teacherExplanationNote: found.question.explanationNote ?? "",
-      studentAnswer: parsed.data.answer,
-    }));
-    const result = parseJsonObject(content);
-    if (typeof result.correct !== "boolean" || typeof result.feedback !== "string") {
-      throw new Error("Invalid grading response");
-    }
-    res.json(GradeReadingShortAnswerResponse.parse({
-      correct: result.correct,
-      feedback: result.feedback.slice(0, 500),
-    }));
-  } catch (error) {
-    req.log.error({ err: error, passageId: found.passage.id }, "Reading short answer grading failed");
     res.status(503).json({ error: apiErrorMessage });
   }
 });

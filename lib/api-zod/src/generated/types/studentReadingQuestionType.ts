@@ -11,6 +11,4 @@ export type StudentReadingQuestionType = typeof StudentReadingQuestionType[keyof
 
 export const StudentReadingQuestionType = {
   true_false: 'true_false',
-  multiple_choice: 'multiple_choice',
-  short_answer: 'short_answer',
 } as const;

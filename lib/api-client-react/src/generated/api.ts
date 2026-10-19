@@ -32,8 +32,6 @@ import type {
   ErrorEnvelope,
   ExplainReadingAnswerInput,
   GetLearningContentParams,
-  GradeReadingShortAnswerInput,
-  GradeReadingShortAnswerResult,
   HealthStatus,
   HomeVideoSettings,
   HomeVideoSettingsInput,
@@ -347,7 +345,7 @@ export const getCheckReadingObjectiveAnswerUrl = (passageId: number,) => {
 }
 
 /**
- * @summary 저장된 정답으로 O/X·객관식 채점
+ * @summary 저장된 정답으로 O/X 채점
  */
 export const checkReadingObjectiveAnswer = async (passageId: number,
     checkReadingObjectiveAnswerInput: CheckReadingObjectiveAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<ReadingAnswerResult> => {
@@ -414,7 +412,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CheckReadingObjectiveAnswerMutationVariables = {passageId: number;data: BodyType<CheckReadingObjectiveAnswerInput>}
 
     /**
- * @summary 저장된 정답으로 O/X·객관식 채점
+ * @summary 저장된 정답으로 O/X 채점
  */
 export const useCheckReadingObjectiveAnswer = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkReadingObjectiveAnswer>>, TError,CheckReadingObjectiveAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -514,95 +512,6 @@ export const useExplainReadingAnswer = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getExplainReadingAnswerMutationOptions(options));
-    }
-
-export const getGradeReadingShortAnswerUrl = (passageId: number,) => {
-
-
-
-
-  return `/api/reading/passages/${passageId}/short-answer`
-}
-
-/**
- * @summary 저장된 지문과 정답을 기준으로 짧은 답 채점
- */
-export const gradeReadingShortAnswer = async (passageId: number,
-    gradeReadingShortAnswerInput: GradeReadingShortAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<GradeReadingShortAnswerResult> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<GradeReadingShortAnswerResult>(getGradeReadingShortAnswerUrl(passageId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(gradeReadingShortAnswerInput)
-  }
-);}
-
-
-
-
-
-export const getGradeReadingShortAnswerMutationKey = () => ['gradeReadingShortAnswer'] as const;
-
-export const getGradeReadingShortAnswerMutationOptions = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gradeReadingShortAnswer>>, TError,GradeReadingShortAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof gradeReadingShortAnswer>>, TError,GradeReadingShortAnswerMutationVariables, TContext> => {
-
-const mutationKey = getGradeReadingShortAnswerMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gradeReadingShortAnswer>>, GradeReadingShortAnswerMutationVariables> = (props) => {
-          const {passageId,data} = props ?? {};
-
-          return  gradeReadingShortAnswer(passageId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GradeReadingShortAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof gradeReadingShortAnswer>>>
-    export type GradeReadingShortAnswerMutationBody = BodyType<GradeReadingShortAnswerInput>
-    export type GradeReadingShortAnswerMutationError = ErrorType<ErrorEnvelope>
-    export type GradeReadingShortAnswerMutationVariables = {passageId: number;data: BodyType<GradeReadingShortAnswerInput>}
-
-    /**
- * @summary 저장된 지문과 정답을 기준으로 짧은 답 채점
- */
-export const useGradeReadingShortAnswer = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gradeReadingShortAnswer>>, TError,GradeReadingShortAnswerMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof gradeReadingShortAnswer>>,
-        TError,
-        GradeReadingShortAnswerMutationVariables,
-        TContext
-      > => {
-      return useMutation(getGradeReadingShortAnswerMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {

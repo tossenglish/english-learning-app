@@ -27,8 +27,6 @@ export type StudentReadingQuestionType = typeof StudentReadingQuestionType[keyof
 
 export const StudentReadingQuestionType = {
   true_false: 'true_false',
-  multiple_choice: 'multiple_choice',
-  short_answer: 'short_answer',
 } as const;
 
 export interface StudentReadingQuestion {
@@ -90,6 +88,31 @@ export const SaveReadingPassageInputGrade = {
   NUMBER_6: 6,
 } as const;
 
+export type TrueFalseReadingQuestionInputType = typeof TrueFalseReadingQuestionInputType[keyof typeof TrueFalseReadingQuestionInputType];
+
+
+export const TrueFalseReadingQuestionInputType = {
+  true_false: 'true_false',
+} as const;
+
+export type TrueFalseReadingQuestionInputAnswer = typeof TrueFalseReadingQuestionInputAnswer[keyof typeof TrueFalseReadingQuestionInputAnswer];
+
+
+export const TrueFalseReadingQuestionInputAnswer = {
+  true: 'true',
+  false: 'false',
+} as const;
+
+export interface TrueFalseReadingQuestionInput {
+  type: TrueFalseReadingQuestionInputType;
+  /** @minLength 1 */
+  prompt: string;
+  /** @maxItems 0 */
+  options: string[];
+  answer: TrueFalseReadingQuestionInputAnswer;
+  explanationNote?: string;
+}
+
 export interface SaveReadingPassageInput {
   grade: SaveReadingPassageInputGrade;
   /**
@@ -103,22 +126,7 @@ export interface SaveReadingPassageInput {
      */
   passage: string;
   /** @minItems 1 */
-  questions: ReadingQuestion[];
-}
-
-export interface GradeReadingShortAnswerInput {
-  /** @minimum 0 */
-  questionIndex: number;
-  /**
-     * @minLength 1
-     * @maxLength 240
-     */
-  answer: string;
-}
-
-export interface GradeReadingShortAnswerResult {
-  correct: boolean;
-  feedback: string;
+  questions: TrueFalseReadingQuestionInput[];
 }
 
 export interface HealthStatus {
