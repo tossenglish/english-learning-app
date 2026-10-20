@@ -54,6 +54,7 @@ import type {
   ReadingAnswerResult,
   ReadingExplanationResult,
   ReadingPassage,
+  ReadingPassageUpdate,
   SaveReadingPassageInput,
   StudentReadingPassage,
   TranslatePracticeSentencesRequest,
@@ -335,6 +336,169 @@ export const useSaveReadingPassage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSaveReadingPassageMutationOptions(options));
+    }
+
+export const getUpdateAdminReadingPassageUrl = (passageId: number,) => {
+
+
+
+
+  return `/api/admin/reading/passages/${passageId}`
+}
+
+/**
+ * @summary 저장된 읽기 지문 수정
+ */
+export const updateAdminReadingPassage = async (passageId: number,
+    readingPassageUpdate: ReadingPassageUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ReadingPassage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReadingPassage>(getUpdateAdminReadingPassageUrl(passageId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(readingPassageUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminReadingPassageMutationKey = () => ['updateAdminReadingPassage'] as const;
+
+export const getUpdateAdminReadingPassageMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminReadingPassage>>, TError,UpdateAdminReadingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminReadingPassage>>, TError,UpdateAdminReadingPassageMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminReadingPassageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminReadingPassage>>, UpdateAdminReadingPassageMutationVariables> = (props) => {
+          const {passageId,data} = props ?? {};
+
+          return  updateAdminReadingPassage(passageId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminReadingPassageMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminReadingPassage>>>
+    export type UpdateAdminReadingPassageMutationBody = BodyType<ReadingPassageUpdate>
+    export type UpdateAdminReadingPassageMutationError = ErrorType<ErrorEnvelope>
+    export type UpdateAdminReadingPassageMutationVariables = {passageId: number;data: BodyType<ReadingPassageUpdate>}
+
+    /**
+ * @summary 저장된 읽기 지문 수정
+ */
+export const useUpdateAdminReadingPassage = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminReadingPassage>>, TError,UpdateAdminReadingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminReadingPassage>>,
+        TError,
+        UpdateAdminReadingPassageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminReadingPassageMutationOptions(options));
+    }
+
+export const getDeleteAdminReadingPassageUrl = (passageId: number,) => {
+
+
+
+
+  return `/api/admin/reading/passages/${passageId}`
+}
+
+/**
+ * @summary 저장된 읽기 지문 삭제
+ */
+export const deleteAdminReadingPassage = async (passageId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminReadingPassageUrl(passageId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminReadingPassageMutationKey = () => ['deleteAdminReadingPassage'] as const;
+
+export const getDeleteAdminReadingPassageMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReadingPassage>>, TError,DeleteAdminReadingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReadingPassage>>, TError,DeleteAdminReadingPassageMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAdminReadingPassageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminReadingPassage>>, DeleteAdminReadingPassageMutationVariables> = (props) => {
+          const {passageId} = props ?? {};
+
+          return  deleteAdminReadingPassage(passageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminReadingPassageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminReadingPassage>>>
+
+    export type DeleteAdminReadingPassageMutationError = ErrorType<ErrorEnvelope>
+    export type DeleteAdminReadingPassageMutationVariables = {passageId: number}
+
+    /**
+ * @summary 저장된 읽기 지문 삭제
+ */
+export const useDeleteAdminReadingPassage = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReadingPassage>>, TError,DeleteAdminReadingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminReadingPassage>>,
+        TError,
+        DeleteAdminReadingPassageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAdminReadingPassageMutationOptions(options));
     }
 
 export const getCheckReadingObjectiveAnswerUrl = (passageId: number,) => {

@@ -94,6 +94,68 @@ export const SaveReadingPassageResponse = zod.object({
 
 
 /**
+ * @summary 저장된 읽기 지문 수정
+ */
+
+
+
+export const UpdateAdminReadingPassageParams = zod.object({
+  "passageId": zod.coerce.number().int().min(1)
+})
+
+export const updateAdminReadingPassageBodyTitleMax = 160;
+
+export const updateAdminReadingPassageBodyPassageMin = 30;
+export const updateAdminReadingPassageBodyPassageMax = 3000;
+
+
+export const updateAdminReadingPassageBodyQuestionsItemOptionsMax = 0;
+
+
+
+
+export const UpdateAdminReadingPassageBody = zod.object({
+  "title": zod.string().min(1).max(updateAdminReadingPassageBodyTitleMax),
+  "passage": zod.string().min(updateAdminReadingPassageBodyPassageMin).max(updateAdminReadingPassageBodyPassageMax),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false']),
+  "prompt": zod.string().min(1),
+  "options": zod.array(zod.string()).max(updateAdminReadingPassageBodyQuestionsItemOptionsMax),
+  "answer": zod.enum(['true', 'false']),
+  "explanationNote": zod.string().optional()
+})).min(1).optional()
+})
+
+export const UpdateAdminReadingPassageResponse = zod.object({
+  "id": zod.number().int(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "passage": zod.string(),
+  "questions": zod.array(zod.object({
+  "type": zod.enum(['true_false', 'multiple_choice', 'short_answer']),
+  "prompt": zod.string(),
+  "options": zod.array(zod.string()),
+  "answer": zod.string(),
+  "explanationNote": zod.string().optional()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary 저장된 읽기 지문 삭제
+ */
+
+
+
+export const DeleteAdminReadingPassageParams = zod.object({
+  "passageId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteAdminReadingPassageResponse = zod.void()
+
+
+/**
  * @summary 저장된 정답으로 O/X 채점
  */
 export const CheckReadingObjectiveAnswerParams = zod.object({

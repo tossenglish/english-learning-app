@@ -129,6 +129,21 @@ export interface SaveReadingPassageInput {
   questions: TrueFalseReadingQuestionInput[];
 }
 
+export interface ReadingPassageUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 30
+     * @maxLength 3000
+     */
+  passage: string;
+  /** @minItems 1 */
+  questions?: TrueFalseReadingQuestionInput[];
+}
+
 export interface HealthStatus {
   status: string;
 }

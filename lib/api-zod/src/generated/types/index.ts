@@ -46,6 +46,7 @@ export * from './memberPasswordUpdate';
 export * from './readingAnswerResult';
 export * from './readingExplanationResult';
 export * from './readingPassage';
+export * from './readingPassageUpdate';
 export * from './readingQuestion';
 export * from './readingQuestionType';
 export * from './saveReadingPassageInput';

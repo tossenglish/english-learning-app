@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/react';
-import { BookOpenCheck, Check, LoaderCircle, Plus, Trash2 } from 'lucide-react';
+import { BookOpenCheck, Check, LoaderCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  useDeleteAdminReadingPassage,
+  useUpdateAdminReadingPassage,
+} from '@workspace/api-client-react';
 import { apiFetch } from '@/lib/api-fetch';
 
 type QuestionType = 'true_false';
-type Question = { type: 'true_false'; prompt: string; options: string[]; answer: string; explanationNote?: string };
+type Question = { type: 'true_false'; prompt: string; options: string[]; answer: 'true' | 'false'; explanationNote?: string };
 type StoredQuestion = { type: 'true_false' | 'multiple_choice' | 'short_answer'; prompt: string; options: string[]; answer: string; explanationNote?: string };
 type StudentQuestion = Pick<Question, 'type' | 'prompt' | 'options'>;
 type Passage = { id: number; grade: number; title: string; passage: string; questions: StudentQuestion[]; createdAt: string };
@@ -92,16 +96,32 @@ async function responseError(response: Response) {
   return genericError;
 }
 
+function adminMutationError(error: unknown, fallback: string) {
+  if (isRecord(error) && isRecord(error.data) && typeof error.data.error === 'string') {
+    return error.data.error;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function AdminReadingBuilder() {
   const [title, setTitle] = useState('');
   const [passage, setPassage] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [saved, setSaved] = useState<AdminPassage[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [savedLoading, setSavedLoading] = useState(true);
   const [savedError, setSavedError] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const updatePassageMutation = useUpdateAdminReadingPassage({
+    request: { credentials: 'include' },
+  });
+  const deletePassageMutation = useDeleteAdminReadingPassage({
+    request: { credentials: 'include' },
+  });
+
   const loadSaved = async () => {
     setSavedLoading(true);
     setSavedError('');
@@ -118,35 +138,101 @@ export function AdminReadingBuilder() {
     }
   };
   useEffect(() => { void loadSaved(); }, []);
+
+  const resetEditor = () => {
+    setEditingId(null);
+    setTitle('');
+    setPassage('');
+    setQuestions([]);
+    setMessage('');
+    setError('');
+  };
+
+  const editSavedPassage = (item: AdminPassage) => {
+    const editableQuestions = item.questions
+      .filter((question): question is Question => question.type === 'true_false')
+      .map((question) => ({ ...question, options: [...question.options] }));
+    const preservedCount = item.questions.length - editableQuestions.length;
+    setEditingId(item.id);
+    setTitle(item.title);
+    setPassage(item.passage);
+    setQuestions(editableQuestions);
+    setError('');
+    setMessage(preservedCount > 0
+      ? `편집 중입니다. 기존 O/X 외 문제 ${preservedCount}개는 저장해도 그대로 보존됩니다.`
+      : '저장된 지문을 편집 중입니다.');
+  };
+
   const updateQuestion = (index: number, updates: Partial<Question>) =>
     setQuestions((current) => current.map((q, i) => i === index ? { ...q, ...updates } : q));
+
   const save = async () => {
     setBusy(true); setError(''); setMessage('');
     try {
+      if (editingId !== null) {
+        const data = await updatePassageMutation.mutateAsync({
+          passageId: editingId,
+          data: {
+            title: title.trim(),
+            passage: passage.trim(),
+            ...(questions.length > 0 ? { questions } : {}),
+          },
+        });
+        setSaved((items) => items.map((item) => item.id === data.id ? data : item));
+        resetEditor();
+        setMessage('읽기 지문을 수정했습니다.');
+        return;
+      }
+
       const r = await apiFetch('/api/admin/reading/passages', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ grade: 6, title, passage, questions }),
       });
       const data = await r.json().catch(() => null) as AdminPassage | { error?: string } | null;
       if (!r.ok || !data || !('id' in data)) throw new Error((data as { error?: string } | null)?.error ?? '저장하지 못했습니다.');
-      setSaved((items) => [data, ...items]); setTitle(''); setPassage(''); setQuestions([]);
+      setSaved((items) => [data, ...items]); resetEditor();
       setMessage('저장했습니다. 학생 화면에 표시됩니다.');
     } catch (e) { setError(e instanceof Error ? e.message : '저장하지 못했습니다.'); }
     finally { setBusy(false); }
   };
+
+  const deleteSavedPassage = async (item: AdminPassage) => {
+    if (!window.confirm(`“${item.title}” 지문을 삭제할까요? 학생 화면에서도 더 이상 표시되지 않습니다.`)) return;
+    setDeletingId(item.id);
+    setError('');
+    setMessage('');
+    try {
+      await deletePassageMutation.mutateAsync({ passageId: item.id });
+      setSaved((items) => items.filter((savedItem) => savedItem.id !== item.id));
+      if (editingId === item.id) resetEditor();
+      setMessage('읽기 지문을 삭제했습니다.');
+    } catch (deleteError) {
+      setError(adminMutationError(deleteError, '읽기 지문을 삭제하지 못했습니다.'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return <section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 sm:p-7" data-testid="reading-admin-builder">
     <div className="flex items-start gap-3"><span className="rounded-xl bg-[hsl(var(--accent)/.12)] p-2 text-[hsl(var(--accent))]"><BookOpenCheck size={20} /></span><div><h2 className="text-xl font-bold">읽기 이해 · 6학년</h2><p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">지문과 문제를 직접 작성하세요. 해설 메모는 학생에게 보이지 않습니다.</p></div></div>
-    <label className="mt-5 block text-sm font-semibold">지문 제목<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} className="mt-1.5 w-full rounded-xl border p-3" /></label>
-    <label className="mt-3 block text-sm font-semibold">영어 지문<textarea value={passage} onChange={(e) => setPassage(e.target.value)} rows={5} maxLength={3000} className="mt-1.5 w-full rounded-xl border p-3 leading-relaxed" placeholder="3~5개의 짧은 영어 문장을 입력하세요." /></label>
-    <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setQuestions((items) => [...items, emptyQuestion()])} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-bold"><Plus size={15} />O/X 문제 추가</button></div>
+    <label className="mt-5 block text-sm font-semibold">지문 제목<input data-testid="input-reading-passage-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} className="mt-1.5 w-full rounded-xl border p-3" /></label>
+    <label className="mt-3 block text-sm font-semibold">영어 지문<textarea data-testid="input-reading-passage-text" value={passage} onChange={(e) => setPassage(e.target.value)} rows={5} maxLength={3000} className="mt-1.5 w-full rounded-xl border p-3 leading-relaxed" placeholder="3~5개의 짧은 영어 문장을 입력하세요." /></label>
+    <div className="mt-4 flex flex-wrap gap-2"><button type="button" data-testid="button-add-reading-question" onClick={() => setQuestions((items) => [...items, emptyQuestion()])} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-bold"><Plus size={15} />O/X 문제 추가</button></div>
     {questions.map((q, i) => <article key={i} className="mt-4 rounded-2xl border p-4">
-      <header className="flex items-center justify-between"><h3 className="font-bold">{i + 1}. {labels[q.type]}</h3><button type="button" aria-label="문제 삭제" onClick={() => setQuestions((items) => items.filter((_, j) => j !== i))} className="rounded-lg p-2 text-rose-600"><Trash2 size={17} /></button></header>
-      <label className="mt-2 block text-xs font-semibold">질문<input value={q.prompt} onChange={(e) => updateQuestion(i, { prompt: e.target.value })} className="mt-1 w-full rounded-lg border p-2.5 text-sm" /></label>
-      <label className="mt-2 block text-xs font-semibold">정답<select value={q.answer} onChange={(e) => updateQuestion(i, { answer: e.target.value })} className="mt-1 block rounded-lg border p-2.5"><option value="true">O / 맞음</option><option value="false">X / 틀림</option></select></label>
-      <label className="mt-2 block text-xs font-semibold">해설 메모 (선택)<textarea value={q.explanationNote ?? ''} onChange={(e) => updateQuestion(i, { explanationNote: e.target.value })} rows={2} maxLength={1000} className="mt-1 w-full rounded-lg border p-2.5 text-sm" placeholder="정답 근거나 설명 방향을 적어 주세요." /></label>
+      <header className="flex items-center justify-between"><h3 className="font-bold">{i + 1}. {labels[q.type]}</h3><button type="button" aria-label="문제 삭제" data-testid={`button-remove-reading-question-${i}`} disabled={editingId !== null && questions.length === 1} title={editingId !== null && questions.length === 1 ? 'O/X 문제는 최소 1개가 필요합니다.' : undefined} onClick={() => setQuestions((items) => items.filter((_, j) => j !== i))} className="rounded-lg p-2 text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 size={17} /></button></header>
+      <label className="mt-2 block text-xs font-semibold">질문<input data-testid={`input-reading-question-${i}`} value={q.prompt} onChange={(e) => updateQuestion(i, { prompt: e.target.value })} className="mt-1 w-full rounded-lg border p-2.5 text-sm" /></label>
+      <label className="mt-2 block text-xs font-semibold">정답<select data-testid={`select-reading-answer-${i}`} value={q.answer} onChange={(e) => updateQuestion(i, { answer: e.target.value as Question['answer'] })} className="mt-1 block rounded-lg border p-2.5"><option value="true">O / 맞음</option><option value="false">X / 틀림</option></select></label>
+      <label className="mt-2 block text-xs font-semibold">해설 메모 (선택)<textarea data-testid={`input-reading-explanation-note-${i}`} value={q.explanationNote ?? ''} onChange={(e) => updateQuestion(i, { explanationNote: e.target.value })} rows={2} maxLength={1000} className="mt-1 w-full rounded-lg border p-2.5 text-sm" placeholder="정답 근거나 설명 방향을 적어 주세요." /></label>
     </article>)}
-    {questions.length > 0 && <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />} 저장</button>}
-    {message && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm">{message}</p>}{error && <p role="alert" className="mt-3 text-sm font-bold text-rose-600">{error}</p>}
+    {editingId !== null && questions.length === 0 && <p className="mt-3 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">현재 편집 가능한 O/X 문제가 없습니다. 지문과 제목을 수정해도 기존 문제는 그대로 보존됩니다.</p>}
+    {(questions.length > 0 || editingId !== null) && <div className="mt-4 flex flex-wrap gap-2">
+      <button type="button" data-testid="button-save-reading-passage" onClick={() => void save()} disabled={busy || updatePassageMutation.isPending || !title.trim() || !passage.trim() || (editingId === null && questions.length === 0)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50">
+        {busy || updatePassageMutation.isPending ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />}
+        {editingId === null ? '저장' : '변경 저장'}
+      </button>
+      {editingId !== null && <button type="button" data-testid="button-cancel-reading-passage-edit" onClick={resetEditor} disabled={busy || updatePassageMutation.isPending} className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 font-bold disabled:opacity-50"><X size={16} />취소</button>}
+    </div>}
+    {message && <p role="status" data-testid="status-reading-passage-message" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm">{message}</p>}{error && <p role="alert" data-testid="status-reading-passage-error" className="mt-3 text-sm font-bold text-rose-600">{error}</p>}
     <div className="mt-6 border-t pt-4">
       <h3 className="font-bold">저장된 지문 ({saved.length})</h3>
       {savedLoading && <p role="status" className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">저장된 지문을 불러오는 중이에요…</p>}
@@ -155,7 +241,15 @@ export function AdminReadingBuilder() {
         <button type="button" onClick={() => void loadSaved()} className="mt-2 font-bold underline">다시 불러오기</button>
       </div>}
       {!savedLoading && !savedError && saved.length === 0 && <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">저장된 지문이 없습니다.</p>}
-      {saved.map((item) => <div key={item.id} className="mt-2 rounded-xl bg-[hsl(var(--muted)/.4)] p-3 text-sm"><b>{item.title}</b><p className="mt-1 line-clamp-2 text-xs">{item.passage}</p></div>)}
+      {saved.map((item) => <div key={item.id} data-testid={`card-saved-reading-passage-${item.id}`} className="mt-2 flex flex-col gap-3 rounded-xl bg-[hsl(var(--muted)/.4)] p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0"><b>{item.title}</b><p className="mt-1 line-clamp-2 text-xs">{item.passage}</p></div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" data-testid={`button-edit-reading-passage-${item.id}`} aria-label={`${item.title} 편집`} onClick={() => editSavedPassage(item)} disabled={busy || updatePassageMutation.isPending || deletingId !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold disabled:opacity-50"><Pencil size={14} />편집</button>
+          <button type="button" data-testid={`button-delete-reading-passage-${item.id}`} aria-label={`${item.title} 삭제`} onClick={() => void deleteSavedPassage(item)} disabled={busy || updatePassageMutation.isPending || deletingId !== null} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-300 px-3 text-xs font-bold text-rose-700 disabled:opacity-50">
+            {deletingId === item.id ? <LoaderCircle className="animate-spin" size={14} /> : <Trash2 size={14} />}삭제
+          </button>
+        </div>
+      </div>)}
     </div>
   </section>;
 }

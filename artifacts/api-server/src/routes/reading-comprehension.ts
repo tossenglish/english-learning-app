@@ -2,6 +2,7 @@ import {
   CheckReadingObjectiveAnswerBody,
   CheckReadingObjectiveAnswerParams,
   CheckReadingObjectiveAnswerResponse,
+  DeleteAdminReadingPassageParams,
   ExplainReadingAnswerBody,
   ExplainReadingAnswerParams,
   ExplainReadingAnswerResponse,
@@ -10,6 +11,9 @@ import {
   ListReadingPassagesResponse,
   SaveReadingPassageBody,
   SaveReadingPassageResponse,
+  UpdateAdminReadingPassageBody,
+  UpdateAdminReadingPassageParams,
+  UpdateAdminReadingPassageResponse,
 } from "@workspace/api-zod";
 import {
   db,
@@ -201,6 +205,76 @@ router.post("/admin/reading/passages", async (req: Request, res: Response): Prom
     })),
   }).returning();
   res.status(201).json(SaveReadingPassageResponse.parse(saved));
+});
+
+router.patch("/admin/reading/passages/:passageId", async (req: Request, res: Response): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const params = UpdateAdminReadingPassageParams.safeParse(req.params);
+  const parsed = UpdateAdminReadingPassageBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({ error: "수정할 제목, 지문, O/X 문제를 확인해 주세요." });
+    return;
+  }
+
+  const title = parsed.data.title.trim();
+  const passageText = parsed.data.passage.trim();
+  if (
+    !title
+    || !validPassage(passageText)
+    || (parsed.data.questions !== undefined && !validQuestions(parsed.data.questions))
+  ) {
+    res.status(400).json({ error: "제목과 지문을 확인하고, 지문은 3~5문장으로 작성해 주세요." });
+    return;
+  }
+
+  const [existing] = await db.select().from(readingPassagesTable)
+    .where(eq(readingPassagesTable.id, params.data.passageId));
+  if (!existing) {
+    res.status(404).json({ error: "읽기 지문을 찾을 수 없습니다." });
+    return;
+  }
+
+  const updatedQuestions = parsed.data.questions
+    ? [
+      ...parsed.data.questions.map((question) => ({
+        ...question,
+        explanationNote: question.explanationNote?.trim() || undefined,
+      })),
+      ...existing.questions.filter((question) => question.type !== "true_false"),
+    ]
+    : existing.questions;
+  const [updated] = await db.update(readingPassagesTable)
+    .set({
+      title,
+      passage: passageText,
+      questions: updatedQuestions,
+    })
+    .where(eq(readingPassagesTable.id, params.data.passageId))
+    .returning();
+
+  if (!updated) {
+    res.status(404).json({ error: "읽기 지문을 찾을 수 없습니다." });
+    return;
+  }
+  res.json(UpdateAdminReadingPassageResponse.parse(updated));
+});
+
+router.delete("/admin/reading/passages/:passageId", async (req: Request, res: Response): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const params = DeleteAdminReadingPassageParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "삭제할 읽기 지문을 확인해 주세요." });
+    return;
+  }
+
+  const [deleted] = await db.delete(readingPassagesTable)
+    .where(eq(readingPassagesTable.id, params.data.passageId))
+    .returning({ id: readingPassagesTable.id });
+  if (!deleted) {
+    res.status(404).json({ error: "읽기 지문을 찾을 수 없습니다." });
+    return;
+  }
+  res.sendStatus(204);
 });
 
 router.post("/reading/passages/:passageId/objective-answer", async (req: Request, res: Response): Promise<void> => {
