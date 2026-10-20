@@ -28,6 +28,8 @@ import {
   UpdateMemberClassBody,
   UpdateMemberClassParams,
   UpdateMemberClassResponse,
+  UpdateAdminMemberPasswordBody,
+  UpdateAdminMemberPasswordParams,
 } from "@workspace/api-zod";
 import { clerkClient } from "@clerk/express";
 import {
@@ -529,6 +531,73 @@ router.post(
           : "계정을 만들지 못했습니다. 이메일 주소와 Clerk 계정 설정을 확인해 주세요.",
       });
     }
+  },
+);
+
+router.patch(
+  "/admin/members/:memberId/password",
+  async (req: Request, res: Response): Promise<void> => {
+    if (!(await requireAdmin(req, res))) return;
+
+    const params = UpdateAdminMemberPasswordParams.safeParse(req.params);
+    const body = UpdateAdminMemberPasswordBody.safeParse(req.body);
+    if (!params.success || !body.success) {
+      res.status(400).json({ error: "비밀번호는 8자 이상이어야 합니다." });
+      return;
+    }
+
+    const { memberId } = params.data;
+    let target;
+    try {
+      target = await clerkClient.users.getUser(memberId);
+    } catch (lookupError) {
+      const status = (lookupError as { status?: unknown })?.status;
+      if (status === 404) {
+        res.status(404).json({ error: "회원 계정을 찾을 수 없습니다." });
+        return;
+      }
+      req.log.error({ memberId, status }, "Failed to load member before password update");
+      res.status(502).json({ error: "회원 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+      return;
+    }
+
+    if (isAdminUser(target)) {
+      res.status(403).json({ error: "관리자 계정의 비밀번호는 회원 관리에서 변경할 수 없습니다." });
+      return;
+    }
+
+    try {
+      await clerkClient.users.updateUser(memberId, { password: body.data.password });
+    } catch (updateError) {
+      const clerkErrors = (updateError as {
+        errors?: Array<{ code?: unknown }>;
+        status?: unknown;
+      })?.errors;
+      const clerkCode = typeof clerkErrors?.[0]?.code === "string"
+        ? clerkErrors[0].code
+        : "";
+      const status = (updateError as { status?: unknown })?.status;
+
+      if (clerkCode.toLowerCase().includes("password")) {
+        req.log.warn({ memberId, clerkCode }, "Clerk rejected member password update");
+        res.status(400).json({
+          error: "Clerk의 보안 기준에 맞지 않는 비밀번호입니다. 다른 8자 이상 비밀번호를 입력해 주세요.",
+        });
+        return;
+      }
+      if (status === 404) {
+        res.status(404).json({ error: "회원 계정을 찾을 수 없습니다." });
+        return;
+      }
+
+      req.log.error({ memberId, clerkCode, status }, "Failed to update member password in Clerk");
+      res.status(502).json({
+        error: "회원 비밀번호를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      });
+      return;
+    }
+
+    res.sendStatus(204);
   },
 );
 

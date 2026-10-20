@@ -473,6 +473,11 @@ export interface AssignmentMember {
   classId: number | null;
 }
 
+export interface MemberPasswordUpdate {
+  /** @minLength 8 */
+  password: string;
+}
+
 export interface MemberClass {
   id: number;
   courseLevel: CourseLevel;

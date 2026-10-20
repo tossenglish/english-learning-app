@@ -22,6 +22,7 @@ import {
   Layers3,
   Library,
   LoaderCircle,
+  KeyRound,
   Plus,
   Trash2,
   Upload,
@@ -237,6 +238,12 @@ export default function AdminAssignments() {
   const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
   const [memberDeleteError, setMemberDeleteError] = useState('');
   const [memberDeleteNotice, setMemberDeleteNotice] = useState('');
+  const [passwordMemberId, setPasswordMemberId] = useState<string | null>(null);
+  const [memberPassword, setMemberPassword] = useState('');
+  const [memberPasswordConfirm, setMemberPasswordConfirm] = useState('');
+  const [passwordSavingMemberId, setPasswordSavingMemberId] = useState<string | null>(null);
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [passwordChangeNotice, setPasswordChangeNotice] = useState<{ memberId: string; message: string } | null>(null);
   const [learningContents, setLearningContents] = useState<LearningContent[]>([]);
   const [libraryHomeContentSelected, setLibraryHomeContentSelected] = useState(false);
   const [level, setLevel] = useState<LearningLevel>('Intermediate');
@@ -670,6 +677,52 @@ export default function AdminAssignments() {
       setMemberDeleteError(deleteError instanceof Error ? deleteError.message : '회원 계정 삭제 오류');
     } finally {
       setDeletingMemberId(null);
+    }
+  };
+
+  const changeMemberPassword = async (
+    event: React.FormEvent,
+    member: AssignmentMember,
+  ) => {
+    event.preventDefault();
+    if (passwordSavingMemberId) return;
+    if (memberPassword.length < 8) {
+      setPasswordChangeError('비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+    if (memberPassword !== memberPasswordConfirm) {
+      setPasswordChangeError('비밀번호 확인이 일치하지 않습니다.');
+      return;
+    }
+
+    setPasswordSavingMemberId(member.id);
+    setPasswordChangeError('');
+    setPasswordChangeNotice(null);
+    try {
+      const response = await apiFetch(`/api/admin/members/${encodeURIComponent(member.id)}/password`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: memberPassword }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || '회원 비밀번호를 변경하지 못했습니다.');
+      }
+
+      setPasswordMemberId(null);
+      setMemberPassword('');
+      setMemberPasswordConfirm('');
+      setPasswordChangeNotice({
+        memberId: member.id,
+        message: `${member.displayName} 회원의 비밀번호를 변경했습니다.`,
+      });
+    } catch (changeError) {
+      setPasswordChangeError(changeError instanceof Error
+        ? changeError.message
+        : '회원 비밀번호를 변경하지 못했습니다.');
+    } finally {
+      setPasswordSavingMemberId(null);
     }
   };
 
@@ -1392,58 +1445,159 @@ export default function AdminAssignments() {
         ) : (
           <div className="mt-5 divide-y divide-[hsl(var(--border))] rounded-2xl border border-[hsl(var(--border))]">
             {members.map((member) => (
-              <div key={member.id} className="flex min-h-[124px] flex-col justify-center gap-3 p-4 sm:min-h-[72px] sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">{member.displayName}</p>
-                  {member.email && <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{member.email}</p>}
-                </div>
-                <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-                  <label className="flex items-center gap-3">
-                    <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">학습 과정</span>
-                    <select
-                      aria-label={`${member.displayName} 학습 과정`}
-                      value={member.course ?? ''}
-                      disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id}
-                      onChange={(event) => {
-                        const selectedCourse = event.target.value as AssignmentMember['course'] | '';
-                        void updateMemberCourse(member.id, selectedCourse || null);
-                      }}
-                      className="min-w-32 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
-                    >
-                      <option value="">과정 미배정</option>
-                      {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                    {member.course && (
+              <div key={member.id} className="p-4">
+                <div className="flex min-h-[124px] flex-col justify-center gap-3 sm:min-h-[72px] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold">{member.displayName}</p>
+                    {member.email && <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{member.email}</p>}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 sm:justify-end">
+                    <label className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">학습 과정</span>
                       <select
-                        aria-label={`${member.displayName} 반 폴더`}
-                        value={member.classId ?? ''}
-                        disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id}
-                        onChange={(event) => void updateMemberClass(member.id, event.target.value ? Number(event.target.value) : null)}
-                        className="min-w-36 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                        aria-label={`${member.displayName} 학습 과정`}
+                        value={member.course ?? ''}
+                        disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id || passwordSavingMemberId === member.id}
+                        onChange={(event) => {
+                          const selectedCourse = event.target.value as AssignmentMember['course'] | '';
+                          void updateMemberCourse(member.id, selectedCourse || null);
+                        }}
+                        className="min-w-32 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
                       >
-                        <option value="">반 미배정</option>
-                        {memberClasses.filter((item) => item.courseLevel === member.course).map((item) => (
-                          <option key={item.id} value={item.id}>{getMemberClassPath(item.id)}</option>
+                        <option value="">과정 미배정</option>
+                        {courseOptions.filter(({ value }) => value !== 'All').map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
                         ))}
                       </select>
-                    )}
-                    {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
-                  </label>
-                  <button
-                    type="button"
-                    aria-label={`${member.email ?? member.displayName} 계정 삭제`}
-                    title="회원 계정 삭제"
-                    disabled={deletingMemberId !== null || updatingMemberIds.includes(member.id)}
-                    onClick={() => void deleteMember(member)}
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--destructive)/.3)] text-[hsl(var(--destructive))] transition hover:bg-[hsl(var(--destructive)/.1)] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {deletingMemberId === member.id
-                      ? <LoaderCircle size={16} className="animate-spin" />
-                      : <Trash2 size={16} />}
-                  </button>
+                      {member.course && (
+                        <select
+                          aria-label={`${member.displayName} 반 폴더`}
+                          value={member.classId ?? ''}
+                          disabled={updatingMemberIds.includes(member.id) || deletingMemberId === member.id || passwordSavingMemberId === member.id}
+                          onChange={(event) => void updateMemberClass(member.id, event.target.value ? Number(event.target.value) : null)}
+                          className="min-w-36 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-semibold outline-none focus:border-[hsl(var(--accent))] disabled:opacity-50"
+                        >
+                          <option value="">반 미배정</option>
+                          {memberClasses.filter((item) => item.courseLevel === member.course).map((item) => (
+                            <option key={item.id} value={item.id}>{getMemberClassPath(item.id)}</option>
+                          ))}
+                        </select>
+                      )}
+                      {updatingMemberIds.includes(member.id) && <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={16} />}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-expanded={passwordMemberId === member.id}
+                        aria-label={`${member.email ?? member.displayName} 비밀번호 변경`}
+                        disabled={deletingMemberId !== null || updatingMemberIds.includes(member.id) || passwordSavingMemberId !== null}
+                        onClick={() => {
+                          const opening = passwordMemberId !== member.id;
+                          setPasswordMemberId(opening ? member.id : null);
+                          setMemberPassword('');
+                          setMemberPasswordConfirm('');
+                          setPasswordChangeError('');
+                          setPasswordChangeNotice(null);
+                        }}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[hsl(var(--border))] px-3 text-xs font-bold text-[hsl(var(--foreground))] transition hover:bg-[hsl(var(--muted)/.6)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <KeyRound size={15} /> 비밀번호 변경
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${member.email ?? member.displayName} 계정 삭제`}
+                        title="회원 계정 삭제"
+                        disabled={deletingMemberId !== null || updatingMemberIds.includes(member.id) || passwordSavingMemberId === member.id}
+                        onClick={() => void deleteMember(member)}
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[hsl(var(--destructive)/.3)] text-[hsl(var(--destructive))] transition hover:bg-[hsl(var(--destructive)/.1)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingMemberId === member.id
+                          ? <LoaderCircle size={16} className="animate-spin" />
+                          : <Trash2 size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+                {passwordMemberId === member.id && (
+                  <form
+                    onSubmit={(event) => void changeMemberPassword(event, member)}
+                    className="mt-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/.65)] p-4"
+                  >
+                    <div className="mb-3">
+                      <h4 className="text-sm font-bold">{member.displayName} 회원 비밀번호 변경</h4>
+                      <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                        새 비밀번호는 8자 이상이어야 하며 Clerk 보안 기준을 통과해야 합니다.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-xs font-semibold">
+                        새 비밀번호
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          autoComplete="new-password"
+                          value={memberPassword}
+                          onChange={(event) => setMemberPassword(event.target.value)}
+                          data-testid={`input-member-password-${member.id}`}
+                          className="mt-1.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]"
+                        />
+                      </label>
+                      <label className="block text-xs font-semibold">
+                        새 비밀번호 확인
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          autoComplete="new-password"
+                          value={memberPasswordConfirm}
+                          onChange={(event) => setMemberPasswordConfirm(event.target.value)}
+                          data-testid={`input-member-password-confirm-${member.id}`}
+                          className="mt-1.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm font-normal outline-none focus:border-[hsl(var(--accent))]"
+                        />
+                      </label>
+                    </div>
+                    {passwordChangeError && <p role="alert" className="mt-3 text-sm font-semibold text-[hsl(var(--destructive))]">{passwordChangeError}</p>}
+                    {memberPasswordConfirm && memberPassword !== memberPasswordConfirm && (
+                      <p role="status" className="mt-3 text-xs font-semibold text-[hsl(var(--destructive))]">비밀번호 확인이 일치하지 않습니다.</p>
+                    )}
+                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={passwordSavingMemberId === member.id}
+                        onClick={() => {
+                          setPasswordMemberId(null);
+                          setMemberPassword('');
+                          setMemberPasswordConfirm('');
+                          setPasswordChangeError('');
+                        }}
+                        className="rounded-xl border border-[hsl(var(--border))] px-4 py-2.5 text-xs font-bold disabled:opacity-50"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={
+                          passwordSavingMemberId === member.id
+                          || memberPassword.length < 8
+                          || memberPassword !== memberPasswordConfirm
+                        }
+                        data-testid={`button-save-member-password-${member.id}`}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-xs font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {passwordSavingMemberId === member.id
+                          ? <LoaderCircle size={14} className="animate-spin" />
+                          : <KeyRound size={14} />}
+                        비밀번호 저장
+                      </button>
+                    </div>
+                  </form>
+                )}
+                {passwordChangeNotice?.memberId === member.id && (
+                  <p role="status" className="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                    {passwordChangeNotice.message}
+                  </p>
+                )}
               </div>
             ))}
           </div>

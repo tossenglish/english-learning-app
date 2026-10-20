@@ -42,6 +42,7 @@ export * from './memberClassAssignmentInput';
 export * from './memberClassInput';
 export * from './memberCourseAssignment';
 export * from './memberCourseInput';
+export * from './memberPasswordUpdate';
 export * from './readingAnswerResult';
 export * from './readingExplanationResult';
 export * from './readingPassage';

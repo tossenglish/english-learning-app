@@ -465,6 +465,27 @@ export const ListAdminMembersResponse = zod.array(ListAdminMembersResponseItem)
 
 
 /**
+ * @summary 관리자 회원 비밀번호 변경
+ */
+
+
+
+export const UpdateAdminMemberPasswordParams = zod.object({
+  "memberId": zod.coerce.string().min(1)
+})
+
+export const updateAdminMemberPasswordBodyPasswordMin = 8;
+
+
+
+export const UpdateAdminMemberPasswordBody = zod.object({
+  "password": zod.string().min(updateAdminMemberPasswordBodyPasswordMin)
+})
+
+export const UpdateAdminMemberPasswordResponse = zod.void()
+
+
+/**
  * @summary 과정별 반 폴더 목록
  */
 export const ListAdminMemberClassesResponseItem = zod.object({
