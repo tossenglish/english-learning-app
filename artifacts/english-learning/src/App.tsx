@@ -41,6 +41,7 @@ import ReadingComprehensionPractice from '@/components/reading-comprehension';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
+import { Layers as WordsIcon } from 'lucide-react';
 import PersianCatFriends from '@/components/persian-cat-friends';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
@@ -434,6 +435,7 @@ function Sidebar({ location }: { location: string }) {
         <nav className="space-y-1.5">
           <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
           <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
+          <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -460,6 +462,7 @@ function MobileNav({ location }: { location: string }) {
       {[
         { href: '/dashboard', label: '오늘', icon: HomeIcon },
         { href: '/reading', label: '읽기', icon: BookOpenCheck },
+        { href: '/words', label: '단어', icon: WordsIcon },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
       ].map(({ href, label, icon: Icon }) => (
@@ -724,6 +727,16 @@ function NotFound() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-[hsl(var(--background))] p-6 text-center"><div><p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-[hsl(var(--accent))]">404 / loop lost</p><h1 className="mt-4 text-4xl font-bold">이 페이지는 아직 없어요.</h1><Link href="/" data-testid="link-not-found-home" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[hsl(var(--accent))]">오늘로 돌아가기 <ArrowRight size={16} /></Link></div></div>;
 }
 
+function WordPracticePage() {
+  return (
+    <iframe
+      src={`${import.meta.env.BASE_URL}word-practice.html`}
+      title="단어 연습장"
+      className="h-[80vh] min-h-[560px] w-full rounded-[24px] border border-[hsl(var(--border))] bg-white"
+    />
+  );
+}
+
 function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFlipped, setCardFlipped, quizAnswer, setQuizAnswer, onMarkLearned, listening, onListen, onRemove, metrics, onPassageProgress, content, quizContent, quizPosition, quizTotal, hasNextQuizWord, onNextQuizWord }: {
               level: Level; onLevelChange: (level: Level) => void; learned: boolean; onStart: (assignment?: Assignment) => Promise<void>; isAdmin: boolean; cardFlipped: boolean; setCardFlipped: (flipped: boolean) => void; quizAnswer: string | null; setQuizAnswer: (answer: string) => void; onMarkLearned: () => void; listening: boolean; onListen: () => void; onRemove: () => void; metrics: LearningMetrics; onPassageProgress: (evaluation: PassageEvaluation) => void; content: LearnContent; quizContent: LearnContent; quizPosition: number; quizTotal: number; hasNextQuizWord: boolean; onNextQuizWord: () => void;
 }) {
@@ -732,6 +745,7 @@ function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFl
     <Route path="/learn"><Learn level={level} onLevelChange={onLevelChange} cardFlipped={cardFlipped} setCardFlipped={setCardFlipped} quizAnswer={quizAnswer} setQuizAnswer={setQuizAnswer} learned={learned} onMarkLearned={onMarkLearned} listening={listening} onListen={onListen} content={quizContent} quizPosition={quizPosition} quizTotal={quizTotal} hasNextWord={hasNextQuizWord} onNextWord={onNextQuizWord} /></Route>
     <Route path="/passage"><PassagePractice onProgressChange={onPassageProgress} /></Route>
     <Route path="/reading"><ReadingComprehensionPractice /></Route>
+    <Route path="/words"><WordPracticePage /></Route>
     <Route path="/vocabulary"><Vocabulary learned={learned} onRemove={onRemove} content={content} /></Route>
     <Route path="/progress"><Progress learned={learned} /></Route>
     <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>
