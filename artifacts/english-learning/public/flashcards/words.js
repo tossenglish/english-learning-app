@@ -1,374 +1,366 @@
 window.FC_SETS = [
   {
-    "id": "unit1",
-    "title": "Unit 09. A Forced Exile",
-    "words": [
-      {
-        "en": "homeland",
-        "ko": "고국, 조국"
-      },
-      {
-        "en": "community",
-        "ko": "공동체, 사회"
-      },
-      {
-        "en": "neighboring",
-        "ko": "이웃하는, 인접한"
-      },
-      {
-        "en": "state",
-        "ko": "국가, 주"
-      },
-      {
-        "en": "descent",
-        "ko": "혈통, 가계"
-      },
-      {
-        "en": "ancestor",
-        "ko": "조상, 선조"
-      },
-      {
-        "en": "century",
-        "ko": "세기, 100년"
-      },
-      {
-        "en": "tragedy",
-        "ko": "비극"
-      },
-      {
-        "en": "immigrant",
-        "ko": "이민자"
-      },
-      {
-        "en": "condition",
-        "ko": "상황, 환경, 조건"
-      },
-      {
-        "en": "government",
-        "ko": "정부"
-      },
-      {
-        "en": "spy",
-        "ko": "간첩, 스파이"
-      },
-      {
-        "en": "exile",
-        "ko": "추방, 망명"
-      },
-      {
-        "en": "goods train",
-        "ko": "화물 열차"
-      },
-      {
-        "en": "journey",
-        "ko": "여정, 긴 여행"
-      },
-      {
-        "en": "wilderness",
-        "ko": "황야, 황무지"
-      },
-      {
-        "en": "destination",
-        "ko": "목적지, 행선지"
-      },
-      {
-        "en": "passenger",
-        "ko": "승객"
-      },
-      {
-        "en": "wasteland",
-        "ko": "황무지, 불모지"
-      },
-      {
-        "en": "hunger",
-        "ko": "굶주림, 기아"
-      },
-      {
-        "en": "hardship",
-        "ko": "고난, 역경"
-      },
-      {
-        "en": "keep alive",
-        "ko": "~을 유지하다, 살려 두다"
-      },
-      {
-        "en": "have to",
-        "ko": "~해야만 한다"
-      },
-      {
-        "en": "in search of",
-        "ko": "~을 찾아서"
-      },
-      {
-        "en": "be satisfied with",
-        "ko": "~에 만족하다"
-      },
-      {
-        "en": "force to leave",
-        "ko": "~을 강제로 떠나게 만들다"
-      },
-      {
-        "en": "reach destination",
-        "ko": "목적지에 도달하다"
-      },
-      {
-        "en": "be abandoned",
-        "ko": "버려지다, 방치되다"
-      },
-      {
-        "en": "die of",
-        "ko": "~로 죽다"
-      },
-      {
-        "en": "manage to survive",
-        "ko": "간신히 살아남다, 어떻게든 생존하다"
-      }
-    ]
+    id: "unit1",
+    title: "Unit 10. The Treasures of Troy",
+    words: [
+      { en: "archaeologist", ko: "고고학자" },
+      { en: "fascinated", ko: "매료된, 마음을 빼앗긴" },
+      { en: "heroism", ko: "영웅적 행위, 영웅적 면모" },
+      { en: "adventure", ko: "모험" },
+      { en: "ancient", ko: "고대의" },
+      { en: "successful", ko: "성공적인" },
+      { en: "retire", ko: "은퇴하다" },
+      { en: "original", ko: "원래의, 독창적인" },
+      { en: "career", ko: "경력, 직업" },
+      { en: "fiction", ko: "허구, 소설" },
+      { en: "absurd", ko: "터무니없는, 불합리한" },
+      { en: "legend", ko: "전설" },
+      { en: "buried", ko: "묻힌, 매장된" },
+      { en: "description", ko: "묘사, 서술" },
+      { en: "modern-day", ko: "현대의, 오늘날의" },
+      { en: "excavation", ko: "발굴 (작업)" },
+      { en: "copper", ko: "구리, 동" },
+      { en: "treasure", ko: "보물" },
+      { en: "reality", ko: "현실, 실재" },
+      { en: "proof", ko: "증거, 증명" },
+      { en: "be born", ko: "태어나다" },
+      { en: "be set during", ko: "~을 배경으로 하다, ~ 기간에 벌어지다" },
+      { en: "look for", ko: "~을 찾다" },
+      { en: "instead of", ko: "~ 대신에" },
+      { en: "teach oneself", ko: "독학하다" },
+      { en: "waste one's time", ko: "시간을 낭비하다" },
+      { en: "based on", ko: "~에 근거하여, ~을 바탕으로" },
+      { en: "focus on", ko: "~에 집중하다, 초점을 맞추다" },
+      { en: "dig up", ko: "파내다, 발굴하다" },
+      { en: "be worth", ko: "~의 가치가 있다" },
+    ],
   },
   {
-    "id": "unit2",
-    "title": "워드마스터 중등실력 33-34",
-    "words": [
+    id: "unit2",
+    title: "워드마스터 중등실력 33-34",
+    words: [
+      { en: "efficiency", ko: "효율" },
+      { en: "battery", ko: "배터리" },
+      { en: "Venus", ko: "금성" },
+      { en: "satellite", ko: "위성" },
+      { en: "universe", ko: "우주" },
+      { en: "astronomer", ko: "천문학자" },
+      { en: "transform", ko: "바꾸다, 변형시키다" },
+      { en: "authorized", ko: "권한이 부여된" },
+      { en: "ring", ko: "고리, 반지" },
+      { en: "careless", ko: "부주의한" },
+      { en: "heat", ko: "열, 가열하다" },
+      { en: "galaxy", ko: "은하" },
+      { en: "dam", ko: "댐" },
+      { en: "coal", ko: "석탄" },
+      { en: "space station", ko: "우주 정거장" },
+      { en: "crisis", ko: "위기" },
+      { en: "wind", ko: "바람" },
+      { en: "conserve", ko: "보전하다, 아끼다, 절약하다" },
+      { en: "radioactive", ko: "방사능을 가진" },
       {
-        "en": "efficiency",
-        "ko": "효율"
+        en: "Big Bang",
+        ko: "빅뱅(우주 생성의 시발이 된 것으로 여겨지는 대폭발)",
       },
+      { en: "power", ko: "힘, 권력, 에너지" },
+      { en: "Jupiter", ko: "목성" },
+      { en: "be made up of", ko: "~로 구성되다, 이루어지다" },
+      { en: "abundant", ko: "풍부한, 풍족한" },
+      { en: "lunar", ko: "달의" },
+      { en: "utility pole", ko: "전신주" },
+      { en: "nuclear", ko: "원자핵의" },
+      { en: "eclipse", ko: "식(蝕)" },
+      { en: "Mercury", ko: "수성, 수은" },
+      { en: "comet", ko: "혜성" },
       {
-        "en": "battery",
-        "ko": "배터리"
+        en: "light year",
+        ko: "광년(빛이 1년에 나아가는 거리로 약 9조 4670억 킬로미터)",
       },
-      {
-        "en": "Venus",
-        "ko": "금성"
-      },
-      {
-        "en": "satellite",
-        "ko": "위성"
-      },
-      {
-        "en": "universe",
-        "ko": "우주"
-      },
-      {
-        "en": "astronomer",
-        "ko": "천문학자"
-      },
-      {
-        "en": "transform",
-        "ko": "바꾸다, 변형시키다"
-      },
-      {
-        "en": "authorized",
-        "ko": "권한이 부여된"
-      },
-      {
-        "en": "ring",
-        "ko": "고리, 반지"
-      },
-      {
-        "en": "careless",
-        "ko": "부주의한"
-      },
-      {
-        "en": "heat",
-        "ko": "열, 가열하다"
-      },
-      {
-        "en": "galaxy",
-        "ko": "은하"
-      },
-      {
-        "en": "dam",
-        "ko": "댐"
-      },
-      {
-        "en": "coal",
-        "ko": "석탄"
-      },
-      {
-        "en": "space station",
-        "ko": "우주 정거장"
-      },
-      {
-        "en": "crisis",
-        "ko": "위기"
-      },
-      {
-        "en": "wind",
-        "ko": "바람"
-      },
-      {
-        "en": "conserve",
-        "ko": "보전하다, 아끼다, 절약하다"
-      },
-      {
-        "en": "radioactive",
-        "ko": "방사능을 가진"
-      },
-      {
-        "en": "Big Bang",
-        "ko": "빅뱅(우주 생성의 시발이 된 것으로 여겨지는 대폭발)"
-      },
-      {
-        "en": "power",
-        "ko": "힘, 권력, 에너지"
-      },
-      {
-        "en": "Jupiter",
-        "ko": "목성"
-      },
-      {
-        "en": "be made up of",
-        "ko": "~로 구성되다, 이루어지다"
-      },
-      {
-        "en": "abundant",
-        "ko": "풍부한, 풍족한"
-      },
-      {
-        "en": "lunar",
-        "ko": "달의"
-      },
-      {
-        "en": "utility pole",
-        "ko": "전신주"
-      },
-      {
-        "en": "nuclear",
-        "ko": "원자핵의"
-      },
-      {
-        "en": "eclipse",
-        "ko": "식(蝕)"
-      },
-      {
-        "en": "Mercury",
-        "ko": "수성, 수은"
-      },
-      {
-        "en": "comet",
-        "ko": "혜성"
-      },
-      {
-        "en": "light year",
-        "ko": "광년(빛이 1년에 나아가는 거리로 약 9조 4670억 킬로미터)"
-      },
-      {
-        "en": "by chance",
-        "ko": "우연히, 뜻밖에"
-      },
-      {
-        "en": "Milky Way",
-        "ko": "은하수"
-      },
-      {
-        "en": "telescope",
-        "ko": "망원경"
-      },
-      {
-        "en": "solar",
-        "ko": "태양의"
-      },
-      {
-        "en": "crew",
-        "ko": "(비행기나 배의) 승무원"
-      },
-      {
-        "en": "solar collector",
-        "ko": "태양열 집열기"
-      },
-      {
-        "en": "astronomy",
-        "ko": "천문학"
-      },
-      {
-        "en": "produce",
-        "ko": "생산하다, 만들어 내다"
-      },
-      {
-        "en": "space shuttle",
-        "ko": "우주 왕복선"
-      },
-      {
-        "en": "Saturn",
-        "ko": "토성"
-      },
-      {
-        "en": "power line",
-        "ko": "송전선"
-      },
-      {
-        "en": "natural gas",
-        "ko": "천연가스"
-      },
-      {
-        "en": "turn into",
-        "ko": "~로 변하다, 바뀌다"
-      },
-      {
-        "en": "windmill",
-        "ko": "풍차"
-      },
-      {
-        "en": "transmission tower",
-        "ko": "송전탑"
-      },
-      {
-        "en": "generate",
-        "ko": "생성하다, 발생시키다"
-      },
-      {
-        "en": "far from",
-        "ko": "~에서 멀리, 전혀 ~이 아닌"
-      },
-      {
-        "en": "tidal",
-        "ko": "조수의"
-      },
-      {
-        "en": "factory",
-        "ko": "공장"
-      },
-      {
-        "en": "outer",
-        "ko": "외부의, 외곽의"
-      },
-      {
-        "en": "rocket",
-        "ko": "로켓, 로켓으로 쏘아 올리다"
-      },
-      {
-        "en": "consume",
-        "ko": "(특히 연료·에너지·시간을) 소모하다"
-      },
-      {
-        "en": "mine",
-        "ko": "광산, 지뢰, 채굴하다"
-      },
-      {
-        "en": "earth",
-        "ko": "지구"
-      },
-      {
-        "en": "surface",
-        "ko": "표면"
-      },
-      {
-        "en": "planet",
-        "ko": "행성"
-      },
-      {
-        "en": "and so on",
-        "ko": "(기타) 등등"
-      },
-      {
-        "en": "orbit",
-        "ko": "궤도, 궤도를 그리며 돌다"
-      },
-      {
-        "en": "Mars",
-        "ko": "화성"
-      }
-    ]
-  }
+      { en: "by chance", ko: "우연히, 뜻밖에" },
+      { en: "Milky Way", ko: "은하수" },
+      { en: "telescope", ko: "망원경" },
+      { en: "solar", ko: "태양의" },
+      { en: "crew", ko: "(비행기나 배의) 승무원" },
+      { en: "solar collector", ko: "태양열 집열기" },
+      { en: "astronomy", ko: "천문학" },
+      { en: "produce", ko: "생산하다, 만들어 내다" },
+      { en: "space shuttle", ko: "우주 왕복선" },
+      { en: "Saturn", ko: "토성" },
+      { en: "power line", ko: "송전선" },
+      { en: "natural gas", ko: "천연가스" },
+      { en: "turn into", ko: "~로 변하다, 바뀌다" },
+      { en: "windmill", ko: "풍차" },
+      { en: "transmission tower", ko: "송전탑" },
+      { en: "generate", ko: "생성하다, 발생시키다" },
+      { en: "far from", ko: "~에서 멀리, 전혀 ~이 아닌" },
+      { en: "tidal", ko: "조수의" },
+      { en: "factory", ko: "공장" },
+      { en: "outer", ko: "외부의, 외곽의" },
+      { en: "rocket", ko: "로켓, 로켓으로 쏘아 올리다" },
+      { en: "consume", ko: "(특히 연료·에너지·시간을) 소모하다" },
+      { en: "mine", ko: "광산, 지뢰, 채굴하다" },
+      { en: "earth", ko: "지구" },
+      { en: "surface", ko: "표면" },
+      { en: "planet", ko: "행성" },
+      { en: "and so on", ko: "(기타) 등등" },
+      { en: "orbit", ko: "궤도, 궤도를 그리며 돌다" },
+      { en: "Mars", ko: "화성" },
+    ],
+  },
+  {
+    id: "unit3",
+    title: "22년 11월 고1",
+    words: [
+      { en: "essential", ko: "필수적인" },
+      { en: "innovative", ko: "획기적인" },
+      { en: "contribute", ko: "기여하다" },
+      { en: "bring in", ko: "유치하다" },
+      { en: "voluntarily", ko: "자발적으로" },
+      { en: "request", ko: "요청하다" },
+      { en: "salary", ko: "급여, 봉급, 월급" },
+      { en: "reflect", ko: "반영하다" },
+      { en: "performance", ko: "실적, 성과" },
+      { en: "industry", ko: "산업, 업" },
+      { en: "immediately", ko: "즉시, 즉각, 바로" },
+      { en: "seat", ko: "앉히다" },
+      { en: "concerned", ko: "걱정하는" },
+      { en: "recover", ko: "회복되다" },
+      { en: "rush", ko: "급히 움직이다" },
+      { en: "launch", ko: "시작하다" },
+      { en: "product", ko: "생산물, 상품, 제품" },
+      { en: "promote", ko: "홍보하다" },
+      { en: "give away", ko: "~을 그냥 주다" },
+      { en: "interested", ko: "관심 있어 하는, 흥미 있어 하는" },
+      { en: "reveal", ko: "드러내다" },
+      { en: "assumption", ko: "추정, 상정" },
+      { en: "phrase", ko: "구절, 관용구" },
+      { en: "accomplish", ko: "성취하다" },
+      { en: "achievement", ko: "업적, 성취한 것" },
+      { en: "earn", ko: "얻다" },
+      { en: "imply", ko: "넌지시 나타내다" },
+      { en: "obtain", ko: "얻다" },
+      { en: "criticism", ko: "비판, 비난" },
+      { en: "inevitably", ko: "필연적으로, 반드시" },
+      { en: "challenge", ko: "이의를 제기하다" },
+      { en: "sacred", ko: "신성시되는" },
+      { en: "pause", ko: "(잠시) 멈추다" },
+      { en: "valuable", ko: "소중한, 귀중한" },
+      { en: "invalidate", ko: "틀렸음을 입증하다" },
+      { en: "threatening", ko: "위협적인" },
+      { en: "suggest", ko: "시사하다, 제안하다" },
+      { en: "exact", ko: "정확한, 정밀한" },
+      { en: "frightening", ko: "무서운" },
+      { en: "rob", ko: "빼앗다, 강탈하다" },
+      { en: "inner", ko: "내밀한, 내면의" },
+      { en: "pessimistic", ko: "비관적인" },
+      { en: "intend", ko: "의도하다, 생각하다" },
+      { en: "rate", ko: "비율, -율" },
+      { en: "screen", ko: "검진하다" },
+      { en: "doom", ko: "파멸" },
+      { en: "gloom", ko: "암울" },
+      { en: "ecological", ko: "생태계의" },
+      { en: "collapse", ko: "붕괴" },
+      { en: "remarkable", ko: "놀라운" },
+      { en: "consequence", ko: "결과" },
+      { en: "alter", ko: "바꾸다, 고치다" },
+      { en: "glacier", ko: "빙하" },
+      { en: "gravity", ko: "중력" },
+      { en: "equator", ko: "적도" },
+      { en: "slightly", ko: "약간, 조금" },
+      { en: "rotation", ko: "회전, 자전" },
+      { en: "barely", ko: "간신히" },
+      { en: "noticeable", ko: "뚜렷한" },
+      { en: "possibility", ko: "가능성" },
+      { en: "viewpoint", ko: "관점, 시각" },
+      { en: "beneficial", ko: "이로운, 유익한" },
+      { en: "eliminate", ko: "없애다, 제거하다" },
+      { en: "survey", ko: "설문 조사" },
+      { en: "welfare", ko: "복지" },
+      { en: "whereas", ko: "반면에, ~임에 반하여" },
+      { en: "consumption", ko: "섭취, 소비" },
+      { en: "cite", ko: "언급하다, 말하다" },
+      { en: "exceptionally", ko: "특별히, 유난히" },
+      { en: "textile", ko: "직물" },
+      { en: "witness", ko: "목격하다, 보다" },
+      { en: "faulty", ko: "결함이 있는" },
+      { en: "equipment", ko: "장비" },
+      { en: "flat-bottomed", ko: "바닥이 평평한" },
+      { en: "assemble", ko: "조립하다, 모으다" },
+      { en: "prolific", ko: "다작(多作)의" },
+      { en: "patent", ko: "특허" },
+      { en: "annual", ko: "연례의, 연간의" },
+      { en: "electronic", ko: "전자기기" },
+      { en: "light bulb", ko: "전구" },
+      { en: "wipe out", ko: "삭제하다" },
+      { en: "in advance", ko: "미리" },
+      { en: "fascinating", ko: "매력적인, 매혹적인" },
+      { en: "marine", ko: "해양의" },
+      { en: "requirement", ko: "요건, 조건" },
+      { en: "insurance fee", ko: "보험료" },
+      { en: "experienced", ko: "숙련된, 능숙한" },
+      { en: "lifeguard", ko: "안전 요원" },
+      { en: "accompany", ko: "동행하다, 동반하다" },
+      { en: "throughout", ko: "내내, ~동안, 쭉" },
+      { en: "on-site", ko: "현장의, 현지의" },
+      { en: "artificial intelligence", ko: "인공지능" },
+      { en: "mind-blowing", ko: "놀라운, 경이로운" },
+      { en: "enable", ko: "~을 가능하게 하다" },
+      { en: "require", ko: "~을 필요로 하다" },
+      { en: "specific to", ko: "~에게 특화된, 고유한" },
+      { en: "core", ko: "핵심의, 가장 중요한" },
+      { en: "exactly", ko: "정확히" },
+      { en: "recognize", ko: "인식하다, 인지하다" },
+      { en: "implication", ko: "영향, 결과" },
+      { en: "have implications for", ko: "~에 영향을 미치다" },
+      { en: "auxin", ko: "옥신(식물에서 발견되는 호르몬)" },
+      { en: "accumulate", ko: "축적되다" },
+      { en: "accordingly", ko: "따라서, 그러므로, 이에 따라, 그에 따라" },
+      { en: "phenomenon", ko: "현상" },
+      { en: "bend", ko: "휘다, 구부러지다" },
+      { en: "limit", ko: "억제하다" },
+      { en: "horizontal", ko: "수평의, 가로의" },
+      { en: "interfere", ko: "방해하다" },
+      { en: "development", ko: "발달" },
+      { en: "downwards", ko: "아래로" },
+      { en: "demonstrate", ko: "설명하다, 입증하다" },
+      { en: "defeat", ko: "무너뜨리다, 극복하다" },
+      { en: "behavioral", ko: "행동의" },
+      { en: "economics", ko: "경제학" },
+      { en: "due", ko: "예정된" },
+      { en: "submit", ko: "제출하다" },
+      { en: "conclude", ko: "결론짓다" },
+      { en: "restrict", ko: "제한하다" },
+      { en: "innovation", ko: "혁신" },
+      { en: "theme", ko: "주제" },
+      { en: "steadily", ko: "꾸준히" },
+      { en: "specialized in", ko: "~에 전문화된" },
+      { en: "diversified", ko: "다양화된" },
+      { en: "consume", ko: "소비하다" },
+      { en: "unstable", ko: "불안정한" },
+      { en: "mutual", ko: "서로 간의" },
+      { en: "interdependence", ko: "상호의존" },
+      { en: "serve", ko: "충족시키다" },
+      { en: "rely on", ko: "~에 의존하다" },
+      { en: "electric", ko: "전기의" },
+      { en: "quantity", ko: "양" },
+      { en: "sesame", ko: "참깨" },
+      { en: "burn", ko: "태우다" },
+      { en: "humanity", ko: "인류" },
+      { en: "not so distant", ko: "그리 멀지 않은" },
+      { en: "a fraction of a second", ko: "아주 짧은 시간" },
+      { en: "refine", ko: "정제하다" },
+      { en: "victim", ko: "희생자" },
+      { en: "irresistible", ko: "저항할 수 없는" },
+      { en: "resist", ko: "저항하다" },
+      { en: "instruct", ko: "지시하다" },
+      { en: "crew", ko: "승무원들" },
+      { en: "cotton", ko: "면, 솜" },
+      { en: "temptation", ko: "유혹" },
+      { en: "stay off", ko: "~을 멀리하다" },
+      { en: "distract", ko: "산만하게 하다" },
+      { en: "lure", ko: "유혹하다" },
+      { en: "microbe", ko: "미생물" },
+      { en: "antibacterial", ko: "항균제" },
+      { en: "insecticide", ko: "살충제" },
+      { en: "cockroach", ko: "바퀴벌레" },
+      { en: "roach", ko: "바퀴벌레" },
+      { en: "counterpart", ko: "상대방" },
+      { en: "the planet", ko: "지구" },
+      { en: "urban", ko: "도시적인" },
+      { en: "trait", ko: "특성" },
+      { en: "thrive", ko: "번성하다" },
+      { en: "long enough", ko: "충분히 오랜" },
+      { en: "perhaps", ko: "아마도" },
+      { en: "represent", ko: "나타내다" },
+      { en: "glucose", ko: "포도당" },
+      { en: "bait", ko: "미끼" },
+      { en: "poetry", ko: "시" },
+      { en: "capacity", ko: "능력" },
+      { en: "immune", ko: "면역의" },
+      { en: "lung", ko: "폐" },
+      { en: "function", ko: "기능" },
+      { en: "diminish", ko: "감소시키다" },
+      { en: "psychological", ko: "심리적인" },
+      { en: "distress", ko: "고통" },
+      { en: "enhance", ko: "강화하다" },
+      { en: "aid", ko: "지원하다" },
+      { en: "empathy", ko: "공감 (능력)" },
+      { en: "reconsider", ko: "재고하다" },
+      { en: "incredibly", ko: "믿을 수 없게도, 놀랍게도" },
+      { en: "actively", ko: "적극적으로" },
+      { en: "target", ko: "겨냥하다, 목표로 하다" },
+      { en: "period", ko: "기간" },
+      { en: "scientific", ko: "과학적인" },
+      { en: "creativity", ko: "창의성" },
+      { en: "process", ko: "과정, 처리하다" },
+      { en: "cognitive", ko: "인지적인, 인지의" },
+      { en: "automation", ko: "자동화" },
+      { en: "franchise", ko: "체인점" },
+      { en: "flip", ko: "뒤집다" },
+      { en: "for instance", ko: "예를 들어" },
+      { en: "available", ko: "이용 가능한" },
+      { en: "specific", ko: "특정한" },
+      { en: "creatively", ko: "창의적으로" },
+      { en: "irreplaceable", ko: "대체할 수 없는" },
+      { en: "individual", ko: "개인" },
+      { en: "location", ko: "장소" },
+      { en: "nutrient", ko: "영양분" },
+      { en: "equalize", ko: "균등하게 하다" },
+      { en: "transfer", ko: "전달하다" },
+      { en: "take place", ko: "일어나다" },
+      { en: "an abundance of", ko: "풍부한" },
+      { en: "run short", ko: "부족해지다" },
+      { en: "fall behind", ko: "뒤처지다" },
+      { en: "photosynthesize", ko: "광합성하다" },
+      { en: "fundamental", ko: "근본적인" },
+      { en: "countless", ko: "수많은" },
+      { en: "navigate", ko: "항해하다" },
+      { en: "preserve", ko: "보존하다" },
+      { en: "assume", ko: "가정하다" },
+      { en: "operation", ko: "작용" },
+      { en: "enormously", ko: "매우" },
+      { en: "cooperate", ko: "협력하다" },
+      { en: "astonishingly", ko: "놀랍게도" },
+      { en: "contributor", ko: "기여 요소" },
+      { en: "collaborative", ko: "협력적인" },
+      { en: "collective", ko: "집단적인" },
+      { en: "appreciate", ko: "(제대로) 인식하다" },
+      { en: "makeup", ko: "성질" },
+      { en: "contain", ko: "들어 있다" },
+      { en: "separate", ko: "분리된" },
+      { en: "surface", ko: "표면" },
+      { en: "salt content", ko: "염분" },
+      { en: "reflective", ko: "반성 [숙고]하는" },
+      { en: "undergraduate", ko: "학부생" },
+      { en: "reflect on", ko: "~을 되돌아보다" },
+      { en: "perspective", ko: "관점" },
+      { en: "demonstration", ko: "드러냄" },
+      { en: "reframe", ko: "재구성하다" },
+      { en: "hassle", ko: "귀찮은 일" },
+      { en: "adapt", ko: "적응하다" },
+      { en: "compensate", ko: "보충되다" },
+      { en: "perception", ko: "인식" },
+      { en: "disrupt", ko: "방해하다" },
+      { en: "overload", ko: "과부하가 걸리게 하다" },
+      { en: "stimuli", ko: "자극" },
+      { en: "overwhelming", ko: "압도적인" },
+      { en: "puzzled", ko: "혼란스러운" },
+      { en: "struggle", ko: "힘쓰다" },
+      { en: "stimulation", ko: "자극" },
+      { en: "confusion", ko: "혼란" },
+      { en: "neuroscientific", ko: "신경 과학의" },
+      { en: "disturb", ko: "방해하다" },
+      { en: "primarily", ko: "주로" },
+      { en: "anticipate", ko: "예상하다" },
+      { en: "a bunch of", ko: "많은" },
+      { en: "mention", ko: "말하다" },
+      { en: "attentive", ko: "세심한" },
+      { en: "unexpectedly", ko: "갑자기" },
+      { en: "sudden", ko: "갑작스런" },
+      { en: "stuck", ko: "갇힌" },
+      { en: "moved", ko: "감동받은" },
+      { en: "generosity", ko: "관대함" },
+      { en: "unforgettable", ko: "잊을 수 없는" },
+    ],
+  },
 ];
