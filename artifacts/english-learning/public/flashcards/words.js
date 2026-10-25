@@ -1,6 +1,6 @@
 window.FC_SETS = [
   {
-    id: "unit2",
+    id: "unit1",
     title: "김지우",
     words: [
       { en: "arise", ko: "발생하다 / 생기다" },
