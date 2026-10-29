@@ -275,6 +275,16 @@ export default function AdminAssignments() {
   const [libraryNotice, setLibraryNotice] = useState('');
   const [libraryError, setLibraryError] = useState('');
   const [libraryImportMessage, setLibraryImportMessage] = useState('');
+  const [libraryFormOpen, setLibraryFormOpen] = useState(false);
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [libraryTypeFilter, setLibraryTypeFilter] = useState<'all' | MaterialType>('all');
+  const [libraryVisibleCount, setLibraryVisibleCount] = useState(8);
+  const [managementTab, setManagementTab] = useState<'members' | 'folders'>('members');
+
+  // 파일 가져오기 등으로 입력창에 내용이 채워지면 작성 폼을 자동으로 펼칩니다.
+  useEffect(() => {
+    if (libraryEnglish.trim() || libraryKorean.trim()) setLibraryFormOpen(true);
+  }, [libraryEnglish, libraryKorean]);
   const [selectedLibraryId, setSelectedLibraryId] = useState<number | null>(null);
   const libraryContent = combineMaterialColumns(libraryEnglish, libraryKorean);
   const selectedLibraryLearningContent = libraryLevel === 'All'
@@ -482,6 +492,7 @@ export default function AdminAssignments() {
       ? `${contentLines.length}개 기존 과제 항목을 보관함 작성기로 가져왔습니다. 저장하면 독립된 라이브러리 자료가 됩니다.`
       : '선택한 위치에 가져올 과제가 없습니다. 보관함에서 새로 작성할 수 있습니다.');
     setActiveView('library');
+    setLibraryFormOpen(true);
     setLibraryError('');
     window.setTimeout(() => document.getElementById('input-library-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
   };
@@ -868,6 +879,7 @@ export default function AdminAssignments() {
       setLibraryTitle('');
       setLibraryEnglish('');
       setLibraryKorean('');
+      setLibraryFormOpen(false);
     } catch (saveError) {
       setLibraryError(saveError instanceof Error ? saveError.message : '보관함에 저장하지 못했습니다.');
     }
@@ -958,6 +970,16 @@ export default function AdminAssignments() {
     setAssignments((current) => current.filter(({ id }) => id !== assignment.id));
   };
 
+  const normalizedLibrarySearch = librarySearch.trim().toLowerCase();
+  const filteredLibraryMaterials = libraryMaterials.filter(
+    (material) =>
+      (libraryTypeFilter === 'all' || material.materialType === libraryTypeFilter)
+      && (!normalizedLibrarySearch
+        || material.title.toLowerCase().includes(normalizedLibrarySearch)
+        || material.materialContent.toLowerCase().includes(normalizedLibrarySearch)),
+  );
+  const shownLibraryMaterials = filteredLibraryMaterials.slice(0, libraryVisibleCount);
+
   return (
     <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
@@ -1002,16 +1024,129 @@ export default function AdminAssignments() {
 
       {activeView === 'library' && (
         <div className="mt-5 grid gap-5">
-          <section className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.42)] p-4 sm:p-6">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"><BookOpen size={18} /></span>
+          {libraryError && <p role="alert" className="rounded-xl bg-[hsl(var(--destructive)/.1)] px-4 py-3 text-sm font-semibold text-[hsl(var(--destructive))]" data-testid="status-library-error">{libraryError}</p>}
+          {libraryNotice && <p role="status" className="rounded-xl bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-semibold text-[hsl(var(--secondary-foreground))]" data-testid="status-library-success">{libraryNotice}</p>}
+
+          <section className="rounded-2xl border border-[hsl(var(--border))] p-4 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="font-bold">새 자료를 보관함에 저장</h3>
-                <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-                  직접 작성한 단어·문장을 언제든 다시 꺼내 쓸 수 있습니다. 저장만으로는 과제가 생성되거나 회원에게 공개되지 않습니다.
-                </p>
+                <h3 className="font-bold">저장한 콘텐츠</h3>
+                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">항목을 골라 바로 과제로 배정할 수 있어요.</p>
               </div>
+              <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{filteredLibraryMaterials.length} / {libraryMaterials.length}</span>
             </div>
+            {libraryMaterials.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <input
+                  type="search"
+                  value={librarySearch}
+                  onChange={(event) => {
+                    setLibrarySearch(event.target.value);
+                    setLibraryVisibleCount(8);
+                  }}
+                  placeholder="제목이나 내용으로 검색"
+                  aria-label="저장한 콘텐츠 검색"
+                  className="h-10 min-w-0 flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 text-sm outline-none focus:border-[hsl(var(--accent))]"
+                  data-testid="input-library-search"
+                />
+                <div className="flex gap-1 rounded-xl bg-[hsl(var(--muted))] p-1" role="group" aria-label="콘텐츠 유형 필터">
+                  {([['all', '전체'], ['word', '단어'], ['sentence', '문장']] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setLibraryTypeFilter(value as 'all' | MaterialType);
+                        setLibraryVisibleCount(8);
+                      }}
+                      aria-pressed={libraryTypeFilter === value}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold ${libraryTypeFilter === value ? 'bg-[hsl(var(--card))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {libraryQuery.isLoading ? (
+              <div className="mt-4 grid gap-2" aria-label="보관함 불러오는 중">{[0, 1, 2].map((item) => <div key={item} className="h-14 animate-pulse rounded-xl bg-[hsl(var(--muted))]" />)}</div>
+            ) : libraryQuery.isError ? (
+              <div className="mt-4 rounded-xl border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.06)] p-4 text-sm">
+                <p className="font-semibold text-[hsl(var(--destructive))]">보관함을 불러오지 못했습니다.</p>
+                <button type="button" onClick={() => void libraryQuery.refetch()} className="mt-2 text-xs font-bold underline underline-offset-4" data-testid="button-retry-library">다시 시도</button>
+              </div>
+            ) : libraryMaterials.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[hsl(var(--border))] px-4 py-8 text-center">
+                <Library className="mx-auto text-[hsl(var(--muted-foreground))]" size={24} />
+                <p className="mt-3 text-sm font-semibold">아직 저장된 자료가 없습니다.</p>
+                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">아래 &lsquo;새 자료 추가&rsquo;에서 첫 자료를 보관해 보세요.</p>
+              </div>
+            ) : filteredLibraryMaterials.length === 0 ? (
+              <p className="mt-4 rounded-xl bg-[hsl(var(--muted)/.55)] px-4 py-6 text-center text-sm text-[hsl(var(--muted-foreground))]">조건에 맞는 자료가 없어요.</p>
+            ) : (
+              <>
+                <ul className="mt-4 grid gap-1.5">
+                  {shownLibraryMaterials.map((material) => {
+                    const firstLine = material.materialContent.split(/\r?\n/).filter(Boolean)[0]?.split(/\s*\|\|\s*/, 1)[0] ?? '';
+                    return (
+                      <li
+                        key={material.id}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${selectedLibraryId === material.id ? 'border-[hsl(var(--accent)/.65)] bg-[hsl(var(--accent)/.05)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.4)]'}`}
+                        data-testid={`card-library-material-${material.id}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="truncate text-sm font-bold">{material.title}</h4>
+                            <span className="shrink-0 rounded-full bg-[hsl(var(--secondary))] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]">{material.materialType === 'word' ? '단어' : '문장'}</span>
+                            <span className="hidden shrink-0 text-[10px] font-semibold text-[hsl(var(--muted-foreground))] sm:inline">{levelLabels[material.level]}</span>
+                          </div>
+                          <p className="mt-0.5 truncate text-[11px] text-[hsl(var(--muted-foreground))]">
+                            {parseDirectMaterial(material.materialContent, material.materialType).length}개 · {material.folderId == null ? '폴더 없음' : getFolderPath(material.folderId, folders)}{firstLine ? ` · ${firstLine}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1.5">
+                          <button type="button" onClick={() => prepareAssignmentFromLibrary(material)} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 text-xs font-bold text-[hsl(var(--primary-foreground))]" data-testid={`button-assign-library-${material.id}`}>
+                            <ClipboardList size={13} /> 배정
+                          </button>
+                          <button type="button" onClick={() => void removeLibraryMaterial(material)} disabled={deleteLibraryMaterial.isPending} aria-label={`${material.title} 보관 자료 삭제`} className="flex min-h-9 w-9 items-center justify-center rounded-lg border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive)/.1)] hover:text-[hsl(var(--destructive))] disabled:opacity-50" data-testid={`button-delete-library-${material.id}`}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {filteredLibraryMaterials.length > shownLibraryMaterials.length && (
+                  <button
+                    type="button"
+                    onClick={() => setLibraryVisibleCount((count) => count + 8)}
+                    className="mt-3 w-full rounded-xl border border-[hsl(var(--border))] py-2.5 text-xs font-bold"
+                    data-testid="button-library-show-more"
+                  >
+                    더 보기 ({filteredLibraryMaterials.length - shownLibraryMaterials.length}개 남음)
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background)/.42)] p-4 sm:p-6">
+            <button
+              type="button"
+              onClick={() => setLibraryFormOpen((open) => !open)}
+              aria-expanded={libraryFormOpen}
+              className="flex w-full items-center gap-3 text-left"
+              data-testid="button-toggle-library-form"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"><BookOpen size={18} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">새 자료 추가</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                  단어·문장을 직접 입력하거나 파일로 가져와 보관함에 저장해요. 저장만으로는 과제가 만들어지거나 공개되지 않아요.
+                </span>
+              </span>
+              <ChevronDown size={18} className={`shrink-0 text-[hsl(var(--muted-foreground))] transition-transform ${libraryFormOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {libraryFormOpen && (
             <form onSubmit={saveLibraryMaterial} className="mt-5 grid gap-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-2 text-xs font-bold">
@@ -1095,8 +1230,6 @@ export default function AdminAssignments() {
               <p className="text-[11px] text-[hsl(var(--muted-foreground))]">
                 자료를 직접 작성하거나 가져온 뒤 저장해야 보관함에 추가됩니다. 파일·홈 콘텐츠 가져오기는 과제를 생성하지 않습니다.
               </p>
-              {libraryError && <p role="alert" className="rounded-xl bg-[hsl(var(--destructive)/.1)] px-4 py-3 text-sm font-semibold text-[hsl(var(--destructive))]" data-testid="status-library-error">{libraryError}</p>}
-              {libraryNotice && <p role="status" className="rounded-xl bg-[hsl(var(--secondary)/.55)] px-4 py-3 text-sm font-semibold text-[hsl(var(--secondary-foreground))]" data-testid="status-library-success">{libraryNotice}</p>}
               <div className="flex justify-end">
                 <button type="submit" disabled={createLibraryMaterial.isPending} className="button-pop inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-save-library-material">
                   {createLibraryMaterial.isPending ? <LoaderCircle className="animate-spin" size={16} /> : <Check size={16} />}
@@ -1104,58 +1237,6 @@ export default function AdminAssignments() {
                 </button>
               </div>
             </form>
-          </section>
-
-          <section className="rounded-2xl border border-[hsl(var(--border))] p-4 sm:p-6">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h3 className="font-bold">저장한 콘텐츠</h3>
-                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">라이브러리에서 항목을 골라 다음 단계에서 과제로 배정하세요.</p>
-              </div>
-              <span className="font-mono text-xs text-[hsl(var(--muted-foreground))]">{libraryMaterials.length} items</span>
-            </div>
-            {libraryQuery.isLoading ? (
-              <div className="mt-4 grid gap-2" aria-label="보관함 불러오는 중">{[0, 1, 2].map((item) => <div key={item} className="h-20 animate-pulse rounded-xl bg-[hsl(var(--muted))]" />)}</div>
-            ) : libraryQuery.isError ? (
-              <div className="mt-4 rounded-xl border border-[hsl(var(--destructive)/.3)] bg-[hsl(var(--destructive)/.06)] p-4 text-sm">
-                <p className="font-semibold text-[hsl(var(--destructive))]">보관함을 불러오지 못했습니다.</p>
-                <button type="button" onClick={() => void libraryQuery.refetch()} className="mt-2 text-xs font-bold underline underline-offset-4" data-testid="button-retry-library">다시 시도</button>
-              </div>
-            ) : libraryMaterials.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-dashed border-[hsl(var(--border))] px-4 py-8 text-center">
-                <Library className="mx-auto text-[hsl(var(--muted-foreground))]" size={24} />
-                <p className="mt-3 text-sm font-semibold">아직 저장된 자료가 없습니다.</p>
-                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">위에서 첫 자료를 보관하면 과제 없이도 언제든 불러올 수 있어요.</p>
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-3">
-                {libraryMaterials.map((material) => {
-                  const preview = material.materialContent.split(/\r?\n/).filter(Boolean).slice(0, 2);
-                  return (
-                    <article key={material.id} className={`rounded-xl border p-4 transition-colors ${selectedLibraryId === material.id ? 'border-[hsl(var(--accent)/.65)] bg-[hsl(var(--accent)/.05)]' : 'border-[hsl(var(--border))] bg-[hsl(var(--background)/.4)]'}`} data-testid={`card-library-material-${material.id}`}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="truncate text-sm font-bold">{material.title}</h4>
-                            <span className="rounded-full bg-[hsl(var(--secondary))] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--secondary-foreground))]">{material.materialType === 'word' ? '단어' : '문장'}</span>
-                            <span className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">{levelLabels[material.level]}</span>
-                          </div>
-                          <p className="mt-1 truncate text-xs text-[hsl(var(--muted-foreground))]">{preview.join(' · ') || '내용 없음'}</p>
-                          <p className="mt-1 text-[10px] text-[hsl(var(--muted-foreground))]">{material.folderId == null ? '폴더 없음' : getFolderPath(material.folderId, folders)} · {parseDirectMaterial(material.materialContent, material.materialType).length}개 항목</p>
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <button type="button" onClick={() => prepareAssignmentFromLibrary(material)} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-[hsl(var(--primary))] px-3 py-2 text-xs font-bold text-[hsl(var(--primary-foreground))]" data-testid={`button-assign-library-${material.id}`}>
-                            <ClipboardList size={14} /> 과제로 배정
-                          </button>
-                          <button type="button" onClick={() => void removeLibraryMaterial(material)} disabled={deleteLibraryMaterial.isPending} aria-label={`${material.title} 보관 자료 삭제`} className="rounded-lg border border-[hsl(var(--border))] px-3 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--destructive)/.1)] hover:text-[hsl(var(--destructive))] disabled:opacity-50" data-testid={`button-delete-library-${material.id}`}>
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
             )}
           </section>
         </div>
@@ -1331,7 +1412,25 @@ export default function AdminAssignments() {
           </span>
         </summary>
         <div className="border-t border-[hsl(var(--border))] px-5 pb-5">
-      <div className="mt-9 border-t border-[hsl(var(--border))] pt-7">
+      <div className="mt-5 grid grid-cols-2 gap-1.5 rounded-xl bg-[hsl(var(--muted))] p-1" role="group" aria-label="관리 구분">
+        <button
+          type="button"
+          onClick={() => setManagementTab('members')}
+          aria-pressed={managementTab === 'members'}
+          className={`rounded-lg px-3 py-2.5 text-sm font-bold ${managementTab === 'members' ? 'bg-[hsl(var(--card))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}
+        >
+          회원·반 관리 <span className="font-mono text-[10px]">{members.length}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setManagementTab('folders')}
+          aria-pressed={managementTab === 'folders'}
+          className={`rounded-lg px-3 py-2.5 text-sm font-bold ${managementTab === 'folders' ? 'bg-[hsl(var(--card))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}
+        >
+          자료 폴더·기존 과제 <span className="font-mono text-[10px]">{assignments.length}</span>
+        </button>
+      </div>
+      <div className={`mt-6 ${managementTab === 'members' ? '' : 'hidden'}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="font-bold">과정 회원 배정</h3>
@@ -1604,7 +1703,7 @@ export default function AdminAssignments() {
         )}
       </div>
 
-        <div id="assignment-folder-management" className="mt-9 border-t border-[hsl(var(--border))] pt-7">
+        <div id="assignment-folder-management" className={`mt-6 ${managementTab === 'folders' ? '' : 'hidden'}`}>
         <div className="flex items-center justify-between">
            <div>
              <h3 className="font-bold">자료 폴더</h3>
