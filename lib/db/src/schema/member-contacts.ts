@@ -1,12 +1,14 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
- * 학생별 학부모 연락처. 관리자만 입력/조회합니다.
- * parentPhone 은 숫자만 저장합니다 (예: 01012345678).
+ * 학생별 관리자 입력 정보.
+ * - parentPhone: 학부모 연락처. 숫자만 저장 (예: 01012345678). 없으면 빈 문자열.
+ * - studentName: 알림톡/출결 화면에 쓰는 표시 이름. 없으면 빈 문자열.
  */
 export const memberContactsTable = pgTable("member_contacts", {
   memberId: text("member_id").primaryKey(),
-  parentPhone: text("parent_phone").notNull(),
+  parentPhone: text("parent_phone").notNull().default(""),
+  studentName: text("student_name").notNull().default(""),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

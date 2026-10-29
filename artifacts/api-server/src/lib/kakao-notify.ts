@@ -120,15 +120,16 @@ async function sendAlimtalk(
   return body?.groupInfo?.groupId ?? body?.groupInfo?._id ?? null;
 }
 
-async function getStudentName(memberId: string): Promise<string> {
+/**
+ * 관리자가 이름을 따로 입력하지 않은 경우에만 쓰는 대체 이름입니다.
+ * 아이디(이메일/사용자명)가 학부모에게 노출되지 않도록 가입 시 입력한 실제 이름만 사용하고,
+ * 그것도 없으면 "학생"으로 보냅니다.
+ */
+async function getFallbackStudentName(memberId: string): Promise<string> {
   try {
     const user = await clerkClient.users.getUser(memberId);
-    return (
-      user.fullName ||
-      user.username ||
-      user.primaryEmailAddress?.emailAddress ||
-      "학생"
-    );
+    const fullName = user.fullName?.trim();
+    return fullName && !fullName.includes("@") ? fullName : "학생";
   } catch {
     return "학생";
   }
@@ -171,7 +172,9 @@ export async function deliverNotification(
     const phone = contact?.parentPhone || row.phone;
     if (!phone) throw new Error("학부모 연락처가 등록되어 있지 않습니다.");
 
-    const studentName = row.studentName || (await getStudentName(row.memberId));
+    // 우선순위: 관리자가 입력한 표시 이름 > 가입 시 이름 > "학생"
+    const studentName =
+      contact?.studentName?.trim() || (await getFallbackStudentName(row.memberId));
     let assignmentTitle = row.assignmentTitle;
     if (!assignmentTitle) {
       const [assignment] = await db

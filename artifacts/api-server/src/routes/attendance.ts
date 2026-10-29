@@ -73,13 +73,21 @@ async function listStudents() {
   return users.data.filter((user) => !isAdminUser(user));
 }
 
-async function memberExists(memberId: string): Promise<boolean> {
+async function getMember(memberId: string) {
   try {
-    await clerkClient.users.getUser(memberId);
-    return true;
+    return await clerkClient.users.getUser(memberId);
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function memberExists(memberId: string): Promise<boolean> {
+  return (await getMember(memberId)) !== null;
+}
+
+/** 로그인 아이디(이메일 또는 사용자명). 관리자 화면에만 작게 보여 줍니다. */
+function loginIdOf(user: Awaited<ReturnType<typeof clerkClient.users.getUser>>): string {
+  return user.primaryEmailAddress?.emailAddress || user.username || "";
 }
 
 /** CSV 셀 이스케이프 + 엑셀 수식 주입 방지 */
@@ -130,7 +138,7 @@ router.get("/admin/attendance", async (req: Request, res: Response): Promise<voi
   ]);
 
   const recordByMember = new Map(records.map((record) => [record.memberId, record]));
-  const phoneByMember = new Map(contacts.map((contact) => [contact.memberId, contact.parentPhone]));
+  const contactByMember = new Map(contacts.map((contact) => [contact.memberId, contact]));
   const courseByMember = new Map(courses.map((course) => [course.memberId, course]));
   const classNameById = new Map(classes.map((row) => [row.id, row.name]));
 
@@ -138,12 +146,17 @@ router.get("/admin/attendance", async (req: Request, res: Response): Promise<voi
     .map((student) => {
       const record = recordByMember.get(student.id);
       const course = courseByMember.get(student.id);
+      const contact = contactByMember.get(student.id);
+      const studentName = contact?.studentName ?? "";
       return {
         id: student.id,
-        displayName: displayNameOf(student),
+        displayName: studentName || displayNameOf(student),
+        studentName,
+        nameSet: Boolean(studentName || student.fullName?.trim()),
+        loginId: loginIdOf(student),
         course: course?.courseLevel ?? null,
         className: course?.classId ? (classNameById.get(course.classId) ?? null) : null,
-        parentPhone: phoneByMember.get(student.id) ?? "",
+        parentPhone: contact?.parentPhone ?? "",
         status: record?.status ?? null,
         note: record?.note ?? "",
       };
@@ -245,7 +258,16 @@ router.get("/admin/attendance/export", async (req: Request, res: Response): Prom
     .orderBy(asc(attendanceRecordsTable.attendanceDate), asc(attendanceRecordsTable.memberId));
 
   const students = await listStudents();
-  const nameById = new Map(students.map((student) => [student.id, displayNameOf(student)]));
+  const contactRows = await db.select().from(memberContactsTable);
+  const customNameById = new Map(
+    contactRows.filter((row) => row.studentName).map((row) => [row.memberId, row.studentName]),
+  );
+  const nameById = new Map(
+    students.map((student) => [
+      student.id,
+      customNameById.get(student.id) ?? displayNameOf(student),
+    ]),
+  );
 
   const lines = ["날짜,학생,출결,메모"];
   for (const record of records) {
@@ -265,42 +287,78 @@ router.get("/admin/attendance/export", async (req: Request, res: Response): Prom
   res.send(`﻿${lines.join("\r\n")}\r\n`);
 });
 
-// 학부모 연락처 저장 (빈 값이면 삭제)
+// 학생 표시 이름 / 학부모 연락처 저장 (보낸 항목만 바꾸고, 둘 다 비면 행을 삭제)
 router.put(
   "/admin/members/:memberId/contact",
   async (req: Request, res: Response): Promise<void> => {
     if (!(await requireAdmin(req, res))) return;
 
     const memberId = String(req.params.memberId ?? "");
-    const raw = (req.body as { parentPhone?: unknown } | undefined)?.parentPhone;
-    if (!memberId || typeof raw !== "string") {
+    const body = (req.body ?? {}) as { parentPhone?: unknown; studentName?: unknown };
+    const phoneInput = body.parentPhone;
+    const nameInput = body.studentName;
+    if (
+      !memberId ||
+      (phoneInput !== undefined && typeof phoneInput !== "string") ||
+      (nameInput !== undefined && typeof nameInput !== "string") ||
+      (phoneInput === undefined && nameInput === undefined)
+    ) {
       res.status(400).json({ error: "요청 값이 올바르지 않습니다." });
       return;
     }
-    if (!(await memberExists(memberId))) {
+    const user = await getMember(memberId);
+    if (!user) {
       res.status(404).json({ error: "회원을 찾을 수 없습니다." });
       return;
     }
 
-    if (raw.trim() === "") {
-      await db.delete(memberContactsTable).where(eq(memberContactsTable.memberId, memberId));
-      res.json({ memberId, parentPhone: "" });
-      return;
+    const [existing] = await db
+      .select()
+      .from(memberContactsTable)
+      .where(eq(memberContactsTable.memberId, memberId));
+
+    let parentPhone = existing?.parentPhone ?? "";
+    if (typeof phoneInput === "string") {
+      if (phoneInput.trim() === "") {
+        parentPhone = "";
+      } else {
+        const normalized = normalizeKoreanMobile(phoneInput);
+        if (!normalized) {
+          res.status(400).json({ error: "휴대전화 번호 형식이 올바르지 않습니다. (예: 010-1234-5678)" });
+          return;
+        }
+        parentPhone = normalized;
+      }
     }
 
-    const phone = normalizeKoreanMobile(raw);
-    if (!phone) {
-      res.status(400).json({ error: "휴대전화 번호 형식이 올바르지 않습니다. (예: 010-1234-5678)" });
-      return;
+    let studentName = existing?.studentName ?? "";
+    if (typeof nameInput === "string") {
+      studentName = nameInput.trim();
+      if (studentName.length > 20) {
+        res.status(400).json({ error: "이름은 20자 이내로 입력해 주세요." });
+        return;
+      }
     }
-    await db
-      .insert(memberContactsTable)
-      .values({ memberId, parentPhone: phone })
-      .onConflictDoUpdate({
-        target: memberContactsTable.memberId,
-        set: { parentPhone: phone, updatedAt: new Date() },
-      });
-    res.json({ memberId, parentPhone: phone });
+
+    if (!parentPhone && !studentName) {
+      await db.delete(memberContactsTable).where(eq(memberContactsTable.memberId, memberId));
+    } else {
+      await db
+        .insert(memberContactsTable)
+        .values({ memberId, parentPhone, studentName })
+        .onConflictDoUpdate({
+          target: memberContactsTable.memberId,
+          set: { parentPhone, studentName, updatedAt: new Date() },
+        });
+    }
+
+    res.json({
+      memberId,
+      parentPhone,
+      studentName,
+      displayName: studentName || displayNameOf(user),
+      nameSet: Boolean(studentName || user.fullName?.trim()),
+    });
   },
 );
 

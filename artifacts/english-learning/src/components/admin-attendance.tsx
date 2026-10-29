@@ -16,6 +16,9 @@ type AttendanceStatus = 'present' | 'late' | 'absent' | 'early_leave';
 interface AttendanceMember {
   id: string;
   displayName: string;
+  studentName: string;
+  nameSet: boolean;
+  loginId: string;
   course: string | null;
   className: string | null;
   parentPhone: string;
@@ -88,6 +91,7 @@ export default function AdminAttendance() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [onlyPending, setOnlyPending] = useState(false);
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [exportFrom, setExportFrom] = useState(() => firstDayOfMonth(todayInSeoul()));
   const [exportTo, setExportTo] = useState(todayInSeoul);
@@ -112,6 +116,7 @@ export default function AdminAttendance() {
       const body = (await response.json()) as { members: AttendanceMember[] };
       setMembers(body.members);
       setPhoneDrafts({});
+      setNameDrafts({});
       setNoteDrafts({});
       setOpenId(null);
     } catch (error) {
@@ -206,32 +211,49 @@ export default function AdminAttendance() {
     }
   };
 
-  const savePhone = async (member: AttendanceMember) => {
-    const value = (phoneDrafts[member.id] ?? member.parentPhone).trim();
-    setBusyKey(`phone-${member.id}`);
+  const saveContact = async (member: AttendanceMember) => {
+    const phone = (phoneDrafts[member.id] ?? member.parentPhone).trim();
+    const name = (nameDrafts[member.id] ?? member.studentName).trim();
+    setBusyKey(`contact-${member.id}`);
     try {
       const response = await apiFetch(`/api/admin/members/${encodeURIComponent(member.id)}/contact`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parentPhone: value }),
+        body: JSON.stringify({ parentPhone: phone, studentName: name }),
       });
-      if (!response.ok) throw new Error(await readError(response, '연락처를 저장하지 못했습니다.'));
-      const saved = (await response.json()) as { parentPhone: string };
+      if (!response.ok) throw new Error(await readError(response, '저장하지 못했습니다.'));
+      const saved = (await response.json()) as {
+        parentPhone: string;
+        studentName: string;
+        displayName: string;
+        nameSet: boolean;
+      };
       setMembers((current) =>
-        current.map((row) => (row.id === member.id ? { ...row, parentPhone: saved.parentPhone } : row)),
+        current.map((row) =>
+          row.id === member.id
+            ? {
+                ...row,
+                parentPhone: saved.parentPhone,
+                studentName: saved.studentName,
+                displayName: saved.displayName,
+                nameSet: saved.nameSet,
+              }
+            : row,
+        ),
       );
       setPhoneDrafts((current) => {
         const next = { ...current };
         delete next[member.id];
         return next;
       });
-      showMessage(
-        saved.parentPhone
-          ? `${member.displayName} 학생 학부모 연락처를 저장했어요.`
-          : `${member.displayName} 학생 학부모 연락처를 삭제했어요.`,
-      );
+      setNameDrafts((current) => {
+        const next = { ...current };
+        delete next[member.id];
+        return next;
+      });
+      showMessage(`${saved.displayName} 학생 정보를 저장했어요.`);
     } catch (error) {
-      showMessage(error instanceof Error ? error.message : '연락처를 저장하지 못했습니다.', true);
+      showMessage(error instanceof Error ? error.message : '저장하지 못했습니다.', true);
     } finally {
       setBusyKey(null);
     }
@@ -376,10 +398,12 @@ export default function AdminAttendance() {
         ) : (
           visibleMembers.map((member) => {
             const attendanceBusy = busyKey === `att-${member.id}`;
-            const phoneBusy = busyKey === `phone-${member.id}`;
+            const contactBusy = busyKey === `contact-${member.id}`;
             const isOpen = openId === member.id;
             const phoneValue = phoneDrafts[member.id] ?? member.parentPhone;
-            const phoneChanged = phoneValue.trim() !== member.parentPhone;
+            const nameValue = nameDrafts[member.id] ?? member.studentName;
+            const contactChanged =
+              phoneValue.trim() !== member.parentPhone || nameValue.trim() !== member.studentName;
             return (
               <li
                 key={member.id}
@@ -397,6 +421,11 @@ export default function AdminAttendance() {
                       className={`shrink-0 text-[hsl(var(--muted-foreground))] transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     />
                     <span className="truncate text-sm font-bold">{member.displayName}</span>
+                    {!member.nameSet && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                        이름 설정 필요
+                      </span>
+                    )}
                     {member.className && (
                       <span className="hidden truncate text-[11px] text-[hsl(var(--muted-foreground))] sm:inline">
                         {member.className}
@@ -432,7 +461,7 @@ export default function AdminAttendance() {
 
                 {isOpen && (
                   <div className="grid gap-2 border-t border-[hsl(var(--border))] px-3 py-3 sm:grid-cols-2">
-                    <label className="grid gap-1 text-[11px] font-bold">
+                    <label className="grid gap-1 text-[11px] font-bold sm:col-span-2">
                       메모
                       <input
                         type="text"
@@ -453,30 +482,47 @@ export default function AdminAttendance() {
                         className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal disabled:opacity-50"
                       />
                     </label>
+                    <label className="grid gap-1 text-[11px] font-bold">
+                      학생 이름 <span className="font-normal text-[hsl(var(--muted-foreground))]">(알림톡에 표시돼요)</span>
+                      <input
+                        type="text"
+                        value={nameValue}
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
+                          setNameDrafts((current) => ({ ...current, [member.id]: value }));
+                        }}
+                        maxLength={20}
+                        placeholder="예: 김민준"
+                        className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal"
+                      />
+                    </label>
                     <div className="grid gap-1 text-[11px] font-bold">
                       학부모 연락처
-                      <div className="flex gap-2">
-                        <input
-                          type="tel"
-                          inputMode="tel"
-                          value={phoneValue}
-                          onChange={(event) => {
-                            const value = event.currentTarget.value;
-                            setPhoneDrafts((current) => ({ ...current, [member.id]: value }));
-                          }}
-                          placeholder="010-0000-0000"
-                          aria-label="학부모 연락처"
-                          className="min-w-0 flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void savePhone(member)}
-                          disabled={!phoneChanged || phoneBusy}
-                          className="rounded-xl bg-[hsl(var(--primary))] px-3 py-2 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
-                        >
-                          저장
-                        </button>
-                      </div>
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        value={phoneValue}
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
+                          setPhoneDrafts((current) => ({ ...current, [member.id]: value }));
+                        }}
+                        placeholder="010-0000-0000"
+                        aria-label="학부모 연락처"
+                        className="min-w-0 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 sm:col-span-2">
+                      <p className="truncate text-[11px] text-[hsl(var(--muted-foreground))]">
+                        로그인 아이디: {member.loginId || '-'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void saveContact(member)}
+                        disabled={!contactChanged || contactBusy}
+                        className="shrink-0 rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
+                      >
+                        이름·연락처 저장
+                      </button>
                     </div>
                     {member.status && (
                       <button
