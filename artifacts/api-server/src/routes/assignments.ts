@@ -45,6 +45,7 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 
 import { getUserId, isAdmin, isAdminEmail, isAdminUser } from "../lib/auth";
+import { notifyAssignmentProgress } from "../lib/kakao-notify";
 
 const router: IRouter = Router();
 
@@ -203,6 +204,19 @@ router.put(
         totalSteps: assignmentProgressTable.totalSteps,
         updatedAt: assignmentProgressTable.updatedAt,
       });
+
+    // 학부모 알림톡 (과제 시작 / 완료). 응답을 지연시키지 않고, 실패해도 진행도 저장에는 영향이 없습니다.
+    void notifyAssignmentProgress({
+      memberId,
+      assignmentId: saved.assignmentId,
+      completedSteps: saved.completedSteps,
+      totalSteps: saved.totalSteps,
+    }).catch((error) => {
+      req.log.error(
+        { message: error instanceof Error ? error.message : String(error) },
+        "Assignment notification failed",
+      );
+    });
 
     res.json(UpsertAssignmentProgressResponse.parse(saved));
   },

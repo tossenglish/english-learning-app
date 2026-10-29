@@ -2,6 +2,7 @@ import { LoaderCircle, ShieldCheck } from 'lucide-react';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import AdminAssignments from '@/components/admin-assignments';
 import AdminHomeVideoSettings from '@/components/admin-home-video-settings';
+import AdminAttendance from '@/components/admin-attendance';
 import { AdminReadingBuilder } from '@/components/reading-comprehension';
 
 export default function AdminUpload() {
@@ -39,6 +40,7 @@ export default function AdminUpload() {
         </p>
       </section>
 
+      <AdminAttendance />
       <AdminHomeVideoSettings />
       <AdminReadingBuilder />
       <AdminAssignments />
