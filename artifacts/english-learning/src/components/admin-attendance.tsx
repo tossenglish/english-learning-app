@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Download, LoaderCircle, RefreshCw, Send } from 'lucide-react';
+import {
+  CalendarCheck,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  LoaderCircle,
+  Phone,
+  RefreshCw,
+  Send,
+} from 'lucide-react';
 import { apiFetch } from '@/lib/api-fetch';
 
 type AttendanceStatus = 'present' | 'late' | 'absent' | 'early_leave';
@@ -46,6 +55,18 @@ function firstDayOfMonth(date: string): string {
   return `${date.slice(0, 8)}01`;
 }
 
+function shiftDate(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function formatDateLabel(date: string): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  const weekday = ['일', '월', '화', '수', '목', '금', '토'][value.getUTCDay()];
+  return `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일 (${weekday})`;
+}
+
 async function readError(response: Response, fallback: string): Promise<string> {
   try {
     const body = (await response.json()) as { error?: string };
@@ -64,6 +85,8 @@ export default function AdminAttendance() {
   const [message, setMessage] = useState('');
   const [messageIsError, setMessageIsError] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [onlyPending, setOnlyPending] = useState(false);
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [exportFrom, setExportFrom] = useState(() => firstDayOfMonth(todayInSeoul()));
@@ -74,6 +97,13 @@ export default function AdminAttendance() {
     setMessageIsError(isError);
   };
 
+  // 성공 안내는 몇 초 뒤 저절로 사라지게 해서 화면이 어수선해지지 않도록 합니다.
+  useEffect(() => {
+    if (!message || messageIsError) return;
+    const timer = window.setTimeout(() => setMessage(''), 3500);
+    return () => window.clearTimeout(timer);
+  }, [message, messageIsError]);
+
   const loadMembers = useCallback(async (targetDate: string) => {
     setIsLoading(true);
     try {
@@ -83,6 +113,7 @@ export default function AdminAttendance() {
       setMembers(body.members);
       setPhoneDrafts({});
       setNoteDrafts({});
+      setOpenId(null);
     } catch (error) {
       showMessage(error instanceof Error ? error.message : '출결 목록을 불러오지 못했습니다.', true);
     } finally {
@@ -124,6 +155,16 @@ export default function AdminAttendance() {
     for (const member of members) counts[member.status ?? 'none'] += 1;
     return counts;
   }, [members]);
+
+  const visibleMembers = useMemo(
+    () => (onlyPending ? members.filter((member) => member.status === null) : members),
+    [members, onlyPending],
+  );
+
+  const failedCount = useMemo(
+    () => notifications.filter((row) => row.status === 'failed').length,
+    [notifications],
+  );
 
   const saveAttendance = async (member: AttendanceMember, status: AttendanceStatus) => {
     const note = noteDrafts[member.id] ?? member.note;
@@ -229,40 +270,60 @@ export default function AdminAttendance() {
     }
   };
 
+  const iconButton =
+    'flex h-9 w-9 items-center justify-center rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] disabled:opacity-40';
+
   return (
-    <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8">
-      <div className="flex items-start gap-3">
+    <section className="rise-in stagger-2 rounded-[30px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 sm:p-7">
+      <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
           <CalendarCheck size={17} />
         </span>
         <div>
           <h2 className="text-lg font-bold">출결 관리</h2>
-          <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
-            날짜를 고르고 학생별 출결을 직접 입력하세요. 학부모 연락처를 등록하면 아이가 과제를 시작하거나 마쳤을 때 카카오톡 알림이 전송돼요.
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">
+            학생 이름을 누르면 메모와 학부모 연락처를 입력할 수 있어요.
           </p>
         </div>
       </div>
 
       {notifyConfigured === false && (
         <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
-          카카오 알림톡 설정이 아직 완료되지 않아 알림은 발송되지 않아요. 서버 환경변수(SOLAPI_*, KAKAO_*)를 등록해 주세요.
+          카카오 알림톡 설정이 아직 완료되지 않아 알림은 발송되지 않아요.
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-end gap-3">
-        <label className="grid gap-1.5 text-xs font-bold">
-          날짜
+      {/* 날짜 이동 */}
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setDate((current) => shiftDate(current, -1))}
+          className={iconButton}
+          aria-label="전날"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <label className="relative">
+          <span className="sr-only">날짜 선택</span>
           <input
             type="date"
             value={date}
             onChange={(event) => event.currentTarget.value && setDate(event.currentTarget.value)}
-            className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm"
+            className="h-9 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 text-sm font-bold"
           />
         </label>
         <button
           type="button"
+          onClick={() => setDate((current) => shiftDate(current, 1))}
+          className={iconButton}
+          aria-label="다음날"
+        >
+          <ChevronRight size={16} />
+        </button>
+        <button
+          type="button"
           onClick={() => setDate(todayInSeoul())}
-          className="rounded-xl border border-[hsl(var(--border))] px-3 py-2.5 text-sm font-bold"
+          className="h-9 rounded-xl border border-[hsl(var(--border))] px-3 text-xs font-bold"
         >
           오늘
         </button>
@@ -270,228 +331,273 @@ export default function AdminAttendance() {
           type="button"
           onClick={() => void loadMembers(date)}
           disabled={isLoading}
-          className="flex items-center gap-1.5 rounded-xl border border-[hsl(var(--border))] px-3 py-2.5 text-sm font-bold"
+          className={`${iconButton} ml-auto`}
+          aria-label="새로고침"
         >
-          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> 새로고침
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
         </button>
       </div>
 
-      <p className="mt-4 text-xs text-[hsl(var(--muted-foreground))]">
-        출석 {summary.present} · 지각 {summary.late} · 결석 {summary.absent} · 조퇴 {summary.early_leave} · 미입력 {summary.none}
-      </p>
+      {/* 요약 + 필터 */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="text-sm font-bold">{formatDateLabel(date)}</p>
+        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+          출석 {summary.present} · 지각 {summary.late} · 결석 {summary.absent} · 조퇴 {summary.early_leave} · 미입력 {summary.none}
+        </p>
+        <label className="ml-auto flex items-center gap-1.5 text-xs font-bold">
+          <input
+            type="checkbox"
+            checked={onlyPending}
+            onChange={(event) => setOnlyPending(event.currentTarget.checked)}
+          />
+          미입력만 보기
+        </label>
+      </div>
 
       {message && (
         <p
           role="status"
-          className={`mt-3 text-xs font-bold ${messageIsError ? 'text-rose-600' : 'text-emerald-700'}`}
+          className={`mt-2 text-xs font-bold ${messageIsError ? 'text-rose-600' : 'text-emerald-700'}`}
         >
           {message}
         </p>
       )}
 
-      <div className="mt-4 grid gap-3">
+      {/* 학생 목록: 한 줄에 한 명 */}
+      <ul className="mt-3 grid gap-1.5">
         {isLoading && members.length === 0 ? (
-          <div className="flex justify-center py-10">
+          <li className="flex justify-center py-8">
             <LoaderCircle className="animate-spin text-[hsl(var(--accent))]" size={24} />
-          </div>
-        ) : members.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[hsl(var(--muted-foreground))]">등록된 학생이 없어요.</p>
+          </li>
+        ) : visibleMembers.length === 0 ? (
+          <li className="py-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
+            {members.length === 0 ? '등록된 학생이 없어요.' : '모든 학생의 출결이 입력됐어요.'}
+          </li>
         ) : (
-          members.map((member) => {
+          visibleMembers.map((member) => {
             const attendanceBusy = busyKey === `att-${member.id}`;
             const phoneBusy = busyKey === `phone-${member.id}`;
+            const isOpen = openId === member.id;
             const phoneValue = phoneDrafts[member.id] ?? member.parentPhone;
             const phoneChanged = phoneValue.trim() !== member.parentPhone;
             return (
-              <article
+              <li
                 key={member.id}
-                className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4"
+                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))]"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-bold">
-                    {member.displayName}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(isOpen ? null : member.id)}
+                    aria-expanded={isOpen}
+                    className="flex min-w-[110px] flex-1 items-center gap-1.5 text-left"
+                  >
+                    <ChevronRight
+                      size={14}
+                      className={`shrink-0 text-[hsl(var(--muted-foreground))] transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                    />
+                    <span className="truncate text-sm font-bold">{member.displayName}</span>
                     {member.className && (
-                      <span className="ml-2 text-xs font-normal text-[hsl(var(--muted-foreground))]">
+                      <span className="hidden truncate text-[11px] text-[hsl(var(--muted-foreground))] sm:inline">
                         {member.className}
                       </span>
                     )}
-                  </p>
-                  {member.status && (
-                    <button
-                      type="button"
-                      onClick={() => void clearAttendance(member)}
-                      disabled={attendanceBusy}
-                      className="text-xs text-[hsl(var(--muted-foreground))] underline"
-                    >
-                      입력 취소
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label={`${member.displayName} 출결`}>
-                  {STATUS_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => void saveAttendance(member, option.value)}
-                      disabled={attendanceBusy}
-                      aria-pressed={member.status === option.value}
-                      className={`rounded-xl border px-2 py-2.5 text-sm font-bold ${
-                        member.status === option.value
-                          ? option.active
-                          : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    value={noteDrafts[member.id] ?? member.note}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setNoteDrafts((current) => ({ ...current, [member.id]: value }));
-                    }}
-                    onBlur={() => {
-                      const draft = noteDrafts[member.id];
-                      if (member.status && draft !== undefined && draft !== member.note) {
-                        void saveAttendance(member, member.status);
-                      }
-                    }}
-                    maxLength={200}
-                    placeholder="메모 (예: 병원 진료로 결석)"
-                    className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={phoneValue}
-                      onChange={(event) => {
-                        const value = event.currentTarget.value;
-                        setPhoneDrafts((current) => ({ ...current, [member.id]: value }));
-                      }}
-                      placeholder="학부모 연락처 010-0000-0000"
-                      className="min-w-0 flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2.5 text-sm"
+                    <Phone
+                      size={12}
+                      className={member.parentPhone ? 'shrink-0 text-emerald-600' : 'shrink-0 text-rose-400'}
+                      aria-label={member.parentPhone ? '학부모 연락처 등록됨' : '학부모 연락처 없음'}
                     />
-                    <button
-                      type="button"
-                      onClick={() => void savePhone(member)}
-                      disabled={!phoneChanged || phoneBusy}
-                      className="rounded-xl bg-[hsl(var(--primary))] px-3 py-2.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
-                    >
-                      저장
-                    </button>
+                    {member.note && <span className="shrink-0 text-[10px] text-[hsl(var(--muted-foreground))]">메모</span>}
+                  </button>
+
+                  <div className="flex gap-1" role="group" aria-label={`${member.displayName} 출결`}>
+                    {STATUS_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => void saveAttendance(member, option.value)}
+                        disabled={attendanceBusy}
+                        aria-pressed={member.status === option.value}
+                        className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold ${
+                          member.status === option.value
+                            ? option.active
+                            : 'border-[hsl(var(--border))] bg-[hsl(var(--card))]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                {!member.status && (
-                  <p className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    출결 버튼을 먼저 누르면 메모가 함께 저장돼요.
-                  </p>
+
+                {isOpen && (
+                  <div className="grid gap-2 border-t border-[hsl(var(--border))] px-3 py-3 sm:grid-cols-2">
+                    <label className="grid gap-1 text-[11px] font-bold">
+                      메모
+                      <input
+                        type="text"
+                        value={noteDrafts[member.id] ?? member.note}
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
+                          setNoteDrafts((current) => ({ ...current, [member.id]: value }));
+                        }}
+                        onBlur={() => {
+                          const draft = noteDrafts[member.id];
+                          if (member.status && draft !== undefined && draft !== member.note) {
+                            void saveAttendance(member, member.status);
+                          }
+                        }}
+                        maxLength={200}
+                        disabled={!member.status}
+                        placeholder={member.status ? '예: 병원 진료로 결석' : '출결을 먼저 선택해 주세요'}
+                        className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal disabled:opacity-50"
+                      />
+                    </label>
+                    <div className="grid gap-1 text-[11px] font-bold">
+                      학부모 연락처
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          value={phoneValue}
+                          onChange={(event) => {
+                            const value = event.currentTarget.value;
+                            setPhoneDrafts((current) => ({ ...current, [member.id]: value }));
+                          }}
+                          placeholder="010-0000-0000"
+                          aria-label="학부모 연락처"
+                          className="min-w-0 flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 text-sm font-normal"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void savePhone(member)}
+                          disabled={!phoneChanged || phoneBusy}
+                          className="rounded-xl bg-[hsl(var(--primary))] px-3 py-2 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                    {member.status && (
+                      <button
+                        type="button"
+                        onClick={() => void clearAttendance(member)}
+                        disabled={attendanceBusy}
+                        className="justify-self-start text-xs text-[hsl(var(--muted-foreground))] underline sm:col-span-2"
+                      >
+                        이 날짜 출결 입력 취소
+                      </button>
+                    )}
+                  </div>
                 )}
-              </article>
+              </li>
             );
           })
         )}
-      </div>
+      </ul>
 
-      <div className="mt-8 rounded-2xl border border-[hsl(var(--border))] p-4">
-        <h3 className="flex items-center gap-2 text-sm font-bold">
+      {/* 접어 두는 부가 기능 */}
+      <details className="mt-5 rounded-xl border border-[hsl(var(--border))]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-bold">
           <Download size={15} /> 엑셀(CSV) 내보내기
-        </h3>
-        <div className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="grid gap-1.5 text-xs font-bold">
+        </summary>
+        <div className="flex flex-wrap items-end gap-3 border-t border-[hsl(var(--border))] px-4 py-3">
+          <label className="grid gap-1 text-xs font-bold">
             시작일
             <input
               type="date"
               value={exportFrom}
               onChange={(event) => setExportFrom(event.currentTarget.value)}
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm"
+              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
             />
           </label>
-          <label className="grid gap-1.5 text-xs font-bold">
+          <label className="grid gap-1 text-xs font-bold">
             종료일
             <input
               type="date"
               value={exportTo}
               onChange={(event) => setExportTo(event.currentTarget.value)}
-              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm"
+              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm"
             />
           </label>
           <button
             type="button"
             onClick={() => void exportCsv()}
             disabled={busyKey === 'export' || !exportFrom || !exportTo}
-            className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2.5 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
+            className="rounded-xl bg-[hsl(var(--primary))] px-4 py-2 text-sm font-bold text-[hsl(var(--primary-foreground))] disabled:opacity-40"
           >
             내려받기
           </button>
         </div>
-      </div>
+      </details>
 
-      <div className="mt-6 rounded-2xl border border-[hsl(var(--border))] p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-bold">
-            <Send size={15} /> 최근 알림 발송 기록
-          </h3>
-          <button
-            type="button"
-            onClick={() => void loadNotifications()}
-            className="text-xs text-[hsl(var(--muted-foreground))] underline"
-          >
-            새로고침
-          </button>
-        </div>
-        {notifications.length === 0 ? (
-          <p className="mt-3 text-xs text-[hsl(var(--muted-foreground))]">아직 발송 기록이 없어요.</p>
-        ) : (
-          <ul className="mt-3 grid gap-2">
-            {notifications.map((row) => (
-              <li
-                key={row.id}
-                className="rounded-xl bg-[hsl(var(--background))] p-3 text-xs leading-relaxed"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold">
-                    {row.studentName || '학생'} · {row.kind === 'started' ? '과제 시작' : '과제 완료'}
-                  </span>
-                  <span
-                    className={`font-bold ${
-                      row.status === 'failed'
-                        ? 'text-rose-600'
-                        : row.status === 'sent'
-                          ? 'text-emerald-700'
-                          : 'text-[hsl(var(--muted-foreground))]'
-                    }`}
-                  >
-                    {NOTIFICATION_STATUS_LABEL[row.status]}
-                  </span>
-                </div>
-                <p className="text-[hsl(var(--muted-foreground))]">
-                  {row.assignmentTitle} · {row.phone || '번호 없음'} ·{' '}
-                  {new Date(row.createdAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
-                </p>
-                {row.status === 'failed' && (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {row.errorMessage && <span className="text-rose-600">{row.errorMessage}</span>}
-                    <button
-                      type="button"
-                      onClick={() => void retryNotification(row.id)}
-                      disabled={busyKey === `retry-${row.id}`}
-                      className="font-bold underline"
+      <details className="mt-2 rounded-xl border border-[hsl(var(--border))]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-bold">
+          <Send size={15} /> 알림 발송 기록
+          {failedCount > 0 && (
+            <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[10px] text-white">
+              실패 {failedCount}
+            </span>
+          )}
+        </summary>
+        <div className="border-t border-[hsl(var(--border))] px-4 py-3">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void loadNotifications()}
+              className="text-xs text-[hsl(var(--muted-foreground))] underline"
+            >
+              새로고침
+            </button>
+          </div>
+          {notifications.length === 0 ? (
+            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">아직 발송 기록이 없어요.</p>
+          ) : (
+            <ul className="mt-2 grid gap-1.5">
+              {notifications.map((row) => (
+                <li
+                  key={row.id}
+                  className="rounded-lg bg-[hsl(var(--background))] px-3 py-2 text-xs leading-relaxed"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold">
+                      {row.studentName || '학생'} · {row.kind === 'started' ? '과제 시작' : '과제 완료'}
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        row.status === 'failed'
+                          ? 'text-rose-600'
+                          : row.status === 'sent'
+                            ? 'text-emerald-700'
+                            : 'text-[hsl(var(--muted-foreground))]'
+                      }`}
                     >
-                      다시 보내기
-                    </button>
+                      {NOTIFICATION_STATUS_LABEL[row.status]}
+                    </span>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  <p className="text-[hsl(var(--muted-foreground))]">
+                    {row.assignmentTitle} · {row.phone || '번호 없음'} ·{' '}
+                    {new Date(row.createdAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                  </p>
+                  {row.status === 'failed' && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {row.errorMessage && <span className="text-rose-600">{row.errorMessage}</span>}
+                      <button
+                        type="button"
+                        onClick={() => void retryNotification(row.id)}
+                        disabled={busyKey === `retry-${row.id}`}
+                        className="font-bold underline"
+                      >
+                        다시 보내기
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
     </section>
   );
 }
