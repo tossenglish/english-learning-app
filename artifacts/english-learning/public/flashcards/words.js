@@ -228,6 +228,6 @@ window.FC_SETS = [
     { en: "protest", ko: "항의; 항의하다" },
     { en: "property", ko: "재산, 소유물" },
     { en: "majority", ko: "대다수, 과반수; 다수의" }
-    231    ],
-    232  }
-    233 ];
+  ],
+}
+  ];
