@@ -29,3 +29,5 @@ export * from "./reading-passages";
 export * from "./member-contacts";
 export * from "./attendance-records";
 export * from "./assignment-notifications";
+export * from "./shared-words";
+
