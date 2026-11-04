@@ -434,7 +434,8 @@ function Sidebar({ location }: { location: string }) {
       <div className="mt-14">
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
-          <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === '/dashboard'} />
+          <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === "/dashboard"} />
+            <NavItem href="/phonics" label="파닉스" icon={BookOpenIcon} active={location === "/phonics"} />
           <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
           <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
@@ -761,7 +762,12 @@ function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFl
     <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>
     <Route path="/admin"><AdminUpload /></Route>
     <Route component={NotFound} />
-  </Switch>;
+          <Route path="/phonics">
+          <div className="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col bg-amber-50 rounded-2xl overflow-hidden shadow-sm">
+            <iframe src="/phonics.html" title="파닉스" className="w-full flex-1 border-0 min-h-[850px]" />
+          </div>
+        </Route>
+      </Switch>;
 }
 
 function HomeRedirect() {
@@ -1012,7 +1018,12 @@ function ClerkProviderWithRoutes() {
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
               <Route component={LearningPortal} />
-            </Switch>
+                    <Route path="/phonics">
+          <div className="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col bg-amber-50 rounded-2xl overflow-hidden shadow-sm">
+            <iframe src="/phonics.html" title="파닉스" className="w-full flex-1 border-0 min-h-[850px]" />
+          </div>
+        </Route>
+      </Switch>
             <Toaster />
           </TooltipProvider>
         </QueryClientProvider>

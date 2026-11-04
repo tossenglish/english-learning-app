@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phonics Adventure Land</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+KR:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      font-family: 'Fredoka', 'Noto Sans KR', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .bounce-hover:hover {
+      transform: translateY(-4px) scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-amber-50 min-h-screen text-slate-800 flex flex-col items-center p-4">
+
+  <div id="audioUnlockBanner" class="w-full max-w-3xl mb-4 p-3 bg-amber-400 text-amber-950 rounded-2xl flex items-center justify-between shadow-md cursor-pointer transition hover:bg-amber-300">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl animate-bounce">📢</span>
+      <span class="font-bold text-sm sm:text-base">소리가 안 나면 여기를 터치해 오디오를 켜주세요!</span>
+    </div>
+    <button class="bg-white px-3 py-1.5 rounded-xl font-bold text-sm shadow text-amber-700">오디오 켜기 🔊</button>
+  </div>
+
+  <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 py-3 border-b-2 border-amber-200 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-rose-400 text-white rounded-2xl flex items-center justify-center text-3xl font-bold shadow-md">🔤</div>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-indigo-900 tracking-wide">Phonics Land</h1>
+        <p class="text-xs sm:text-sm text-slate-500 font-medium">재미있게 듣고 따라 하는 파닉스 모험</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200">
+      <span class="text-2xl">⭐</span>
+      <span id="starScore" class="text-xl font-bold text-amber-500">0</span>
+    </div>
+  </header>
+
+  <nav class="flex gap-2 sm:gap-4 mb-6">
+    <button onclick="switchTab('cards')" id="tabCards" class="px-5 py-2.5 rounded-2xl font-bold bg-indigo-600 text-white shadow-md transition">📇 알파벳 카드</button>
+    <button onclick="switchTab('blend')" id="tabBlend" class="px-5 py-2.5 rounded-2xl font-bold bg-white text-slate-600 shadow-sm border hover:bg-slate-50 transition">🧩 CVC 단어 조합</button>
+    <button onclick="switchTab('quiz')" id="tabQuiz" class="px-5 py-2.5 rounded-2xl font-bold bg-white text-slate-600 shadow-sm border hover:bg-slate-50 transition">🎯 소리 맞히기</button>
+  </nav>
+
+  <main class="w-full max-w-4xl">
+    <section id="sectionCards" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"></section>
+
+    <section id="sectionBlend" class="hidden bg-white p-6 sm:p-8 rounded-3xl shadow-xl border-4 border-indigo-100 flex flex-col items-center">
+      <h2 class="text-2xl font-bold text-indigo-950 mb-2">CVC 3글자 단어 조합하기</h2>
+      <p class="text-sm text-slate-500 mb-6 text-center">글자를 누르고 [소리 모아 읽기]를 눌러보세요!</p>
+      <div class="flex items-center gap-3 sm:gap-6 mb-8">
+        <div class="flex flex-col items-center gap-2">
+          <button onclick="cycleLetter('c1', -1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▲</button>
+          <div id="c1Box" onclick="speakSingle(this.innerText)" class="w-20 h-24 sm:w-24 sm:h-28 bg-rose-50 border-4 border-rose-300 rounded-2xl flex items-center justify-center text-5xl font-black text-rose-600 cursor-pointer shadow-md">C</div>
+          <button onclick="cycleLetter('c1', 1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▼</button>
+        </div>
+        <span class="text-3xl font-black text-slate-300">+</span>
+        <div class="flex flex-col items-center gap-2">
+          <button onclick="cycleLetter('v', -1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▲</button>
+          <div id="vBox" onclick="speakSingle(this.innerText)" class="w-20 h-24 sm:w-24 sm:h-28 bg-amber-50 border-4 border-amber-300 rounded-2xl flex items-center justify-center text-5xl font-black text-amber-600 cursor-pointer shadow-md">A</div>
+          <button onclick="cycleLetter('v', 1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▼</button>
+        </div>
+        <span class="text-3xl font-black text-slate-300">+</span>
+        <div class="flex flex-col items-center gap-2">
+          <button onclick="cycleLetter('c2', -1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▲</button>
+          <div id="c2Box" onclick="speakSingle(this.innerText)" class="w-20 h-24 sm:w-24 sm:h-28 bg-sky-50 border-4 border-sky-300 rounded-2xl flex items-center justify-center text-5xl font-black text-sky-600 cursor-pointer shadow-md">T</div>
+          <button onclick="cycleLetter('c2', 1)" class="w-10 h-10 bg-slate-100 rounded-full text-slate-600 font-bold hover:bg-slate-200">▼</button>
+        </div>
+      </div>
+      <button onclick="blendAndPlay()" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-xl font-bold rounded-2xl shadow-lg transition active:scale-95 flex items-center gap-2">
+        <span>🔊</span> 단어 소리 모아 듣기
+      </button>
+      <div id="blendResult" class="mt-6 text-xl font-bold text-slate-700 min-h-[30px]"></div>
+    </section>
+
+    <section id="sectionQuiz" class="hidden bg-white p-6 sm:p-8 rounded-3xl shadow-xl border-4 border-amber-100 flex flex-col items-center">
+      <h2 class="text-2xl font-bold text-amber-950 mb-1">소리를 듣고 글자를 골라보세요!</h2>
+      <p class="text-sm text-slate-500 mb-6">스피커 버튼을 눌러 소리를 다시 들을 수 있어요.</p>
+      <button id="quizSpeaker" onclick="playQuizPrompt()" class="w-24 h-24 rounded-full bg-amber-400 hover:bg-amber-500 text-white text-4xl shadow-lg flex items-center justify-center mb-8 active:scale-95 transition">📢</button>
+      <div id="quizOptions" class="grid grid-cols-2 gap-4 w-full max-w-md"></div>
+    </section>
+  </main>
+
+  <script>
+    let audioCtx = null;
+    let selectedVoice = null;
+    let stars = 0;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function loadVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      selectedVoice = voices.find(v => v.lang === 'en-US' && !v.name.includes('Bad')) ||
+                      voices.find(v => v.lang.startsWith('en')) || null;
+    }
+
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    document.getElementById('audioUnlockBanner').addEventListener('click', () => {
+      initAudioContext();
+      speak("Phonics Sound On!");
+      playSuccessSound();
+      document.getElementById('audioUnlockBanner').classList.add('hidden');
+    });
+
+    function playPopSound() {
+      initAudioContext();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.09);
+    }
+
+    function playSuccessSound() {
+      initAudioContext();
+      if (!audioCtx) return;
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.08);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.08);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + (idx + 1) * 0.08 + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + idx * 0.08);
+        osc.stop(audioCtx.currentTime + (idx + 1) * 0.08 + 0.12);
+      });
+    }
+
+    function playWrongSound() {
+      initAudioContext();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.22);
+    }
+
+    function speak(text, rate = 0.9, onEndCallback = null) {
+      initAudioContext();
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'en-US';
+      if (selectedVoice) utter.voice = selectedVoice;
+      utter.rate = rate;
+      utter.pitch = 1.05;
+      if (onEndCallback) utter.onend = onEndCallback;
+      window.speechSynthesis.speak(utter);
+    }
+
+    function speakSingle(letter) {
+      playPopSound();
+      speak(letter.toLowerCase());
+    }
+
+    const phonicsData = [
+      { letter: 'A', word: 'Apple', icon: '🍎', sound: '애' },
+      { letter: 'B', word: 'Bear', icon: '🐻', sound: 'ㅂ' },
+      { letter: 'C', word: 'Cat', icon: '🐱', sound: 'ㅋ' },
+      { letter: 'D', word: 'Dog', icon: '🐶', sound: 'ㄷ' },
+      { letter: 'E', word: 'Egg', icon: '🥚', sound: '에' },
+      { letter: 'F', word: 'Fish', icon: '🐟', sound: 'ㅍ' },
+      { letter: 'G', word: 'Goat', icon: '🐐', sound: 'ㄱ' },
+      { letter: 'H', word: 'Hat', icon: '👒', sound: 'ㅎ' },
+      { letter: 'I', word: 'Igloo', icon: '🏠', sound: '이' },
+      { letter: 'J', word: 'Jam', icon: '🍓', sound: 'ㅈ' },
+      { letter: 'K', word: 'Kite', icon: '🪁', sound: 'ㅋ' },
+      { letter: 'L', word: 'Lion', icon: '🦁', sound: 'ㄹ' },
+      { letter: 'M', word: 'Monkey', icon: '🐵', sound: 'ㅁ' },
+      { letter: 'N', word: 'Nut', icon: '🥜', sound: 'ㄴ' },
+      { letter: 'O', word: 'Octopus', icon: '🐙', sound: '아' },
+      { letter: 'P', word: 'Pig', icon: '🐷', sound: 'ㅍ' },
+      { letter: 'Q', word: 'Queen', icon: '👑', sound: '쿼' },
+      { letter: 'R', word: 'Rabbit', icon: '🐰', sound: 'ㄹ' },
+      { letter: 'S', word: 'Sun', icon: '☀️', sound: 'ㅅ' },
+      { letter: 'T', word: 'Tiger', icon: '🐯', sound: 'ㅌ' },
+      { letter: 'U', word: 'Umbrella', icon: '☂️', sound: '어' },
+      { letter: 'V', word: 'Van', icon: '🚐', sound: 'ㅂ' },
+      { letter: 'W', word: 'Water', icon: '💧', sound: '워' },
+      { letter: 'X', word: 'Box', icon: '📦', sound: 'ㅋ스' },
+      { letter: 'Y', word: 'Yo-yo', icon: '🪀', sound: '이' },
+      { letter: 'Z', word: 'Zebra', icon: '🦓', sound: 'ㅈ' }
+    ];
+
+    const cardsContainer = document.getElementById('sectionCards');
+    phonicsData.forEach(item => {
+      const card = document.createElement('div');
+      card.className = "bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-md flex flex-col items-center justify-center cursor-pointer bounce-hover transition active:scale-95";
+      card.onclick = () => {
+        playPopSound();
+        speak(`${item.letter}. ${item.word}.`);
+      };
+      card.innerHTML = `
+        <div class="text-3xl mb-1">${item.icon}</div>
+        <div class="text-3xl font-black text-indigo-900">${item.letter}<span class="text-slate-400 text-xl font-bold">${item.letter.toLowerCase()}</span></div>
+        <div class="text-sm font-bold text-slate-600 mt-1">${item.word}</div>
+      `;
+      cardsContainer.appendChild(card);
+    });
+
+    const consonants1 = ['B', 'C', 'D', 'F', 'H', 'M', 'P', 'R', 'S', 'T'];
+    const vowels = ['A', 'E', 'I', 'O', 'U'];
+    const consonants2 = ['T', 'P', 'G', 'D', 'N', 'M', 'X'];
+
+    let idxC1 = 1, idxV = 0, idxC2 = 0;
+
+    function cycleLetter(type, step) {
+      playPopSound();
+      if (type === 'c1') {
+        idxC1 = (idxC1 + step + consonants1.length) % consonants1.length;
+        document.getElementById('c1Box').innerText = consonants1[idxC1];
+      } else if (type === 'v') {
+        idxV = (idxV + step + vowels.length) % vowels.length;
+        document.getElementById('vBox').innerText = vowels[idxV];
+      } else if (type === 'c2') {
+        idxC2 = (idxC2 + step + consonants2.length) % consonants2.length;
+        document.getElementById('c2Box').innerText = consonants2[idxC2];
+      }
+    }
+
+    function blendAndPlay() {
+      const c1 = consonants1[idxC1], v = vowels[idxV], c2 = consonants2[idxC2];
+      const word = (c1 + v + c2).toLowerCase();
+      document.getElementById('blendResult').innerText = `합쳐진 단어: ${word.toUpperCase()}`;
+
+      speak(c1, 0.8, () => {
+        setTimeout(() => {
+          speak(v, 0.8, () => {
+            setTimeout(() => {
+              speak(c2, 0.8, () => {
+                setTimeout(() => {
+                  playSuccessSound();
+                  speak(word, 0.85);
+                  confetti({ particleCount: 30, spread: 60, origin: { y: 0.7 } });
+                }, 250);
+              });
+            }, 180);
+          });
+        }, 180);
+      });
+    }
+
+    let currentQuizLetter = '';
+    function generateQuiz() {
+      const randomIdx = Math.floor(Math.random() * phonicsData.length);
+      currentQuizLetter = phonicsData[randomIdx].letter;
+      const options = [currentQuizLetter];
+      while (options.length < 4) {
+        const rand = phonicsData[Math.floor(Math.random() * phonicsData.length)].letter;
+        if (!options.includes(rand)) options.push(rand);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      const quizOptionsBox = document.getElementById('quizOptions');
+      quizOptionsBox.innerHTML = '';
+      options.forEach(char => {
+        const btn = document.createElement('button');
+        btn.className = "py-6 bg-slate-50 hover:bg-indigo-50 border-2 border-slate-200 text-3xl font-black text-slate-700 rounded-2xl shadow transition active:scale-95";
+        btn.innerText = `${char} ${char.toLowerCase()}`;
+        btn.onclick = () => checkQuizAnswer(char, btn);
+        quizOptionsBox.appendChild(btn);
+      });
+      playQuizPrompt();
+    }
+
+    function playQuizPrompt() {
+      speak(currentQuizLetter.toLowerCase(), 0.8);
+    }
+
+    function checkQuizAnswer(selected, buttonEl) {
+      if (selected === currentQuizLetter) {
+        playSuccessSound();
+        buttonEl.classList.remove('bg-slate-50', 'text-slate-700');
+        buttonEl.classList.add('bg-emerald-500', 'text-white', 'border-emerald-600');
+        stars += 1;
+        document.getElementById('starScore').innerText = stars;
+        confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 } });
+        setTimeout(generateQuiz, 1200);
+      } else {
+        playWrongSound();
+        buttonEl.classList.add('bg-rose-100', 'border-rose-400');
+        setTimeout(() => buttonEl.classList.remove('bg-rose-100', 'border-rose-400'), 500);
+      }
+    }
+
+    function switchTab(tab) {
+      playPopSound();
+      document.getElementById('sectionCards').classList.add('hidden');
+      document.getElementById('sectionBlend').classList.add('hidden');
+      document.getElementById('sectionQuiz').classList.add('hidden');
+      ['tabCards', 'tabBlend', 'tabQuiz'].forEach(id => {
+        document.getElementById(id).className = "px-5 py-2.5 rounded-2xl font-bold bg-white text-slate-600 shadow-sm border hover:bg-slate-50 transition";
+      });
+
+      if (tab === 'cards') {
+        document.getElementById('sectionCards').classList.remove('hidden');
+        document.getElementById('tabCards').className = "px-5 py-2.5 rounded-2xl font-bold bg-indigo-600 text-white shadow-md transition";
+      } else if (tab === 'blend') {
+        document.getElementById('sectionBlend').classList.remove('hidden');
+        document.getElementById('tabBlend').className = "px-5 py-2.5 rounded-2xl font-bold bg-indigo-600 text-white shadow-md transition";
+      } else if (tab === 'quiz') {
+        document.getElementById('sectionQuiz').classList.remove('hidden');
+        document.getElementById('tabQuiz').className = "px-5 py-2.5 rounded-2xl font-bold bg-indigo-600 text-white shadow-md transition";
+        generateQuiz();
+      }
+    }
+  </script>
+</body>
+</html>
