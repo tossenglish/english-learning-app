@@ -40,7 +40,6 @@ import PassagePractice, { type PassageEvaluation } from '@/components/passage-pr
 import ReadingComprehensionPractice from '@/components/reading-comprehension';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
-import WordQuestGame from '@/components/word-quest-game';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
 import { Layers as WordsIcon } from 'lucide-react';
 import PersianCatFriends from '@/components/persian-cat-friends';
@@ -588,14 +587,6 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
         onStartPractice={onStart}
       />
 
-      <section className="space-y-4" aria-label="워드 퀘스트 영어 단어 게임">
-        <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[.16em] text-[hsl(var(--accent))]">Play & learn</p>
-          <h2 className="mt-1 text-xl font-bold tracking-[-.03em]">워드 퀘스트 RPG</h2>
-          <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">퀴즈를 풀고 몬스터를 물리치며 영어 단어를 연습해요.</p>
-        </div>
-        <WordQuestGame />
-      </section>
 
       <HomeVideoPlayer />
     </div>

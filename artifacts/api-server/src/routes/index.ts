@@ -7,6 +7,7 @@ import homeVideoRouter from "./home-video";
 import translationsRouter from "./translations";
 import readingComprehensionRouter from "./reading-comprehension";
 import attendanceRouter from "./attendance";
+import wordsRouter from "./words";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(homeVideoRouter);
 router.use(translationsRouter);
 router.use(readingComprehensionRouter);
 router.use(attendanceRouter);
+router.use(wordsRouter);
 
 export default router;

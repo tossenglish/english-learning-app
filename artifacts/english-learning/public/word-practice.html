@@ -737,6 +737,7 @@
     </div>
 
     <script src="flashcards/words.js"></script>
+    <script src="shared-words.js"></script>
     <script>
       (function () {
         var SAMPLE = [
@@ -934,7 +935,8 @@
             current = MINE;
             loadMine();
           }
-          $("#editBtn").hidden = current !== MINE;
+          $("#editBtn").hidden =
+            current !== MINE || (window.SharedWords && !SharedWords.canEdit);
           $("#setSel").value = current;
           try {
             localStorage.setItem(SETKEY, current);
@@ -955,7 +957,7 @@
             }).join("") +
             '<option value="' +
             MINE +
-            '">내 단어 (이 기기에 저장)</option>';
+            '">내 단어 (서버에 저장)</option>';
           $("#setbar").hidden = false;
           $("#setSel").onchange = function () {
             applySet(this.value);
@@ -1622,6 +1624,17 @@
             localStorage.setItem(KEY, toText(words));
           } catch (e) {}
           closeEditor();
+          /* 서버에도 저장해서 워드 퀘스트 RPG와 같은 단어를 쓰게 합니다. */
+          if (window.SharedWords) {
+            SharedWords.save(words).then(function (r) {
+              if (r.ok) return;
+              alert(
+                r.status === 403
+                  ? "관리자만 공유 단어를 바꿀 수 있어요. 이번 변경은 서버에 저장되지 않았어요."
+                  : "서버에 저장하지 못했어요. 잠시 뒤에 다시 저장해 주세요.",
+              );
+            });
+          }
         };
 
         /* ---------- large display ---------- */
@@ -1639,26 +1652,50 @@
           if (localStorage.getItem(BIGKEY) === "1") setBig(true);
         } catch (e) {}
 
-        buildSetBar();
-        var want = null;
-        try {
-          want = new URLSearchParams(location.search).get("set");
-        } catch (e) {}
-        if (!want) {
-          try {
-            want = localStorage.getItem(SETKEY);
-          } catch (e) {}
+        /* 서버의 공유 단어를 먼저 불러온 뒤 화면을 시작합니다. */
+        function syncFromServer(done) {
+          if (!window.SharedWords) return done();
+          SharedWords.load().then(function (list) {
+            if (list && list.length) {
+              try {
+                localStorage.setItem(KEY, toText(list));
+              } catch (e) {}
+            } else if (list) {
+              /* 서버가 비어 있으면 이 기기에 있던 단어를 한 번 올립니다(관리자만 성공). */
+              var raw = null;
+              try {
+                raw = localStorage.getItem(KEY);
+              } catch (e) {}
+              var p = raw ? parse(raw) : { words: [] };
+              if (p.words.length) SharedWords.save(p.words);
+            }
+            done();
+          });
         }
-        if (
-          !want ||
-          (want !== MINE &&
-            !SETS.some(function (s) {
-              return String(s.id) === want;
-            }))
-        )
-          want = SETS.length ? String(SETS[0].id) : MINE;
-        applySet(want);
-        setMode("learn");
+
+        function init() {
+          buildSetBar();
+          var want = null;
+          try {
+            want = new URLSearchParams(location.search).get("set");
+          } catch (e) {}
+          if (!want) {
+            try {
+              want = localStorage.getItem(SETKEY);
+            } catch (e) {}
+          }
+          if (
+            !want ||
+            (want !== MINE &&
+              !SETS.some(function (s) {
+                return String(s.id) === want;
+              }))
+          )
+            want = SETS.length ? String(SETS[0].id) : MINE;
+          applySet(want);
+          setMode("learn");
+        }
+        syncFromServer(init);
       })();
     </script>
   </body>
