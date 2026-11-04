@@ -190,7 +190,7 @@ export default function PassagePracticeGrid() {
             <p className="lpv-mono mb-3 px-3 text-[9px] font-bold uppercase tracking-[.2em] text-[#89909f]">My practice</p>
             <nav className="space-y-1.5">
               {[
-                ['오늘의 연습', '01'],
+                ['오늘의 과제', '01'],
                 ['배우기', '02'],
                 ['지문 연습', '03'],
                 ['단어장', '04'],
@@ -274,7 +274,7 @@ export default function PassagePracticeGrid() {
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e7e1d8]">
                   <div className="h-full rounded-full bg-[#e88942] transition-[width] duration-500" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="mt-2 text-[10px] font-semibold text-[#6f756f]">{progress}% · 오늘의 연습이 쌓이고 있어요</p>
+                <p className="mt-2 text-[10px] font-semibold text-[#6f756f]">{progress}% · 오늘의 과제가 쌓이고 있어요</p>
               </div>
             </section>
 

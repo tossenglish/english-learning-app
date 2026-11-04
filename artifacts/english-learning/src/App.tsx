@@ -433,7 +433,7 @@ function Sidebar({ location }: { location: string }) {
       <div className="mt-14">
         <p className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.38)]">My practice</p>
         <nav className="space-y-1.5">
-          <NavItem href="/dashboard" label="오늘의 연습" icon={HomeIcon} active={location === "/dashboard"} />
+          <NavItem href="/dashboard" label="오늘의 과제" icon={HomeIcon} active={location === "/dashboard"} />
             <NavItem href="/phonics" label="파닉스" icon={BookOpenIcon} active={location === "/phonics"} />
           <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
           <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
