@@ -752,13 +752,13 @@ function RouterContent({ level, onLevelChange, learned, onStart, isAdmin, cardFl
     <Route path="/progress"><Progress learned={learned} /></Route>
     <Route path="/report"><LearningReport level={level} metrics={metrics} /></Route>
     <Route path="/admin"><AdminUpload /></Route>
+    <Route path="/phonics">
+      <div className="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col bg-amber-50 rounded-2xl overflow-hidden shadow-sm">
+        <iframe src="/phonics.html" title="파닉스" className="w-full flex-1 border-0 min-h-[850px]" />
+      </div>
+    </Route>
     <Route component={NotFound} />
-          <Route path="/phonics">
-          <div className="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col bg-amber-50 rounded-2xl overflow-hidden shadow-sm">
-            <iframe src="/phonics.html" title="파닉스" className="w-full flex-1 border-0 min-h-[850px]" />
-          </div>
-        </Route>
-      </Switch>;
+  </Switch>;
 }
 
 function HomeRedirect() {
