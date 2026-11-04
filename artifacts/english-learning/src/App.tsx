@@ -41,7 +41,7 @@ import ReadingComprehensionPractice from '@/components/reading-comprehension';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
-import { Layers as WordsIcon } from 'lucide-react';
+import { Layers as WordsIcon, BookOpen as BookOpenIcon } from 'lucide-react';
 import PersianCatFriends from '@/components/persian-cat-friends';
 import { useAdminAccess } from '@/hooks/use-admin-access';
 import LevelAssignments from '@/components/level-assignments';
