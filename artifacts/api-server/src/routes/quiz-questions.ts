@@ -21,13 +21,6 @@ export const quizQuestions: QuizQuestion[] = [
     answer: 1,
     explanation: "대한민국의 수도는 서울입니다.",
   },
-  {
-    id: "q3",
-    text: "물이 얼면 무엇이 될까요?",
-    choices: ["수증기", "얼음", "구름", "비"],
-    answer: 1,
-    explanation: "물이 0℃ 이하로 내려가면 얼음이 됩니다.",
-  },
 ];
 
 export const quizQuestionCount = 0;

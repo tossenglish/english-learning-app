@@ -24,19 +24,19 @@ async function requireQuizAdmin(req: Request, res: Response): Promise<boolean> {
   return true;
 }
 
-function publicQuestions(questions: QuizQuestion[], count: number): QuizQuestion[] {
+function chooseQuestions(questions: QuizQuestion[], count: number): QuizQuestion[] {
   const shuffled = [...questions];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = randomInt(index + 1);
     [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
   }
-  return count > 0 ? shuffled.slice(0, Math.min(count, shuffled.length)) : shuffled;
+  return count > 0 ? shuffled.slice(0, count) : shuffled;
 }
 
 router.get("/quiz", async (req: Request, res: Response): Promise<void> => {
   try {
     const bank = await getQuizBank();
-    const questions = publicQuestions(bank.questions, bank.count);
+    const questions = chooseQuestions(bank.questions, bank.count);
     if (questions.length === 0) {
       res.status(503).json({ error: "등록된 문제가 없어요." });
       return;
@@ -86,7 +86,6 @@ router.put("/admin/questions", async (req: Request, res: Response): Promise<void
       res.status(400).json({ error: `${index + 1}번 문제를 확인해 주세요.` });
       return;
     }
-
     const id = typeof rawQuestion.id === "string" ? rawQuestion.id.trim().slice(0, 40) : "";
     const text = typeof rawQuestion.text === "string" ? rawQuestion.text.trim().slice(0, 500) : "";
     const choices = Array.isArray(rawQuestion.choices)
@@ -115,19 +114,18 @@ router.put("/admin/questions", async (req: Request, res: Response): Promise<void
       });
       return;
     }
-
     seenIds.add(id);
     questions.push({ id, text, choices, answer, explanation });
   }
 
-  const rawCount = body.count === undefined ? 0 : Number(body.count);
-  if (!Number.isInteger(rawCount) || rawCount < 0 || rawCount > questions.length) {
+  const count = body.count === undefined ? 0 : Number(body.count);
+  if (!Number.isInteger(count) || count < 0 || count > questions.length) {
     res.status(400).json({ error: "출제 문항 수를 확인해 주세요." });
     return;
   }
 
   try {
-    await saveQuizBank(questions, rawCount);
+    await saveQuizBank(questions, count);
     res.json({ ok: true });
   } catch (error) {
     req.log.error({ err: error }, "Failed to save quiz questions");
@@ -141,7 +139,6 @@ router.post("/quiz/grade", async (req: Request, res: Response): Promise<void> =>
     res.status(400).json({ error: "잘못된 요청입니다." });
     return;
   }
-
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 30) : "";
   if (!name) {
     res.status(400).json({ error: "이름을 입력해 주세요." });
@@ -182,11 +179,11 @@ router.post("/quiz/grade", async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  const bankById = new Map(bank.questions.map((question) => [question.id, question]));
+  const questionsById = new Map(bank.questions.map((question) => [question.id, question]));
   const selectedQuestions: QuizQuestion[] = [];
   const selectedAnswers: number[] = [];
   for (const id of questionIds as string[]) {
-    const question = bankById.get(id);
+    const question = questionsById.get(id);
     const picked = answers[id];
     if (
       !question
@@ -215,7 +212,6 @@ router.post("/quiz/grade", async (req: Request, res: Response): Promise<void> =>
   const score = results.filter((result) => result.correct).length;
   const total = results.length;
   let saved = false;
-
   if (process.env.GOOGLE_SCRIPT_URL && process.env.GOOGLE_SCRIPT_SECRET) {
     try {
       await saveQuizScore({
@@ -229,7 +225,6 @@ router.post("/quiz/grade", async (req: Request, res: Response): Promise<void> =>
       req.log.warn({ err: error }, "Failed to save quiz score to Google Sheets");
     }
   }
-
   res.json({ score, total, results, saved });
 });
 

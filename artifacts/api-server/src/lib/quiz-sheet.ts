@@ -1,4 +1,4 @@
-import { quizQuestions, quizQuestionCount, quizQuestionVersion, type QuizQuestion } from "../routes/quiz-questions";
+import { quizQuestionCount, quizQuestionVersion, quizQuestions, type QuizQuestion } from "../routes/quiz-questions";
 
 export type QuizBank = {
   questions: QuizQuestion[];
@@ -13,22 +13,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseQuestion(value: unknown): QuizQuestion | null {
   if (!isRecord(value)) return null;
   const { id, text, choices, answer, explanation } = value;
-  const parsedChoices = Array.isArray(choices)
-    ? choices.filter((choice): choice is string => typeof choice === "string" && choice.length > 0)
-    : [];
   if (
     typeof id !== "string"
     || !id
     || typeof text !== "string"
     || !text
     || !Array.isArray(choices)
-    || parsedChoices.length !== choices.length
-    || parsedChoices.length < 2
-    || parsedChoices.length > 5
+    || choices.length < 2
+    || choices.length > 5
+    || !choices.every((choice) => typeof choice === "string" && choice.length > 0)
     || typeof answer !== "number"
     || !Number.isInteger(answer)
     || answer < 0
-    || answer >= parsedChoices.length
+    || answer >= choices.length
     || (explanation !== undefined && typeof explanation !== "string")
   ) {
     return null;
@@ -36,7 +33,7 @@ function parseQuestion(value: unknown): QuizQuestion | null {
   return {
     id,
     text,
-    choices: parsedChoices,
+    choices,
     answer,
     explanation: typeof explanation === "string" ? explanation : "",
   };
@@ -62,13 +59,16 @@ async function callQuizScript(payload: Record<string, unknown>): Promise<Record<
 }
 
 export async function getQuizBank(): Promise<QuizBank> {
-  if (!process.env.GOOGLE_SCRIPT_URL && !process.env.GOOGLE_SCRIPT_SECRET) {
+  const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+  const scriptSecret = process.env.GOOGLE_SCRIPT_SECRET;
+  if (!scriptUrl && !scriptSecret) {
     return {
       questions: quizQuestions,
       count: quizQuestionCount,
       version: quizQuestionVersion,
     };
   }
+  if (!scriptUrl || !scriptSecret) throw new Error("Both Google Apps Script settings must be configured");
 
   const result = await callQuizScript({ action: "getQuestions" });
   if (!Array.isArray(result.questions)) throw new Error("Google Apps Script returned invalid quiz questions");
@@ -82,17 +82,14 @@ export async function getQuizBank(): Promise<QuizBank> {
     typeof result.count !== "number"
     || !Number.isInteger(result.count)
     || result.count < 0
+    || result.count > questions.length
     || typeof result.version !== "string"
     || !result.version
   ) {
     throw new Error("Google Apps Script returned invalid quiz settings");
   }
 
-  return {
-    questions,
-    count: result.count,
-    version: result.version,
-  };
+  return { questions, count: result.count, version: result.version };
 }
 
 export async function saveQuizBank(questions: QuizQuestion[], count: number): Promise<void> {

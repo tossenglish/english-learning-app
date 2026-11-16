@@ -39,8 +39,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
 import ReadingComprehensionPractice from '@/components/reading-comprehension';
-import QuizPractice from '@/components/quiz-practice';
 import QuizAdmin from '@/components/quiz-admin';
+import QuizPractice from '@/components/quiz-practice';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
@@ -455,8 +455,8 @@ function Sidebar({ location }: { location: string }) {
           <NavItem href="/dashboard" label="오늘의 과제" icon={HomeIcon} active={location === "/dashboard"} />
             <NavItem href="/phonics" label="파닉스" icon={BookOpenIcon} active={location === "/phonics"} />
           <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
-            <NavItem href="/quiz" label="새 문제풀이" icon={ClipboardList} active={location === '/quiz'} />
-            <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
+          <NavItem href="/quiz" label="문제풀이" icon={ClipboardList} active={location === '/quiz'} />
+          <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -618,8 +618,8 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
             <ClipboardList size={23} />
           </span>
           <div>
-            <p className="text-base font-extrabold">새 문제풀이</p>
-            <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">객관식 문제를 풀고 바로 채점해 보세요.</p>
+            <p className="text-base font-extrabold">문제풀이</p>
+            <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">문제를 풀고 바로 채점해 보세요.</p>
           </div>
         </div>
         <span className="inline-flex items-center gap-2 self-start rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] sm:self-auto">
