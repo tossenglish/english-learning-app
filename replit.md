@@ -10,6 +10,7 @@
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Optional quiz score saving: `GOOGLE_SCRIPT_URL` and `GOOGLE_SCRIPT_SECRET` — see `artifacts/api-server/google-apps-script/Code.gs` and `artifacts/api-server/.env.example`
 
 ## Stack
 
@@ -26,6 +27,7 @@
 - `artifacts/english-learning/src/index.css` — 앱 전체 색상 토큰과 모션 스타일
 - `artifacts/english-learning/package.json` — 프론트엔드 실행 및 빌드 설정
 - `artifacts/api-server` — 공유 API 서버 스캐폴드 (현재 LingoLoop는 로컬 상태 기반으로 동작)
+- `artifacts/api-server/src/routes/quiz-questions.ts` — 객관식 퀴즈 문항과 서버 전용 정답
 
 ## Architecture decisions
 
@@ -38,6 +40,7 @@
 - 사용자는 Beginner, Intermediate, Advanced 레벨을 선택할 수 있습니다.
 - 오늘의 단어 `serendipity`와 실생활 문장을 보고, 카드를 뒤집고, 발음을 듣고, 4지선다 퀴즈를 풀 수 있습니다.
 - 학습한 단어를 단어장에 저장하고 삭제할 수 있으며, 스트릭·주간 학습 시간·완료 레슨을 확인할 수 있습니다.
+- 로그인 없이 `/quiz`에서 객관식 문제를 풀 수 있습니다. 채점은 API 서버에서 처리하며, Google Apps Script 설정 시 점수를 스프레드시트에 저장합니다.
 
 ## User preferences
 

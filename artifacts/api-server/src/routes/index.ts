@@ -8,6 +8,7 @@ import translationsRouter from "./translations";
 import readingComprehensionRouter from "./reading-comprehension";
 import attendanceRouter from "./attendance";
 import wordsRouter from "./words";
+import quizRouter from "./quiz";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(translationsRouter);
 router.use(readingComprehensionRouter);
 router.use(attendanceRouter);
 router.use(wordsRouter);
+router.use(quizRouter);
 
 export default router;

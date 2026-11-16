@@ -21,6 +21,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ClipboardList,
   Clock3,
   Flame,
   Headphones,
@@ -38,6 +39,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
 import ReadingComprehensionPractice from '@/components/reading-comprehension';
+import QuizPractice from '@/components/quiz-practice';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
@@ -323,6 +325,13 @@ function PublicLanding() {
               >
                 로그인
               </Link>
+              <Link
+                href="/quiz"
+                data-testid="link-landing-quiz"
+                className="inline-flex items-center gap-2 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--foreground))] transition-colors hover:border-[hsl(var(--accent)/.5)]"
+              >
+                문제 풀어보기 <ClipboardList size={16} />
+              </Link>
             </div>
           </div>
           <div className="rise-in stagger-1 relative overflow-hidden rounded-[34px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 shadow-[var(--shadow-md)] sm:p-7">
@@ -436,7 +445,8 @@ function Sidebar({ location }: { location: string }) {
           <NavItem href="/dashboard" label="오늘의 과제" icon={HomeIcon} active={location === "/dashboard"} />
             <NavItem href="/phonics" label="파닉스" icon={BookOpenIcon} active={location === "/phonics"} />
           <NavItem href="/reading" label="읽기 이해" icon={BookOpenCheck} active={location === '/reading'} />
-          <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
+            <NavItem href="/quiz" label="새 문제풀이" icon={ClipboardList} active={location === '/quiz'} />
+            <NavItem href="/words" label="단어 연습장" icon={WordsIcon} active={location === '/words'} />
           <NavItem href="/vocabulary" label="단어장" icon={Layers3} active={location === '/vocabulary'} />
           <NavItem href="/progress" label="나의 기록" icon={BarChart3} active={location === '/progress'} />
           <NavItem href="/report" label="학습 평가" icon={Target} active={location === '/report'} />
@@ -463,6 +473,7 @@ function MobileNav({ location }: { location: string }) {
       {[
         { href: '/dashboard', label: '오늘', icon: HomeIcon },
         { href: '/reading', label: '읽기', icon: BookOpenCheck },
+        { href: '/quiz', label: '퀴즈', icon: ClipboardList },
         { href: '/words', label: '단어', icon: WordsIcon },
         { href: '/vocabulary', label: '단어장', icon: Layers3 },
         { href: '/progress', label: '기록', icon: BarChart3 },
@@ -587,6 +598,24 @@ function Home({ level, onLevelChange, onStart, isAdmin }: { level: Level; onLeve
         onStartPractice={onStart}
       />
 
+      <Link
+        href="/quiz"
+        data-testid="link-dashboard-quiz"
+        className="card-lift flex flex-col gap-4 rounded-[24px] border border-[hsl(var(--accent)/.3)] bg-[hsl(var(--card))] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      >
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
+            <ClipboardList size={23} />
+          </span>
+          <div>
+            <p className="text-base font-extrabold">새 문제풀이</p>
+            <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">객관식 문제를 풀고 바로 채점해 보세요.</p>
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-2 self-start rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] sm:self-auto">
+          문제 풀기 <ArrowRight size={16} />
+        </span>
+      </Link>
 
       <HomeVideoPlayer />
     </div>
@@ -1008,6 +1037,15 @@ function ClerkProviderWithRoutes() {
               <Route path="/" component={HomeRedirect} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route path="/quiz">
+                <main className="grain flex min-h-[100dvh] flex-col bg-[hsl(var(--background))] px-4 py-8 sm:px-8">
+                  <div className="mx-auto flex w-full max-w-[1060px] flex-1 flex-col gap-8">
+                    <Logo />
+                    <QuizPractice />
+                  </div>
+                  <SiteFooter />
+                </main>
+              </Route>
               <Route component={LearningPortal} />
                     <Route path="/phonics">
           <div className="w-full h-full min-h-[calc(100vh-4rem)] flex flex-col bg-amber-50 rounded-2xl overflow-hidden shadow-sm">
