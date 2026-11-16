@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ClipboardList, Plus, Save, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { useUser } from '@clerk/react';
+import { useAdminAccess } from '@/hooks/use-admin-access';
 import { apiFetch } from '@/lib/api-fetch';
 
 type EditableQuestion = {
@@ -24,38 +26,44 @@ function createQuestion(): EditableQuestion {
 }
 
 export default function QuizAdmin() {
-  const [password, setPassword] = useState('');
-  const [authenticated, setAuthenticated] = useState(false);
   const [questions, setQuestions] = useState<EditableQuestion[]>([]);
   const [count, setCount] = useState(0);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [questionsLoaded, setQuestionsLoaded] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { isLoaded, isSignedIn } = useUser();
+  const { isAdmin, isChecking } = useAdminAccess();
 
-  async function loadQuestions() {
+  useEffect(() => {
+    if (!isAdmin || isChecking) return;
+    const controller = new AbortController();
     setBusy(true);
-    setMessage('');
-    try {
-      const response = await apiFetch('/api/admin/questions', {
-        headers: { 'x-admin-password': password },
+    apiFetch('/api/admin/questions', { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json() as {
+          questions?: EditableQuestion[];
+          count?: number;
+          error?: string;
+        };
+        if (!response.ok) throw new Error(data.error || '문제를 불러오지 못했어요.');
+        if (!Array.isArray(data.questions) || typeof data.count !== 'number' || !Number.isInteger(data.count)) {
+          throw new Error('문제 응답 형식이 올바르지 않아요.');
+        }
+        setQuestions(data.questions);
+        setCount(data.count);
+        setQuestionsLoaded(true);
+      })
+      .catch((cause: unknown) => {
+        if (!(cause instanceof DOMException && cause.name === 'AbortError')) {
+          setMessage(cause instanceof Error ? cause.message : '문제를 불러오지 못했어요.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBusy(false);
       });
-      const data = await response.json() as {
-        questions?: EditableQuestion[];
-        count?: number;
-        error?: string;
-      };
-      if (!response.ok) throw new Error(data.error || '문제를 불러오지 못했어요.');
-      if (!Array.isArray(data.questions) || typeof data.count !== 'number' || !Number.isInteger(data.count)) {
-        throw new Error('문제 응답 형식이 올바르지 않아요.');
-      }
-      setQuestions(data.questions);
-      setCount(data.count);
-      setAuthenticated(true);
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : '문제를 불러오지 못했어요.');
-    } finally {
-      setBusy(false);
-    }
-  }
+    return () => controller.abort();
+  }, [isAdmin, isChecking, loadAttempt]);
 
   function updateQuestion(index: number, patch: Partial<EditableQuestion>) {
     setQuestions((current) => current.map((question, itemIndex) =>
@@ -111,10 +119,7 @@ export default function QuizAdmin() {
     try {
       const response = await apiFetch('/api/admin/questions', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': password,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questions, count }),
       });
       const data = await response.json() as { error?: string };
@@ -129,7 +134,7 @@ export default function QuizAdmin() {
 
   const fieldClass = 'w-full rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm outline-none focus:border-[hsl(var(--ring))]';
 
-  if (!authenticated) {
+  if (!isLoaded || isChecking) {
     return (
       <div className="mx-auto w-full max-w-[500px]">
         <section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-sm)] sm:p-8">
@@ -138,28 +143,57 @@ export default function QuizAdmin() {
           </div>
           <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Teacher tools</p>
           <h1 className="mt-2 text-2xl font-extrabold">퀴즈 출제 관리</h1>
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">관리자 비밀번호를 입력해 문제를 편집하세요.</p>
-          <label htmlFor="quiz-admin-password" className="mt-6 block text-sm font-bold">관리자 비밀번호</label>
-          <input
-            id="quiz-admin-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !busy) void loadQuestions();
-            }}
-            className={`${fieldClass} mt-2`}
-          />
-          {message && <p className="mt-3 text-sm font-semibold text-[hsl(var(--destructive))]" role="alert">{message}</p>}
-          <button
-            type="button"
-            onClick={() => void loadQuestions()}
-            disabled={busy || !password}
-            className="button-pop mt-5 w-full rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-extrabold text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-          >
-            {busy ? '확인 중...' : '들어가기'}
-          </button>
+          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]" role="status">관리자 권한을 확인하고 있어요...</p>
+        </section>
+      </div>
+    );
+  }
+
+  if (!isSignedIn || !isAdmin) {
+    return (
+      <div className="mx-auto w-full max-w-[500px]">
+        <section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-sm)] sm:p-8">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]">
+            <ClipboardList size={23} />
+          </div>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[.18em] text-[hsl(var(--accent))]">Teacher tools</p>
+          <h1 className="mt-2 text-2xl font-extrabold">퀴즈 출제 관리</h1>
+          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
+            {!isSignedIn ? '관리자 계정으로 로그인해 주세요.' : '퀴즈를 출제할 관리자 권한이 필요해요.'}
+          </p>
+          {!isSignedIn && (
+            <Link
+              href="/sign-in"
+              className="button-pop mt-5 inline-flex rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-extrabold text-[hsl(var(--primary-foreground))]"
+            >
+              로그인
+            </Link>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  if (!questionsLoaded) {
+    return (
+      <div className="mx-auto w-full max-w-[500px]">
+        <section className="rounded-[26px] border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 shadow-[var(--shadow-sm)] sm:p-8">
+          <h1 className="text-2xl font-extrabold">퀴즈 출제 관리</h1>
+          <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]" role={message ? 'alert' : 'status'}>
+            {message || (busy ? '문제를 불러오고 있어요...' : '문제를 불러오지 못했어요.')}
+          </p>
+          {!busy && (
+            <button
+              type="button"
+              onClick={() => {
+                setMessage('');
+                setLoadAttempt((attempt) => attempt + 1);
+              }}
+              className="button-pop mt-5 rounded-xl bg-[hsl(var(--primary))] px-5 py-3 text-sm font-extrabold text-[hsl(var(--primary-foreground))]"
+            >
+              다시 불러오기
+            </button>
+          )}
         </section>
       </div>
     );

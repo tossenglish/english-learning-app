@@ -1,5 +1,6 @@
-import { timingSafeEqual, randomInt } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
+import { getUserId, isAdmin } from "../lib/auth";
 import { getQuizBank, saveQuizBank, saveQuizScore, type QuizBank } from "../lib/quiz-sheet";
 import type { QuizQuestion } from "./quiz-questions";
 
@@ -11,21 +12,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function authorizeAdmin(req: Request, res: Response): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) {
-    res.status(503).json({ error: "서버에 ADMIN_PASSWORD가 설정되지 않았어요." });
+async function requireQuizAdmin(req: Request, res: Response): Promise<boolean> {
+  if (!getUserId(req)) {
+    res.status(401).json({ error: "로그인해 주세요." });
     return false;
   }
-
-  const provided = req.get("x-admin-password") ?? "";
-  const givenBytes = Buffer.from(provided);
-  const expectedBytes = Buffer.from(expected);
-  if (
-    givenBytes.length !== expectedBytes.length
-    || !timingSafeEqual(givenBytes, expectedBytes)
-  ) {
-    res.status(401).json({ error: "비밀번호가 맞지 않아요." });
+  if (!(await isAdmin(req))) {
+    res.status(403).json({ error: "퀴즈 출제 관리자 권한이 필요해요." });
     return false;
   }
   return true;
@@ -59,7 +52,7 @@ router.get("/quiz", async (req: Request, res: Response): Promise<void> => {
 });
 
 router.get("/admin/questions", async (req: Request, res: Response): Promise<void> => {
-  if (!authorizeAdmin(req, res)) return;
+  if (!(await requireQuizAdmin(req, res))) return;
   try {
     const bank = await getQuizBank();
     res.json({ questions: bank.questions, count: bank.count });
@@ -70,7 +63,7 @@ router.get("/admin/questions", async (req: Request, res: Response): Promise<void
 });
 
 router.put("/admin/questions", async (req: Request, res: Response): Promise<void> => {
-  if (!authorizeAdmin(req, res)) return;
+  if (!(await requireQuizAdmin(req, res))) return;
   if (!process.env.GOOGLE_SCRIPT_URL || !process.env.GOOGLE_SCRIPT_SECRET) {
     res.status(503).json({ error: "문제 저장을 위해 GOOGLE_SCRIPT_URL과 GOOGLE_SCRIPT_SECRET을 설정해 주세요." });
     return;

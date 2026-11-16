@@ -10,7 +10,7 @@
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
-- Quiz question editing and score saving: configure `GOOGLE_SCRIPT_URL`, `GOOGLE_SCRIPT_SECRET`, and `ADMIN_PASSWORD` from `artifacts/api-server/.env.example`. Deploy `artifacts/api-server/google-apps-script/Code.gs` as a Google Apps Script web app, then set the same secret in the script and API server.
+- Quiz question editing and score saving: configure `GOOGLE_SCRIPT_URL` and `GOOGLE_SCRIPT_SECRET` from `artifacts/api-server/.env.example`. Deploy `artifacts/api-server/google-apps-script/Code.gs` as a Google Apps Script web app, then set the same secret in the script and API server. Quiz administration uses the existing signed-in Clerk administrator account.
 - After changing `Code.gs`, publish a new web app deployment version. Teachers edit questions at `/quiz-admin`; students take quizzes at `/quiz`.
 
 ## Stack
