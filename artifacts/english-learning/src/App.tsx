@@ -40,6 +40,7 @@ import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } fr
 import PassagePractice, { type PassageEvaluation } from '@/components/passage-practice';
 import ReadingComprehensionPractice from '@/components/reading-comprehension';
 import QuizPractice from '@/components/quiz-practice';
+import QuizAdmin from '@/components/quiz-admin';
 import AdminUpload from '@/components/admin-upload';
 import HomeVideoPlayer from '@/components/home-video-player';
 import LearningReport, { type LearningMetrics } from '@/components/learning-report';
@@ -394,13 +395,22 @@ function AccountControl() {
   return (
     <div className="flex items-center gap-2">
       {isAdmin && (
-        <Link
-          href="/admin"
-          data-testid="link-admin-upload"
-          className="rounded-lg px-2.5 py-2 text-xs font-bold text-[hsl(var(--accent))] transition-colors hover:bg-[hsl(var(--muted))]"
-        >
-          관리자
-        </Link>
+        <>
+          <Link
+            href="/admin"
+            data-testid="link-admin-upload"
+            className="rounded-lg px-2.5 py-2 text-xs font-bold text-[hsl(var(--accent))] transition-colors hover:bg-[hsl(var(--muted))]"
+          >
+            관리자
+          </Link>
+          <Link
+            href="/quiz-admin"
+            data-testid="link-quiz-admin"
+            className="rounded-lg px-2.5 py-2 text-xs font-bold text-[hsl(var(--accent))] transition-colors hover:bg-[hsl(var(--muted))]"
+          >
+            퀴즈 출제
+          </Link>
+        </>
       )}
       <span className="hidden text-xs font-semibold text-[hsl(var(--muted-foreground))] sm:inline" data-testid="text-account-name">
         {name}
@@ -1042,6 +1052,15 @@ function ClerkProviderWithRoutes() {
                   <div className="mx-auto flex w-full max-w-[1060px] flex-1 flex-col gap-8">
                     <Logo />
                     <QuizPractice />
+                  </div>
+                  <SiteFooter />
+                </main>
+              </Route>
+              <Route path="/quiz-admin">
+                <main className="grain flex min-h-[100dvh] flex-col bg-[hsl(var(--background))] px-4 py-8 sm:px-8">
+                  <div className="mx-auto flex w-full max-w-[1060px] flex-1 flex-col gap-8">
+                    <Logo />
+                    <QuizAdmin />
                   </div>
                   <SiteFooter />
                 </main>

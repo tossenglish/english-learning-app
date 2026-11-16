@@ -29,3 +29,6 @@ export const quizQuestions: QuizQuestion[] = [
     explanation: "물이 0℃ 이하로 내려가면 얼음이 됩니다.",
   },
 ];
+
+export const quizQuestionCount = 0;
+export const quizQuestionVersion = "sample-quiz-v1";

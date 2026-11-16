@@ -15,6 +15,7 @@ type GradedQuiz = { score: number; total: number; results: QuizResult[]; saved: 
 
 export default function QuizPractice() {
   const [questions, setQuestions] = useState<PublicQuestion[]>([]);
+  const [version, setVersion] = useState('');
   const [name, setName] = useState('');
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [graded, setGraded] = useState<GradedQuiz | null>(null);
@@ -27,11 +28,15 @@ export default function QuizPractice() {
     apiFetch('/api/quiz', { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error('문제를 불러오지 못했어요.');
-        const data = await response.json() as { questions?: PublicQuestion[] };
+        const data = await response.json() as { questions?: PublicQuestion[]; version?: string };
         if (!Array.isArray(data.questions) || data.questions.length === 0) {
           throw new Error('등록된 문제가 없어요.');
         }
+        if (typeof data.version !== 'string' || !data.version) {
+          throw new Error('문제 정보를 확인하지 못했어요.');
+        }
         setQuestions(data.questions);
+        setVersion(data.version);
       })
       .catch((cause: unknown) => {
         if (!(cause instanceof DOMException && cause.name === 'AbortError')) {
@@ -61,7 +66,12 @@ export default function QuizPractice() {
       const response = await apiFetch('/api/quiz/grade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, answers }),
+        body: JSON.stringify({
+          name,
+          answers,
+          questionIds: questions.map((question) => question.id),
+          version,
+        }),
       });
       const data = await response.json() as GradedQuiz & { error?: string };
       if (!response.ok) throw new Error(data.error || '채점에 실패했어요.');
